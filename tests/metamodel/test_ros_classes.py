@@ -15,8 +15,11 @@ from haros.metamodel.ros import File, RosPackage
 
 
 def test_file_slots():
+    assert 'uid' in File.__slots__
     assert 'package' in File.__slots__
     assert 'path' in File.__slots__
+    assert 'name' not in File.__slots__
+    assert 'directory' not in File.__slots__
     assert 'storage' in File.__slots__
     assert 'source' in File.__slots__
 
@@ -103,6 +106,21 @@ def test_file_change_metadata():
     assert f.source.lines == 100
     f.source.ast = 'AST'
     assert f.source.ast == 'AST'
+
+
+def test_file_json():
+    data = File('pkg', 'file.txt').asdict()
+    assert data['uid'] == 'file:pkg/file.txt'
+    assert data['package'] == 'pkg'
+    assert data['path'] == 'file.txt'
+    assert data['storage']['path'] is None
+    assert data['storage']['size'] is None
+    assert data['storage']['timestamp'] == 0
+    assert data['source']['language'] == 'Text'
+    assert data['source']['lines'] == 1
+    assert data['source']['ast'] is None
+    assert 'name' not in data
+    assert 'directory' not in data
 
 
 ###############################################################################
