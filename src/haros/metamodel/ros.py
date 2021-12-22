@@ -41,14 +41,14 @@ class Languages(enum.Enum):
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class File:
+    uid: str = attr.ib(init=False)
     package: str
     path: str  # relative path within package (e.g. 'src/code.cpp')
     storage: StorageMetadata = attr.Factory(StorageMetadata)
     source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
 
-    @property
-    def uid(self) -> str:
-        return f'file:{self.package}/{self.path}'
+    def __attrs_post_init__(self):
+        object.__setattr__(self, 'uid', f'file:{self.package}/{self.path}')
 
     @property
     def name(self) -> str:
@@ -61,12 +61,18 @@ class File:
             return parts[0]
         return '.'
 
+    def asdict(self):
+        return attr.asdict(self)
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class RosPackage:
+    uid: str = attr.ib(init=False)
     name: str
     files: typing.List[str] = attr.Factory(list)
 
-    @property
-    def uid(self) -> str:
-        return f'pkg:{self.name}'
+    def __attrs_post_init__(self):
+        object.__setattr__(self, 'uid', f'pkg:{self.name}')
+
+    def asdict(self):
+        return attr.asdict(self)
