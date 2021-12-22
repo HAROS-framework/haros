@@ -11,7 +11,7 @@ import enum
 
 import attr
 
-from haros.metamodel.common import SourceCodeMetadata, StorageMetadata
+from haros.metamodel.common import DevelopmentMetadata, SourceCodeMetadata, StorageMetadata
 
 ###############################################################################
 # Constants
@@ -66,10 +66,14 @@ class File:
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class RosPackage:
+class Package:
     uid: str = attr.ib(init=False)
     name: str
+    is_metapackage: bool = False
     files: typing.List[str] = attr.Factory(list)
+    nodes: typing.List[str] = attr.Factory(list)
+    storage: StorageMetadata = attr.Factory(StorageMetadata)
+    metadata: DevelopmentMetadata = attr.Factory(DevelopmentMetadata)
 
     def __attrs_post_init__(self):
         object.__setattr__(self, 'uid', f'pkg:{self.name}')
