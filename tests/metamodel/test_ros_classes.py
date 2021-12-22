@@ -22,10 +22,12 @@ def test_file_slots():
     assert 'directory' not in File.__slots__
     assert 'storage' in File.__slots__
     assert 'source' in File.__slots__
+    assert 'dependencies' in File.__slots__
 
 
 def test_file_creation():
     f = File('pkg', 'file.txt')
+    assert f.uid == 'file:pkg/file.txt'
     assert f.package == 'pkg'
     assert f.path == 'file.txt'
     assert f.storage.path is None
@@ -34,7 +36,8 @@ def test_file_creation():
     assert f.source.language == 'Text'
     assert f.source.lines == 1
     assert f.source.ast is None
-    assert f.uid == 'file:pkg/file.txt'
+    assert f.dependencies.build == set()
+    assert f.dependencies.runtime == set()
     assert f.name == 'file.txt'
     assert f.directory == '.'
 
@@ -104,6 +107,8 @@ def test_file_json():
     assert data['source']['language'] == 'Text'
     assert data['source']['lines'] == 1
     assert data['source']['ast'] is None
+    assert data['dependencies']['build'] == []
+    assert data['dependencies']['runtime'] == []
     assert 'name' not in data
     assert 'directory' not in data
 
@@ -121,6 +126,7 @@ def test_pkg_slots():
     assert 'nodes' in Package.__slots__
     assert 'storage' in Package.__slots__
     assert 'metadata' in Package.__slots__
+    assert 'dependencies' in Package.__slots__
 
 
 def test_pkg_creation():
@@ -141,6 +147,8 @@ def test_pkg_creation():
     assert p.metadata.url_home is None
     assert p.metadata.url_source is None
     assert p.metadata.url_tracker is None
+    assert p.dependencies.build == set()
+    assert p.dependencies.runtime == set()
 
 
 def test_pkg_requires_args():
@@ -229,3 +237,5 @@ def test_pkg_json():
     assert data['metadata']['url_home'] is None
     assert data['metadata']['url_source'] is None
     assert data['metadata']['url_tracker'] is None
+    assert data['dependencies']['build'] == []
+    assert data['dependencies']['runtime'] == []

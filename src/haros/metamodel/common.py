@@ -43,3 +43,9 @@ class DevelopmentMetadata:
     url_home: typing.Optional[str] = None
     url_source: typing.Optional[str] = None
     url_tracker: typing.Optional[str] = None
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class SourceDependencies:
+    build: typing.Set[str] = attr.Factory(set)
+    runtime: typing.Set[str] = attr.Factory(set)

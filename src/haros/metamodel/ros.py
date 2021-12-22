@@ -11,7 +11,12 @@ import enum
 
 import attr
 
-from haros.metamodel.common import DevelopmentMetadata, SourceCodeMetadata, StorageMetadata
+from haros.metamodel.common import (
+    DevelopmentMetadata,
+    SourceCodeMetadata,
+    SourceDependencies,
+    StorageMetadata,
+)
 
 ###############################################################################
 # Constants
@@ -46,6 +51,7 @@ class File:
     path: str  # relative path within package (e.g. 'src/code.cpp')
     storage: StorageMetadata = attr.Factory(StorageMetadata)
     source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
+    dependencies: SourceDependencies = attr.Factory(SourceDependencies)
 
     def __attrs_post_init__(self):
         object.__setattr__(self, 'uid', f'file:{self.package}/{self.path}')
@@ -74,6 +80,7 @@ class Package:
     nodes: typing.List[str] = attr.Factory(list)
     storage: StorageMetadata = attr.Factory(StorageMetadata)
     metadata: DevelopmentMetadata = attr.Factory(DevelopmentMetadata)
+    dependencies: SourceDependencies = attr.Factory(SourceDependencies)
 
     def __attrs_post_init__(self):
         object.__setattr__(self, 'uid', f'pkg:{self.name}')
