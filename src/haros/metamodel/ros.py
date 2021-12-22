@@ -42,8 +42,10 @@ class Languages(enum.Enum):
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class File:
     uid: str = attr.ib(init=False)
+    # Parameters
     package: str
     path: str  # relative path within package (e.g. 'src/code.cpp')
+    # Defaults
     # storage: StorageMetadata = attr.Factory(StorageMetadata)
     source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
     dependencies: SourceCodeDependencies = attr.Factory(SourceCodeDependencies)
@@ -69,7 +71,9 @@ class File:
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class Package:
     uid: str = attr.ib(init=False)
+    # Parameters
     name: str
+    # Defaults
     is_metapackage: bool = False
     files: typing.List[str] = attr.Factory(list)
     nodes: typing.List[str] = attr.Factory(list)
@@ -79,6 +83,26 @@ class Package:
 
     def __attrs_post_init__(self):
         object.__setattr__(self, 'uid', f'pkg:{self.name}')
+
+    def asdict(self):
+        return attr.asdict(self)
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class Node:
+    uid: str = attr.ib(init=False)
+    # Parameters
+    package: str
+    name: str
+    # Defaults
+    is_nodelet: bool = False
+    # TODO rosname: typing.Optional[RosName] = None
+    files: typing.List[str] = attr.Factory(list)
+    source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
+    # TODO function calls
+
+    def __attrs_post_init__(self):
+        object.__setattr__(self, 'uid', f'node:{self.package}/{self.name}')
 
     def asdict(self):
         return attr.asdict(self)
