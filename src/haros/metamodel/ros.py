@@ -11,12 +11,7 @@ import enum
 
 import attr
 
-from haros.metamodel.common import (
-    DevelopmentMetadata,
-    SourceCodeMetadata,
-    SourceDependencies,
-    StorageMetadata,
-)
+from haros.metamodel.common import DevelopmentMetadata, SourceCodeDependencies, SourceCodeMetadata
 
 ###############################################################################
 # Constants
@@ -40,7 +35,7 @@ class Languages(enum.Enum):
 
 
 ###############################################################################
-# Metamodel Classes
+# Metamodel Objects
 ###############################################################################
 
 
@@ -49,9 +44,9 @@ class File:
     uid: str = attr.ib(init=False)
     package: str
     path: str  # relative path within package (e.g. 'src/code.cpp')
-    storage: StorageMetadata = attr.Factory(StorageMetadata)
+    # storage: StorageMetadata = attr.Factory(StorageMetadata)
     source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
-    dependencies: SourceDependencies = attr.Factory(SourceDependencies)
+    dependencies: SourceCodeDependencies = attr.Factory(SourceCodeDependencies)
 
     def __attrs_post_init__(self):
         object.__setattr__(self, 'uid', f'file:{self.package}/{self.path}')
@@ -78,9 +73,30 @@ class Package:
     is_metapackage: bool = False
     files: typing.List[str] = attr.Factory(list)
     nodes: typing.List[str] = attr.Factory(list)
-    storage: StorageMetadata = attr.Factory(StorageMetadata)
+    # storage: StorageMetadata = attr.Factory(StorageMetadata)
     metadata: DevelopmentMetadata = attr.Factory(DevelopmentMetadata)
-    dependencies: SourceDependencies = attr.Factory(SourceDependencies)
+    dependencies: SourceCodeDependencies = attr.Factory(SourceCodeDependencies)
+
+    def __attrs_post_init__(self):
+        object.__setattr__(self, 'uid', f'pkg:{self.name}')
+
+    def asdict(self):
+        return attr.asdict(self)
+
+
+###############################################################################
+# Metamodel Instance
+###############################################################################
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class Metamodel:
+    name: str
+    packages: typing.Dict[str, Package] = attr.Factory(dict)
+    files: typing.Dict[str, File] = attr.Factory(dict)
+    # nodes: typing.Dict[str, Node] = attr.Factory(dict)
+    # NOTE: still not sure whether to include storage here
+    # storage: typing.Dict[str, StorageMetadata] = attr.Factory(dict)
 
     def __attrs_post_init__(self):
         object.__setattr__(self, 'uid', f'pkg:{self.name}')

@@ -18,11 +18,11 @@ def test_file_slots():
     assert 'uid' in File.__slots__
     assert 'package' in File.__slots__
     assert 'path' in File.__slots__
-    assert 'name' not in File.__slots__
     assert 'directory' not in File.__slots__
-    assert 'storage' in File.__slots__
     assert 'source' in File.__slots__
     assert 'dependencies' in File.__slots__
+    assert 'name' not in File.__slots__
+    assert 'storage' not in File.__slots__
 
 
 def test_file_creation():
@@ -30,9 +30,9 @@ def test_file_creation():
     assert f.uid == 'file:pkg/file.txt'
     assert f.package == 'pkg'
     assert f.path == 'file.txt'
-    assert f.storage.path is None
-    assert f.storage.size is None
-    assert f.storage.timestamp == 0
+    # assert f.storage.path is None
+    # assert f.storage.size is None
+    # assert f.storage.timestamp == 0
     assert f.source.language == 'Text'
     assert f.source.lines == 1
     assert f.source.ast is None
@@ -82,12 +82,12 @@ def test_file_change_frozen():
 
 def test_file_change_metadata():
     f = File('pkg', 'file.txt')
-    f.storage.path = '/etc/file'
-    assert f.storage.path == '/etc/file'
-    f.storage.size = 1
-    assert f.storage.size == 1
-    f.storage.timestamp = 100
-    assert f.storage.timestamp == 100
+    # f.storage.path = '/etc/file'
+    # assert f.storage.path == '/etc/file'
+    # f.storage.size = 1
+    # assert f.storage.size == 1
+    # f.storage.timestamp = 100
+    # assert f.storage.timestamp == 100
     f.source.language = 'C++'
     assert f.source.language == 'C++'
     f.source.lines = 100
@@ -101,9 +101,9 @@ def test_file_json():
     assert data['uid'] == 'file:pkg/file.txt'
     assert data['package'] == 'pkg'
     assert data['path'] == 'file.txt'
-    assert data['storage']['path'] is None
-    assert data['storage']['size'] is None
-    assert data['storage']['timestamp'] == 0
+    # assert data['storage']['path'] is None
+    # assert data['storage']['size'] is None
+    # assert data['storage']['timestamp'] == 0
     assert data['source']['language'] == 'Text'
     assert data['source']['lines'] == 1
     assert data['source']['ast'] is None
@@ -124,9 +124,9 @@ def test_pkg_slots():
     assert 'is_metapackage' in Package.__slots__
     assert 'files' in Package.__slots__
     assert 'nodes' in Package.__slots__
-    assert 'storage' in Package.__slots__
     assert 'metadata' in Package.__slots__
     assert 'dependencies' in Package.__slots__
+    assert 'storage' not in Package.__slots__
 
 
 def test_pkg_creation():
@@ -136,9 +136,9 @@ def test_pkg_creation():
     assert p.is_metapackage is False
     assert p.files == []
     assert p.nodes == []
-    assert p.storage.path is None
-    assert p.storage.size is None
-    assert p.storage.timestamp == 0
+    # assert p.storage.path is None
+    # assert p.storage.size is None
+    # assert p.storage.timestamp == 0
     assert p.metadata.description == ''
     assert p.metadata.authors == set()
     assert p.metadata.maintainers == set()
@@ -169,7 +169,7 @@ def test_two_pkgs_equal():
     assert p1.is_metapackage == p2.is_metapackage
     assert p1.files == p2.files
     assert p1.nodes == p2.nodes
-    assert p1.storage == p2.storage
+    # assert p1.storage == p2.storage
     assert p1.metadata == p2.metadata
 
 
@@ -195,12 +195,12 @@ def test_pkg_change_frozen():
 
 def test_pkg_change_metadata():
     p = Package('pkg')
-    p.storage.path = '/etc/pkg'
-    assert p.storage.path == '/etc/pkg'
-    p.storage.size = 1
-    assert p.storage.size == 1
-    p.storage.timestamp = 100
-    assert p.storage.timestamp == 100
+    # p.storage.path = '/etc/pkg'
+    # assert p.storage.path == '/etc/pkg'
+    # p.storage.size = 1
+    # assert p.storage.size == 1
+    # p.storage.timestamp = 100
+    # assert p.storage.timestamp == 100
     p.metadata.description = 'README'
     assert p.metadata.description == 'README'
     p.metadata.authors.add('Joe')
@@ -226,9 +226,9 @@ def test_pkg_json():
     assert data['is_metapackage'] is False
     assert data['files'] == []
     assert data['nodes'] == []
-    assert data['storage']['path'] is None
-    assert data['storage']['size'] is None
-    assert data['storage']['timestamp'] == 0
+    # assert data['storage']['path'] is None
+    # assert data['storage']['size'] is None
+    # assert data['storage']['timestamp'] == 0
     assert data['metadata']['description'] == ''
     assert data['metadata']['authors'] == []
     assert data['metadata']['maintainers'] == []
