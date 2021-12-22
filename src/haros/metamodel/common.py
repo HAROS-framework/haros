@@ -46,6 +46,6 @@ class DevelopmentMetadata:
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class SourceDependencies:
+class SourceCodeDependencies:
     build: typing.Set[str] = attr.Factory(set)
     runtime: typing.Set[str] = attr.Factory(set)
