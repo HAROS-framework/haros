@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-import typing
+from typing import Any, Dict, Final, List
 
 import enum
 
@@ -16,6 +16,9 @@ from haros.metamodel.common import DevelopmentMetadata, SourceCodeDependencies, 
 ###############################################################################
 # Constants
 ###############################################################################
+
+
+RE_NAME: Final = r'(^[a-zA-Z][a-zA-Z0-9_]*$)'
 
 
 @enum.unique
@@ -35,23 +38,23 @@ class Languages(enum.Enum):
 
 
 ###############################################################################
-# Metamodel Objects
+# File System Objects
 ###############################################################################
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class File:
-    uid: str = attr.ib(init=False)
     # Parameters
-    package: str
+    package: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
     path: str  # relative path within package (e.g. 'src/code.cpp')
     # Defaults
     # storage: StorageMetadata = attr.Factory(StorageMetadata)
     source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
     dependencies: SourceCodeDependencies = attr.Factory(SourceCodeDependencies)
 
-    def __attrs_post_init__(self):
-        object.__setattr__(self, 'uid', f'file:{self.package}/{self.path}')
+    @property
+    def uid(self) -> str:
+        return f'{self.package}/{self.path}'
 
     @property
     def name(self) -> str:
@@ -64,48 +67,58 @@ class File:
             return parts[0]
         return '.'
 
-    def asdict(self):
+    def asdict(self) -> Dict[str, Any]:
         return attr.asdict(self)
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class Package:
-    uid: str = attr.ib(init=False)
     # Parameters
-    name: str
+    name: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
     # Defaults
     is_metapackage: bool = False
-    files: typing.List[str] = attr.Factory(list)
-    nodes: typing.List[str] = attr.Factory(list)
+    files: List[str] = attr.Factory(list)
+    nodes: List[str] = attr.Factory(list)
     # storage: StorageMetadata = attr.Factory(StorageMetadata)
     metadata: DevelopmentMetadata = attr.Factory(DevelopmentMetadata)
     dependencies: SourceCodeDependencies = attr.Factory(SourceCodeDependencies)
 
-    def __attrs_post_init__(self):
-        object.__setattr__(self, 'uid', f'pkg:{self.name}')
+    @property
+    def uid(self) -> str:
+        return self.name
 
-    def asdict(self):
+    def asdict(self) -> Dict[str, Any]:
         return attr.asdict(self)
+
+
+###############################################################################
+# ROS Source Objects
+###############################################################################
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class Node:
-    uid: str = attr.ib(init=False)
     # Parameters
-    package: str
-    name: str
+    package: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
+    name: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
     # Defaults
     is_nodelet: bool = False
     # TODO rosname: typing.Optional[RosName] = None
-    files: typing.List[str] = attr.Factory(list)
+    files: List[str] = attr.Factory(list)
     source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
     # TODO function calls
 
-    def __attrs_post_init__(self):
-        object.__setattr__(self, 'uid', f'node:{self.package}/{self.name}')
+    @property
+    def uid(self) -> str:
+        return f'{self.package}/{self.name}'
 
-    def asdict(self):
+    def asdict(self) -> Dict[str, Any]:
         return attr.asdict(self)
+
+
+###############################################################################
+# ROS Runtime Objects
+###############################################################################
 
 
 ###############################################################################
@@ -116,14 +129,11 @@ class Node:
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class Metamodel:
     name: str
-    packages: typing.Dict[str, Package] = attr.Factory(dict)
-    files: typing.Dict[str, File] = attr.Factory(dict)
-    # nodes: typing.Dict[str, Node] = attr.Factory(dict)
+    packages: Dict[str, Package] = attr.Factory(dict)
+    files: Dict[str, File] = attr.Factory(dict)
+    nodes: Dict[str, Node] = attr.Factory(dict)
     # NOTE: still not sure whether to include storage here
-    # storage: typing.Dict[str, StorageMetadata] = attr.Factory(dict)
+    # storage: Dict[str, StorageMetadata] = attr.Factory(dict)
 
-    def __attrs_post_init__(self):
-        object.__setattr__(self, 'uid', f'pkg:{self.name}')
-
-    def asdict(self):
+    def asdict(self) -> Dict[str, Any]:
         return attr.asdict(self)
