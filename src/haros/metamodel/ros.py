@@ -85,7 +85,7 @@ class RosName:
     def is_relative(self) -> bool:
         return not self.is_global and not self.is_private
 
-    def join(self, other: RosName) -> RosName:
+    def join(self, other: 'RosName') -> 'RosName':
         """Uses `self` as a namespace to join with `other`."""
         if other.is_global:
             return other
@@ -101,7 +101,7 @@ class RosName:
         name: str = f'{prefix}/{suffix}'
         return RosName(name)
 
-    def resolve(self, ns: RosName, private_ns: RosName) -> RosName:
+    def resolve(self, ns: 'RosName', private_ns: 'RosName') -> 'RosName':
         """Resolves `self` relative to `ns` or `private_ns`."""
         if self.is_global:
             return self
