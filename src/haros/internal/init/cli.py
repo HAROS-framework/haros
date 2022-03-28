@@ -12,7 +12,7 @@ Module that contains the command line sub-program.
 from typing import Any, Dict, List
 
 import argparse
-import sys
+from pathlib import Path
 
 ###############################################################################
 # Argument Parsing
@@ -24,7 +24,11 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
     parser = argparse.ArgumentParser(description=msg)
 
     parser.add_argument(
-        'args', metavar='ARG', nargs=argparse.ZERO_OR_MORE, help='Arguments for the command.'
+        'path',
+        nargs='?',
+        default=Path.cwd(),
+        type=Path,
+        help=f'HAROS home directory path. Defaults to current working dir.'
     )
 
     args = parser.parse_args(args=argv)
@@ -38,7 +42,8 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
 
 def run(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print('Command init executed successfully.')
-    print(f'init arguments: {args}')
+    path = args['path'].resolve()
+    print('Initializing HAROS home at: ' + str(path))
 
 
 ###############################################################################
