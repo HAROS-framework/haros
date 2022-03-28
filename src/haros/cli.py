@@ -24,6 +24,7 @@ import argparse
 import sys
 
 from haros import __version__ as current_version
+from haros.internal.init import cli as cli_init
 
 ###############################################################################
 # Argument Parsing
@@ -86,11 +87,14 @@ def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
 ###############################################################################
 
 
-def do_real_work(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
-    if args['cmd'] == 'echo-args':
+def cmd_switch(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
+    cmd = args['cmd']
+    if cmd == 'echo-args':
         print(f'Arguments: {args}')
         print(f'Configurations: {configs}')
-        return
+    elif cmd == 'init':
+        cli_init.main(args.get('args'), configs)
+    return 0  # success
 
 
 ###############################################################################
@@ -105,7 +109,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         # Load additional config files here, e.g., from a path given via args.
         # Alternatively, set sane defaults if configuration is missing.
         config = load_configs(args)
-        do_real_work(args, config)
+        return cmd_switch(args, config)
 
     except KeyboardInterrupt:
         print('Aborted manually.', file=sys.stderr)
@@ -120,5 +124,3 @@ def main(argv: Optional[List[str]] = None) -> int:
         # Non-zero return code to signal error.
         # It can, of course, be more fine-grained than this general code.
         return 1
-
-    return 0  # success
