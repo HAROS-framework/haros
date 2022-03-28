@@ -44,7 +44,7 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
     parser.add_argument(
         'cmd',
         metavar='CMD',
-        choices=['init', 'analysis', 'config'],
+        choices=['init', 'analysis', 'config', 'echo-args'],
         help='A concrete HAROS command to run.',
     )
 
@@ -87,8 +87,10 @@ def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def do_real_work(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
-    print(f'Arguments: {args}')
-    print(f'Configurations: {configs}')
+    if args['cmd'] == 'echo-args':
+        print(f'Arguments: {args}')
+        print(f'Configurations: {configs}')
+        return
 
 
 ###############################################################################
