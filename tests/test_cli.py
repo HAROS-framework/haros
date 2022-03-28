@@ -5,6 +5,8 @@
 # Imports
 ###############################################################################
 
+import pytest
+
 from haros import cli
 
 ###############################################################################
@@ -13,4 +15,7 @@ from haros import cli
 
 
 def test_zero_arguments():
-    cli.main([])
+    with pytest.raises(SystemExit) as pytest_wrapped_e:
+        cli.main([])
+    assert pytest_wrapped_e.type == SystemExit
+    assert pytest_wrapped_e.value.code == 2
