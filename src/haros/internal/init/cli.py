@@ -9,10 +9,12 @@ Module that contains the command line sub-program.
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List
+from typing import Any, Dict, Final, List
 
 import argparse
 from pathlib import Path
+
+from haros.internal import home
 
 ###############################################################################
 # Argument Parsing
@@ -44,6 +46,7 @@ def run(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     print('Command init executed successfully.')
     path = args['path'].resolve()
     print('Initializing HAROS home at: ' + str(path))
+    home.make_at(path, overwrite=True)
 
 
 ###############################################################################
