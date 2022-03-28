@@ -151,7 +151,9 @@ class File:
         return '.'
 
     def asdict(self) -> Dict[str, Any]:
-        return attr.asdict(self)
+        data = attr.asdict(self)
+        data['uid'] = self.uid
+        return data
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -171,7 +173,9 @@ class Package:
         return self.name
 
     def asdict(self) -> Dict[str, Any]:
-        return attr.asdict(self)
+        data = attr.asdict(self)
+        data['uid'] = self.uid
+        return data
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
