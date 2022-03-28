@@ -15,7 +15,7 @@ from haros.metamodel.ros import File, Package
 
 
 def test_file_slots():
-    assert 'uid' in File.__slots__
+    assert 'uid' not in File.__slots__
     assert 'package' in File.__slots__
     assert 'path' in File.__slots__
     assert 'directory' not in File.__slots__
@@ -27,7 +27,7 @@ def test_file_slots():
 
 def test_file_creation():
     f = File('pkg', 'file.txt')
-    assert f.uid == 'file:pkg/file.txt'
+    assert f.uid == 'pkg/file.txt'
     assert f.package == 'pkg'
     assert f.path == 'file.txt'
     # assert f.storage.path is None
@@ -98,7 +98,7 @@ def test_file_change_metadata():
 
 def test_file_json():
     data = File('pkg', 'file.txt').asdict()
-    assert data['uid'] == 'file:pkg/file.txt'
+    assert data['uid'] == 'pkg/file.txt'
     assert data['package'] == 'pkg'
     assert data['path'] == 'file.txt'
     # assert data['storage']['path'] is None
@@ -119,7 +119,7 @@ def test_file_json():
 
 
 def test_pkg_slots():
-    assert 'uid' in Package.__slots__
+    assert 'uid' not in Package.__slots__
     assert 'name' in Package.__slots__
     assert 'is_metapackage' in Package.__slots__
     assert 'files' in Package.__slots__
@@ -131,7 +131,7 @@ def test_pkg_slots():
 
 def test_pkg_creation():
     p = Package('name')
-    assert p.uid == 'pkg:name'
+    assert p.uid == 'name'
     assert p.name == 'name'
     assert p.is_metapackage is False
     assert p.files == []
@@ -221,7 +221,7 @@ def test_pkg_change_metadata():
 
 def test_pkg_json():
     data = Package('pkg').asdict()
-    assert data['uid'] == 'pkg:pkg'
+    assert data['uid'] == 'pkg'
     assert data['name'] == 'pkg'
     assert data['is_metapackage'] is False
     assert data['files'] == []
