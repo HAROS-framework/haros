@@ -37,3 +37,10 @@ def test_parse_echo_args():
     assert isinstance(args, dict)
     assert args.get('cmd') == 'echo-args'
     assert args.get('args') == ['x', 'y', 'z']
+
+
+def test_parse_echo_args_no_args():
+    args = cli.parse_arguments(['echo-args'])
+    assert isinstance(args, dict)
+    assert args.get('cmd') == 'echo-args'
+    assert args.get('args') == []
