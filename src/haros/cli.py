@@ -24,6 +24,7 @@ import argparse
 import sys
 
 from haros import __version__ as current_version
+from haros.internal.config import load as load_configs
 from haros.internal.init import cli as cli_init
 
 ###############################################################################
@@ -58,31 +59,6 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
 
 
 ###############################################################################
-# Setup
-###############################################################################
-
-
-def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
-    try:
-        config: Dict[str, Any] = {}
-        # with open(args['config_path'], 'r') as file_pointer:
-        # yaml.safe_load(file_pointer)
-
-        # arrange and check configs here
-
-        return config
-    except Exception as err:
-        # log or raise errors
-        print(err, file=sys.stderr)
-        if str(err) == 'Really Bad':
-            raise err
-
-        # Optional: return some sane fallback defaults.
-        sane_defaults: Dict[str, Any] = {}
-        return sane_defaults
-
-
-###############################################################################
 # Commands
 ###############################################################################
 
@@ -94,6 +70,8 @@ def cmd_switch(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
         print(f'Configurations: {configs}')
     elif cmd == 'init':
         cli_init.main(args.get('args'), configs)
+    elif cmd == 'config':
+        pass
     return 0  # success
 
 
@@ -108,8 +86,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         # Load additional config files here, e.g., from a path given via args.
         # Alternatively, set sane defaults if configuration is missing.
-        config = load_configs(args)
-        return cmd_switch(args, config)
+        # settings = load_configs(args)
+        # loading settings will depend on the commands
+        settings = {}
+        return cmd_switch(args, settings)
 
     except KeyboardInterrupt:
         print('Aborted manually.', file=sys.stderr)

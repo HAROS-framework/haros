@@ -9,27 +9,12 @@ from typing import Any, Dict, Final, Union
 
 from pathlib import Path
 
+from haros.internal.config import CONFIG_FILE, DEFAULT_CONFIGS
 from haros.internal.fsutil import generate_dir
 
 ###############################################################################
 # Constants
 ###############################################################################
-
-CONFIG_YAML: Final[str] = r"""%YAML 1.1
----
-logs:
-    # level: info | warning | error
-    level: warning
-    max_files: 10
-    max_size_kb: 10000
-environment: true
-plugins:
-    disable: []
-parsing:
-    cpp:
-        parser: clang
-"""
-
 
 DIR_STRUCTURE: Final[Dict[str, Any]] = {
     'logs': {},
@@ -38,7 +23,7 @@ DIR_STRUCTURE: Final[Dict[str, Any]] = {
     'data': {},
     'cache': {},
     'output': {},
-    'config.yaml': CONFIG_YAML,
+    CONFIG_FILE: DEFAULT_CONFIGS,
 }
 
 
