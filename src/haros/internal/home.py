@@ -7,9 +7,10 @@
 
 from typing import Any, Dict, Final, Union
 
+import os
 from pathlib import Path
 
-from haros.internal.fsutil import generate_dir
+from haros.internal.fsutil import ensure_structure, generate_dir
 from haros.internal.settings import SETTINGS_FILE, DEFAULT_SETTINGS
 
 ###############################################################################
@@ -28,6 +29,8 @@ DIR_STRUCTURE: Final[Dict[str, Any]] = {
     SETTINGS_FILE: DEFAULT_SETTINGS,
 }
 
+DEFAULT_PATH: Final[str] = f'~/{DIR_NAME}'
+
 
 ###############################################################################
 # Interface
@@ -44,3 +47,24 @@ def make_at(dirpath: Union[str, Path], overwrite: bool = False):
     # Raises `FileExistsError` if the last path component exists and is not a directory.
     path.mkdir(parents=True, exist_ok=True)
     generate_dir(path, DIR_STRUCTURE, overwrite=overwrite)
+
+
+def find() -> Path:
+    # try the current directory
+    path = Path.cwd()
+    if path.name == DIR_NAME:
+        ensure_structure(path, DIR_STRUCTURE)
+        return path
+
+    # try a child of the current directory
+    path = path / DIR_NAME
+    if path.is_dir():
+        ensure_structure(path, DIR_STRUCTURE)
+        return path
+
+    # try a path pointed by the environment
+    # or simply use the default path
+    ps = os.environ.get('HAROS_HOME', DEFAULT_PATH)
+    path = Path(ps).resolve()
+    ensure_structure(path, DIR_STRUCTURE)
+    return path
