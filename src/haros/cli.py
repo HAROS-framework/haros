@@ -46,7 +46,14 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
     parser.add_argument(
         'cmd',
         metavar='CMD',
-        choices=['init', 'analysis', 'config', 'echo-args'],
+        choices=[
+            'init',
+            'config',
+            'project',
+            'cache',
+            'analysis',
+            'echo-args',
+        ],
         help='A concrete HAROS command to run.',
     )
 
@@ -71,6 +78,12 @@ def cmd_switch(args: Dict[str, Any], settings: Dict[str, Any]) -> None:
     elif cmd == 'init':
         cli_init.main(args.get('args'), settings)
     elif cmd == 'config':
+        pass
+    elif cmd == 'cache':
+        pass
+    elif cmd == 'project':
+        pass
+    elif cmd == 'analysis':
         pass
     return 0  # success
 
