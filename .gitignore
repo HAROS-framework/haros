@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # Test files
-tests/haroshome/**/*
+tests/.haros/**/*
