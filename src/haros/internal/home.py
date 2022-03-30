@@ -9,12 +9,14 @@ from typing import Any, Dict, Final, Union
 
 from pathlib import Path
 
-from haros.internal.config import CONFIG_FILE, DEFAULT_CONFIGS
 from haros.internal.fsutil import generate_dir
+from haros.internal.settings import SETTINGS_FILE, DEFAULT_SETTINGS
 
 ###############################################################################
 # Constants
 ###############################################################################
+
+DIR_NAME: Final[str] = '.haros'
 
 DIR_STRUCTURE: Final[Dict[str, Any]] = {
     'logs': {},
@@ -23,7 +25,7 @@ DIR_STRUCTURE: Final[Dict[str, Any]] = {
     'data': {},
     'cache': {},
     'output': {},
-    CONFIG_FILE: DEFAULT_CONFIGS,
+    SETTINGS_FILE: DEFAULT_SETTINGS,
 }
 
 
@@ -33,7 +35,12 @@ DIR_STRUCTURE: Final[Dict[str, Any]] = {
 
 
 def make_at(dirpath: Union[str, Path], overwrite: bool = False):
+    # ensures a '.haros' directory
+    # uses the given path directly, if it ends with '.haros', or uses it
+    # as a parent for a new '.haros' directory
     path = Path(dirpath).resolve()
+    if path.name != DIR_NAME:
+        path = path / DIR_NAME
     # Raises `FileExistsError` if the last path component exists and is not a directory.
     path.mkdir(parents=True, exist_ok=True)
     generate_dir(path, DIR_STRUCTURE, overwrite=overwrite)

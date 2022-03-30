@@ -24,8 +24,8 @@ import argparse
 import sys
 
 from haros import __version__ as current_version
-from haros.internal.config import load as load_configs
 from haros.internal.init import cli as cli_init
+from haros.internal.settings import load as load_settings
 
 ###############################################################################
 # Argument Parsing
@@ -86,7 +86,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         # Load additional config files here, e.g., from a path given via args.
         # Alternatively, set sane defaults if configuration is missing.
-        # settings = load_configs(args)
+        # settings = load_settings(args)
         # loading settings will depend on the commands
         settings = {}
         return cmd_switch(args, settings)

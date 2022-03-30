@@ -14,9 +14,9 @@ from yaml import safe_load
 # Constants
 ###############################################################################
 
-CONFIG_FILE: Final[str] = 'config.yaml'
+SETTINGS_FILE: Final[str] = 'config.yaml'
 
-DEFAULT_CONFIGS: Final[str] = r"""%YAML 1.1
+DEFAULT_SETTINGS: Final[str] = r"""%YAML 1.1
 ---
 logs:
     # level: info | warning | error
