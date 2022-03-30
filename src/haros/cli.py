@@ -63,13 +63,13 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
 ###############################################################################
 
 
-def cmd_switch(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
+def cmd_switch(args: Dict[str, Any], settings: Dict[str, Any]) -> None:
     cmd = args['cmd']
     if cmd == 'echo-args':
         print(f'Arguments: {args}')
-        print(f'Configurations: {configs}')
+        print(f'Settings: {settings}')
     elif cmd == 'init':
-        cli_init.main(args.get('args'), configs)
+        cli_init.main(args.get('args'), settings)
     elif cmd == 'config':
         pass
     return 0  # success
