@@ -49,6 +49,10 @@ def make_at(dirpath: Union[str, Path], overwrite: bool = False):
     generate_dir(path, DIR_STRUCTURE, overwrite=overwrite)
 
 
+def make_default(overwrite: bool = False):
+    return make_at(DEFAULT_PATH, overwrite=overwrite)
+
+
 def find() -> Path:
     # try the current directory
     path = Path.cwd()
