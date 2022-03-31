@@ -24,8 +24,9 @@ import argparse
 import sys
 
 from haros import __version__ as current_version
+from haros.internal import home
 from haros.internal.cli import init
-from haros.internal.settings import load as load_settings
+from haros.internal.settings import load as load_settings, defaults as default_settings
 
 ###############################################################################
 # Entry Point
@@ -34,19 +35,39 @@ from haros.internal.settings import load as load_settings
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = parse_arguments(argv)
+    cmd = args['cmd']
 
+    # shortcut commands ------------------------------------
+    if cmd == 'init':
+        return init.subprogram(args.get('args'), default_settings())
+
+    # setup phase ------------------------------------------
     try:
-        # Load additional config files here, e.g., from a path given via args.
-        # Alternatively, set sane defaults if configuration is missing.
-        # settings = load_settings(args)
-        # loading settings will depend on the commands
-        settings = {}
-        return cmd_switch(args, settings)
-
+        homepath = home.find()
+        settings = load_settings(homepath)
     except KeyboardInterrupt:
         print('Aborted manually.', file=sys.stderr)
         return 1
+    except Exception as err:
+        print('Unhandled exception during setup.', err)
+        return 1
 
+    # main phase -------------------------------------------
+    try:
+        if cmd == 'echo-args':
+            print(f'Arguments: {args}')
+            print(f'Settings: {settings}')
+        elif cmd == 'config':
+            pass
+        elif cmd == 'cache':
+            pass
+        elif cmd == 'project':
+            pass
+        elif cmd == 'analysis':
+            pass
+    except KeyboardInterrupt:
+        print('Aborted manually.', file=sys.stderr)
+        return 1
     except Exception as err:
         # In real code the `except` would probably be less broad.
         # Turn exceptions into appropriate logs and/or console output.
@@ -57,27 +78,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         # It can, of course, be more fine-grained than this general code.
         return 1
 
-
-###############################################################################
-# Commands
-###############################################################################
-
-
-def cmd_switch(args: Dict[str, Any], settings: Dict[str, Any]) -> None:
-    cmd = args['cmd']
-    if cmd == 'echo-args':
-        print(f'Arguments: {args}')
-        print(f'Settings: {settings}')
-    elif cmd == 'init':
-        init.subprogram(args.get('args'), settings)
-    elif cmd == 'config':
-        pass
-    elif cmd == 'cache':
-        pass
-    elif cmd == 'project':
-        pass
-    elif cmd == 'analysis':
-        pass
+    print(f'[HAROS] Command {cmd} executed successfully.')
     return 0  # success
 
 
@@ -87,7 +88,7 @@ def cmd_switch(args: Dict[str, Any], settings: Dict[str, Any]) -> None:
 
 
 def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
-    msg = 'A short description of the project.'
+    msg = 'The High-Assurance ROS Framework.'
     parser = argparse.ArgumentParser(description=msg)
 
     parser.add_argument(
@@ -112,7 +113,10 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
     )
 
     parser.add_argument(
-        'args', metavar='ARG', nargs=argparse.ZERO_OR_MORE, help='Arguments for the command.'
+        'args',
+        metavar='ARG',
+        nargs=argparse.ZERO_OR_MORE,
+        help='Arguments for the HAROS command.',
     )
 
     args = parser.parse_args(args=argv)
