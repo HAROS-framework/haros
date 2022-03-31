@@ -29,7 +29,7 @@ DIR_STRUCTURE: Final[Dict[str, Any]] = {
     SETTINGS_FILE: DEFAULT_SETTINGS,
 }
 
-DEFAULT_PATH: Final[str] = f'~/{DIR_NAME}'
+DEFAULT_PATH: Final[Path] = Path.home() / DIR_NAME
 
 
 ###############################################################################
@@ -69,6 +69,6 @@ def find() -> Path:
     # try a path pointed by the environment
     # or simply use the default path
     ps = os.environ.get('HAROS_HOME', DEFAULT_PATH)
-    path = Path(ps).resolve()
+    path = Path(ps).resolve(strict=True)
     ensure_structure(path, DIR_STRUCTURE)
     return path

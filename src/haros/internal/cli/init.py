@@ -36,7 +36,6 @@ def run(args: Dict[str, Any], settings: Dict[str, Any]) -> None:
     path = args['path'].resolve()
     print('Initializing HAROS home at: ' + str(path))
     home.make_at(path, overwrite=True)
-    print('Command init executed successfully.')
 
 
 ###############################################################################

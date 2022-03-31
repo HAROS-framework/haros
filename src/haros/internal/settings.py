@@ -25,7 +25,9 @@ logs:
     max_size_kb: 10000
 environment: true
 plugins:
-    disable: []
+    dummy:
+        enabled: false
+        args: {}
 parsing:
     cpp:
         parser: clang
@@ -37,8 +39,12 @@ parsing:
 
 
 def load(haroshome: Path) -> Dict[str, Any]:
-    path = haroshome / CONFIG_FILE
+    path = haroshome / SETTINGS_FILE
     path = path.resolve()
     with path.open(mode='r', encoding='utf-8') as f:
         settings = safe_load(f)
     return settings
+
+
+def defaults() -> Dict[str, Any]:
+    return {}
