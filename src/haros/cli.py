@@ -45,6 +45,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         homepath = home.find()
         settings = load_settings(homepath)
+        # TODO logging; see
+        # https://stackoverflow.com/questions/13733552/logger-configuration-to-log-to-file-and-print-to-stdout?rq=1
     except KeyboardInterrupt:
         print('Aborted manually.', file=sys.stderr)
         return 1
