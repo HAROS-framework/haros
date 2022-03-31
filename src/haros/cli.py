@@ -24,8 +24,62 @@ import argparse
 import sys
 
 from haros import __version__ as current_version
-from haros.internal.init import cli as cli_init
+from haros.internal.cli import init
 from haros.internal.settings import load as load_settings
+
+###############################################################################
+# Entry Point
+###############################################################################
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = parse_arguments(argv)
+
+    try:
+        # Load additional config files here, e.g., from a path given via args.
+        # Alternatively, set sane defaults if configuration is missing.
+        # settings = load_settings(args)
+        # loading settings will depend on the commands
+        settings = {}
+        return cmd_switch(args, settings)
+
+    except KeyboardInterrupt:
+        print('Aborted manually.', file=sys.stderr)
+        return 1
+
+    except Exception as err:
+        # In real code the `except` would probably be less broad.
+        # Turn exceptions into appropriate logs and/or console output.
+
+        print('An unhandled exception crashed the application!', err)
+
+        # Non-zero return code to signal error.
+        # It can, of course, be more fine-grained than this general code.
+        return 1
+
+
+###############################################################################
+# Commands
+###############################################################################
+
+
+def cmd_switch(args: Dict[str, Any], settings: Dict[str, Any]) -> None:
+    cmd = args['cmd']
+    if cmd == 'echo-args':
+        print(f'Arguments: {args}')
+        print(f'Settings: {settings}')
+    elif cmd == 'init':
+        init.subprogram(args.get('args'), settings)
+    elif cmd == 'config':
+        pass
+    elif cmd == 'cache':
+        pass
+    elif cmd == 'project':
+        pass
+    elif cmd == 'analysis':
+        pass
+    return 0  # success
+
 
 ###############################################################################
 # Argument Parsing
@@ -63,57 +117,3 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
 
     args = parser.parse_args(args=argv)
     return vars(args)
-
-
-###############################################################################
-# Commands
-###############################################################################
-
-
-def cmd_switch(args: Dict[str, Any], settings: Dict[str, Any]) -> None:
-    cmd = args['cmd']
-    if cmd == 'echo-args':
-        print(f'Arguments: {args}')
-        print(f'Settings: {settings}')
-    elif cmd == 'init':
-        cli_init.main(args.get('args'), settings)
-    elif cmd == 'config':
-        pass
-    elif cmd == 'cache':
-        pass
-    elif cmd == 'project':
-        pass
-    elif cmd == 'analysis':
-        pass
-    return 0  # success
-
-
-###############################################################################
-# Entry Point
-###############################################################################
-
-
-def main(argv: Optional[List[str]] = None) -> int:
-    args = parse_arguments(argv)
-
-    try:
-        # Load additional config files here, e.g., from a path given via args.
-        # Alternatively, set sane defaults if configuration is missing.
-        # settings = load_settings(args)
-        # loading settings will depend on the commands
-        settings = {}
-        return cmd_switch(args, settings)
-
-    except KeyboardInterrupt:
-        print('Aborted manually.', file=sys.stderr)
-        return 1
-
-    except Exception as err:
-        # In real code the `except` would probably be less broad.
-        # Turn exceptions into appropriate logs and/or console output.
-
-        print('An unhandled exception crashed the application!', err)
-
-        # Non-zero return code to signal error.
-        # It can, of course, be more fine-grained than this general code.
-        return 1
