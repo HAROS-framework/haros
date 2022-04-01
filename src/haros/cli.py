@@ -18,9 +18,12 @@ Some of the structure of this file came from this StackExchange question:
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Final, List, Optional
 
 import argparse
+import logging
+import logging.config
+from pathlib import Path
 import sys
 
 from haros import __version__ as current_version
@@ -33,9 +36,16 @@ from haros.internal.settings import load as load_settings, defaults as default_s
 ###############################################################################
 
 
+logger: Final[logging.Logger] = logging.getLogger(__name__)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     args = parse_arguments(argv)
     cmd = args['cmd']
+
+    logger.info('test info without config')
+    logger.warning('test warning without config')
+    logger.error('test error without config')
 
     # shortcut commands ------------------------------------
     if cmd == 'init':
@@ -45,17 +55,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         homepath = home.find()
         settings = load_settings(homepath)
-        # TODO logging; see
-        # https://stackoverflow.com/questions/13733552/logger-configuration-to-log-to-file-and-print-to-stdout?rq=1
+        _setup_logging(homepath, settings)
+        logger.info('Logging configured.')
     except KeyboardInterrupt:
         print('Aborted manually.', file=sys.stderr)
         return 1
     except Exception as err:
-        print('Unhandled exception during setup.', err)
+        print('Unhandled exception during setup.', err, file=sys.stderr)
         return 1
 
+    logger.info('Setup phase finished.')
+    logger.info(f'Running {cmd} command.')
     # main phase -------------------------------------------
     try:
+        logger.warning('Test warning message.')
         if cmd == 'echo-args':
             print(f'Arguments: {args}')
             print(f'Settings: {settings}')
@@ -68,16 +81,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif cmd == 'analysis':
             pass
     except KeyboardInterrupt:
-        print('Aborted manually.', file=sys.stderr)
+        logger.error('Aborted manually.')
         return 1
     except Exception as err:
-        # In real code the `except` would probably be less broad.
-        # Turn exceptions into appropriate logs and/or console output.
-
-        print('An unhandled exception crashed the application!', err)
-
-        # Non-zero return code to signal error.
-        # It can, of course, be more fine-grained than this general code.
+        logger.exception('An unhandled exception crashed the application!', err)
         return 1
 
     print(f'[HAROS] Command {cmd} executed successfully.')
@@ -85,7 +92,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 
 ###############################################################################
-# Argument Parsing
+# Argument Parser
 ###############################################################################
 
 
@@ -123,3 +130,17 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
 
     args = parser.parse_args(args=argv)
     return vars(args)
+
+
+###############################################################################
+# Logging Configuration
+###############################################################################
+
+def _setup_logging(homepath: Path, settings: Dict[str, Any]) -> None:
+    config = settings['logging']
+    config['disable_existing_loggers'] = False
+    filename = config['handlers']['logfile']['filename']
+    path = homepath / 'logs' / filename
+    path = path.resolve()
+    config['handlers']['logfile']['filename'] = str(path)
+    logging.config.dictConfig(config)

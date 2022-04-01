@@ -18,11 +18,31 @@ SETTINGS_FILE: Final[str] = 'config.yaml'
 
 DEFAULT_SETTINGS: Final[str] = r"""%YAML 1.1
 ---
-logs:
-    # level: info | warning | error
-    level: warning
-    max_files: 10
-    max_size_kb: 10000
+logging:
+    # follows Python's Dictionary configuration schema
+    # https://docs.python.org/3.8/library/logging.config.html#dictionary-schema-details
+    version: 1
+    formatters:
+        screenFormat:
+            format: '[HAROS - %(levelname)s]: %(message)s'
+        logfileFormat:
+            format: '%(levelname)s - %(name)s:%(lineno)d#%(funcName)s: %(message)s'
+    handlers:
+        console:
+            class: logging.StreamHandler
+            level: WARNING
+            formatter: screenFormat
+            stream: ext://sys.stdout
+        logfile:
+            class : logging.handlers.RotatingFileHandler
+            level: DEBUG
+            formatter: logfileFormat
+            filename: haros.log
+            maxBytes: 10485760  # 10 MB
+            backupCount: 5
+    root:
+        level: DEBUG
+        handlers: [console, logfile]
 environment: true
 plugins:
     dummy:
@@ -47,4 +67,4 @@ def load(haroshome: Path) -> Dict[str, Any]:
 
 
 def defaults() -> Dict[str, Any]:
-    return {}
+    return safe_load(DEFAULT_SETTINGS)
