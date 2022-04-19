@@ -29,6 +29,7 @@ import sys
 from haros import __version__ as current_version
 from haros.internal import home
 from haros.internal.cli import init
+from haros.internal.plugins import load as load_plugins
 from haros.internal.settings import load as load_settings, defaults as default_settings
 
 ###############################################################################
@@ -79,7 +80,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif cmd == 'project':
             pass
         elif cmd == 'analysis':
-            pass
+            plugins = load_plugins()
+            logger.warning(f'Running analysis with plugins {plugins}')
     except KeyboardInterrupt:
         logger.error('Aborted manually.')
         return 1
