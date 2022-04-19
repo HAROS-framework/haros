@@ -37,5 +37,5 @@ def load() -> List[Any]:
             except ImportError as e:
                 logger.exception(f'plugins: error {ep.name}', e)
     except KeyError:
-        logger.warning('plugins: none')
+        logger.warning('plugins: none to load')
     return plugins
