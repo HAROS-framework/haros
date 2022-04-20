@@ -23,8 +23,7 @@ from haros.internal import home
 
 def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
     args = parse_arguments(argv)
-    run(args, settings)
-    return 0  # success
+    return run(args, settings)
 
 
 ###############################################################################
@@ -32,10 +31,11 @@ def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Dict[str, Any]) -> None:
+def run(args: Dict[str, Any], settings: Dict[str, Any]) -> int:
     path = args['path'].resolve()
     print('Initializing HAROS home at: ' + str(path))
     home.make_at(path, overwrite=True)
+    return 0  # success
 
 
 ###############################################################################
