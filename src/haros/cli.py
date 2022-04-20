@@ -28,7 +28,7 @@ import sys
 
 from haros import __version__ as current_version
 from haros.internal import home
-from haros.internal.cli import init
+from haros.internal.cli import init, project
 from haros.internal.plugins import load as load_plugins
 from haros.internal.settings import load as load_settings, defaults as default_settings
 
@@ -68,6 +68,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     logger.info('Setup phase finished.')
     logger.info(f'Running {cmd} command.')
     # main phase -------------------------------------------
+    rcode = 0
     try:
         logger.warning('Test warning message.')
         if cmd == 'echo-args':
@@ -78,10 +79,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif cmd == 'cache':
             pass
         elif cmd == 'project':
-            pass
+            logger.info(f'running subprogram: project')
+            rcode = project.subprogram(args['args'], settings)
         elif cmd == 'analysis':
             plugins = load_plugins()
-            logger.warning(f'Running analysis with plugins {plugins}')
+            logger.info(f'Running analysis with plugins {plugins}')
     except KeyboardInterrupt:
         logger.error('Aborted manually.')
         return 1
@@ -89,8 +91,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         logger.exception('An unhandled exception crashed the application!', err)
         return 1
 
-    print(f'[HAROS] Command {cmd} executed successfully.')
-    return 0  # success
+    if rcode == 0:  # success
+        print(f'[HAROS] Command {cmd} executed successfully.')
+    return rcode
 
 
 ###############################################################################
