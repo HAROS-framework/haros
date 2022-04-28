@@ -47,53 +47,14 @@ def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
 
 
 def run(args: Dict[str, Any], settings: Dict[str, Any]) -> int:
-    action = args['action']
-    if action == 'new':
-        return action_new(args)
-    if action == 'build':
-        return action_build(args)
+    paths = args['paths']
+    workspaces, packages, to_find = process_paths(paths)
+    if not workspaces and not packages:
+        if not to_find:
+            logger.error('analysis: need at least one workspace or package')
+            return 1
     logger.error(f'project: {action}')
     return 1
-
-
-def action_new(args: Dict[str, Any]) -> int:
-    name = args['name']
-    path = args['path']
-    logger.info(f'project: new ({name}, {path})')
-    try:
-        path = path.resolve(strict=True)
-        if path.is_dir():
-            path = path / DEFAULT_FILE_NAME
-        if path.exists():
-            logger.error(f'project: "{path}" already exists')
-            return 1
-    except FileNotFoundError:
-        pass  # this is ok
-    try:
-        path.write_text(f'project: {name}', encoding='utf-8')
-    except FileNotFoundError:
-        logger.error(f'project: unable to write to "{path}"')
-        return 1
-    return 0  # success
-
-
-def action_build(args: Dict[str, Any]) -> int:
-    path = args['path']
-    logger.info(f'project: build ({path})')
-    try:
-        path = path.resolve(strict=True)
-        if path.is_dir():
-            path = path / DEFAULT_FILE_NAME
-            path = path.resolve(strict=True)
-            if not path.is_file():
-                logger.error(f'project: "{path}" is not a file')
-                return 1
-        text = path.read_text(encoding='utf-8')
-        logger.info(f'project: contents:\n{text}')
-    except FileNotFoundError:
-        logger.error(f'project: "{path}" is not a file')
-        return 1
-    return 0  # success
 
 
 ###############################################################################
@@ -144,4 +105,11 @@ def process_paths(paths: List[Path]) -> Tuple[List[Path], List[Path], List[str]]
                 to_find.append(name)
             else:
                 logger.error(f'analysis: neither a package nor a workspace: {str(path)}')
+    for name in to_find:
+
     return workspaces, packages, to_find
+
+
+###############################################################################
+# Helper Functions
+###############################################################################

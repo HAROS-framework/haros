@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict
+from typing import Any, Dict, Final, Iterable, List
 
+import os
 from pathlib import Path
 
 ###############################################################################
@@ -81,3 +82,56 @@ def is_ros_package(path: Path) -> bool:
 
     manifest = pkg / 'package.xml'
     return manifest.is_file()
+
+
+def get_package_path(name: str, *, workspaces: Iterable[Path] = None) -> Path:
+    """
+    Find the file system path for a given ROS package.
+    This essentially duplicates the behaviour of ament.
+    See https://github.com/ros2/ros2cli/tree/master/ros2pkg for the original.
+    """
+
+    # from ament_index_python import get_package_prefix
+    # from ament_index_python import get_packages_with_prefixes
+
+    workspaces = workspaces or ()
+    for ws in workspaces:
+        pass  # TODO
+
+    if not True:
+        _get_ament_prefix_path(name)
+
+    return
+
+
+###############################################################################
+# ROS Package Functions
+###############################################################################
+
+AMENT_PREFIX_PATH_ENV_VAR: Final[str] = 'AMENT_PREFIX_PATH'
+RESOURCE_INDEX_SUBFOLDER: Final[str] = 'share/ament_index/resource_index'
+
+
+def _get_ament_search_paths() -> List[Path]:
+    ament_prefix_path = os.environ.get(AMENT_PREFIX_PATH_ENV_VAR)
+    if not ament_prefix_path:
+        # raise EnvironmentError(AMENT_PREFIX_PATH_ENV_VAR)
+        return []
+    paths = ament_prefix_path.split(os.pathsep)
+    return list(map(Path, p for p in paths if p and os.path.exists(p)))
+
+
+def _get_ament_prefix_path(name: str) -> Path:
+    for prefix in _get_ament_search_paths():
+        path = prefix / RESOURCE_INDEX_SUBFOLDER / 'packages' / name
+        try:
+            path = path.resolve(strict=True)
+            if path.is_file():
+                return path
+        except FileNotFoundError:
+            pass
+    raise LookupError(f'package: {name}')
+
+
+def crawl_workspace():
+    return
