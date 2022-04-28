@@ -48,3 +48,36 @@ def ensure_structure(path: Path, structure: Dict[str, Any]):
         elif isinstance(contents, dict):
             if not new_path.is_dir():
                 raise FileNotFoundError(str(new_path))
+
+
+def is_workspace(path: Path) -> bool:
+    """Check whether the given path is likely to be a ROS workspace."""
+
+    try:
+        ws = path.resolve(strict=True)
+    except FileNotFoundError:
+        return False
+
+    if not ws.is_dir():
+        return False
+
+    src = ws / 'src'
+    if not src.is_dir():
+        # build = ws / 'build'
+        return False  # this can be amended, it is only a best practice
+    return True
+
+
+def is_ros_package(path: Path) -> bool:
+    """Check whether the given path is likely to be a ROS package."""
+
+    try:
+        pkg = path.resolve(strict=True)
+    except FileNotFoundError:
+        return False
+
+    if not pkg.is_dir():
+        return False
+
+    manifest = pkg / 'package.xml'
+    return manifest.is_file()
