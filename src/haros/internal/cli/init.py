@@ -45,7 +45,7 @@ def run(args: Dict[str, Any], settings: Dict[str, Any]) -> int:
 
 def parse_arguments(argv: List[str]) -> Dict[str, Any]:
     msg = 'haros init'
-    parser = argparse.ArgumentParser(description=msg)
+    parser = argparse.ArgumentParser(prog='haros init', description=msg)
 
     parser.add_argument(
         'path',
