@@ -84,6 +84,41 @@ def is_ros_package(path: Path) -> bool:
     return manifest.is_file()
 
 
+def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
+    packages = {}
+    stack = [ws]
+    while stack:
+        path = stack.pop()
+        try:
+            path = path.resolve(strict=True)
+        except FileNotFoundError:
+            continue
+        if not path.is_dir():
+            continue
+        ignore = path / 'COLCON_IGNORE'
+        if ignore.is_file():
+            continue
+        ignore = path / 'AMENT_IGNORE'
+        if ignore.is_file():
+            continue
+        ignore = path / 'CATKIN_IGNORE'
+        if ignore.is_file():
+            continue
+        ignore = path / 'HAROS_IGNORE'
+        if ignore.is_file():
+            continue
+        manifest = path / 'package.xml'
+        if manifest.is_file():
+            name = path.name
+            if relative:
+                packages[name] = path.relative_to(ws)
+            else:
+                packages[name] = path
+        else:
+            stack.extend(path.iterdir())
+    return packages
+
+
 def get_package_path(name: str, *, workspaces: Iterable[Path] = None) -> Path:
     """
     Find the file system path for a given ROS package.
@@ -118,7 +153,7 @@ def _get_ament_search_paths() -> List[Path]:
         # raise EnvironmentError(AMENT_PREFIX_PATH_ENV_VAR)
         return []
     paths = ament_prefix_path.split(os.pathsep)
-    return list(map(Path, p for p in paths if p and os.path.exists(p)))
+    return list(map(Path, (p for p in paths if p and os.path.exists(p))))
 
 
 def _get_ament_prefix_path(name: str) -> Path:
@@ -131,7 +166,3 @@ def _get_ament_prefix_path(name: str) -> Path:
         except FileNotFoundError:
             pass
     raise LookupError(f'package: {name}')
-
-
-def crawl_workspace():
-    return

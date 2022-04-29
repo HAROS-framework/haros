@@ -9,14 +9,14 @@ Module that contains the command line sub-program.
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Tuple
+from typing import Any, Dict, Final, List
 
 import argparse
 import logging
 from pathlib import Path
 import re
 
-from haros.internal.fsutil import is_ros_package, is_workspace
+from haros.internal.fsutil import crawl_workspace, is_ros_package, is_workspace
 
 ###############################################################################
 # Constants
@@ -48,13 +48,16 @@ def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
 
 def run(args: Dict[str, Any], settings: Dict[str, Any]) -> int:
     paths = args['paths']
-    workspaces, packages, to_find = process_paths(paths)
-    if not workspaces and not packages:
-        if not to_find:
-            logger.error('analysis: need at least one workspace or package')
-            return 1
-    logger.error(f'project: {action}')
-    return 1
+    if args['packages']:
+        logger.error('analysis: discovery mode not yet supported')
+        return 1
+    packages = process_paths(paths)
+    if not packages:
+        logger.error('analysis: did not find any ROS packages')
+        return 1
+    logger.info(f'analysis: packages: {packages}')
+    print(f'analysis: packages: {packages}')
+    return 0
 
 
 ###############################################################################
@@ -71,14 +74,21 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
         nargs='*',
         default=[Path.cwd()],
         type=Path,
-        help='paths to workspaces or packages [default: "."]'
+        help='paths to workspaces or packages [default: "."]',
     )
 
     parser.add_argument(
         '-p',
-        '--project'
+        '--packages',
+        action='store_true',
+        help=f'process args as package names',
+    )
+
+    parser.add_argument(
+        '-s',
+        '--store',
         default=DEFAULT_PROJECT,
-        help=f'paths to workspaces or packages [default: {DEFAULT_PROJECT}]'
+        help=f'database name [default: {DEFAULT_PROJECT}]',
     )
 
     args = parser.parse_args(args=argv)
@@ -90,24 +100,22 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
 ###############################################################################
 
 
-def process_paths(paths: List[Path]) -> Tuple[List[Path], List[Path], List[str]]:
+def process_paths(paths: List[Path]) -> Dict[str, Path]:
     workspaces = []
     packages = []
-    to_find = []
     for path in paths:
         if is_ros_package(path):
             packages.append(path)
-        elif is_workspace(path):
-            workspaces.append(path)
         else:
-            name = path.name
-            if RE_PACKAGE_NAME.fullmatch(name):
-                to_find.append(name)
-            else:
-                logger.error(f'analysis: neither a package nor a workspace: {str(path)}')
-    for name in to_find:
-
-    return workspaces, packages, to_find
+            workspaces.append(path)
+            if not is_workspace(path):
+                logger.warning(f'analysis: workspace without "src" directory: {str(path)}')
+    index = {}
+    for ws in workspaces:
+        index.update(crawl_workspace(ws))
+    for path in packages:
+        index[path.name] = path
+    return index
 
 
 ###############################################################################
