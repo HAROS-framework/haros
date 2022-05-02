@@ -49,7 +49,7 @@ def subprogram(argv: List[str], settings: Settings) -> int:
 
 
 def run(args: Dict[str, Any], settings: Settings) -> int:
-    plugins = load_plugins(settings.plugins.asdict())
+    plugins = load_plugins(settings.home, settings.plugins)
     paths = args['paths']
     if args['packages']:
         logger.error('analysis: discovery mode not yet supported')
@@ -59,7 +59,11 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error('analysis: did not find any ROS packages')
         return 1
     logger.info(f'analysis: packages: {packages}')
-    print(f'analysis: packages: {packages}')
+    for plugin in plugins:
+        plugin.on_analysis_begin()
+    print(f'analysis: packages: {list(packages.keys())}')
+    for plugin in plugins:
+        plugin.on_analysis_end()
     return 0
 
 

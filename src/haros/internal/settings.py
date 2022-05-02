@@ -133,14 +133,6 @@ class LoggingSettings:
         return attr.asdict(self)
 
 
-@attr.s(auto_attribs=True, slots=False, frozen=False)
-class PluginSettings:
-    dummy: Dict[str, Any] = attr.Factory(_default_plugin_settings)
-
-    def asdict(self) -> Dict[str, Any]:
-        return attr.asdict(self)
-
-
 @attr.s(auto_attribs=True, slots=True, frozen=False)
 class ParsingSettings:
     cpp: Dict[str, str] = attr.Factory(_default_parsing_cpp)
@@ -151,9 +143,10 @@ class ParsingSettings:
 
 @attr.s(auto_attribs=True, slots=True, frozen=False)
 class Settings:
+    home: Path
     environment: EnvironmentSettings = attr.Factory(EnvironmentSettings)
     logging: LoggingSettings = attr.Factory(LoggingSettings)
-    plugins: PluginSettings = attr.Factory(PluginSettings)
+    plugins: Dict[str, Dict[str, Any]] = attr.Factory(dict)
     parsing: ParsingSettings = attr.Factory(ParsingSettings)
 
     def asdict(self) -> Dict[str, Any]:
@@ -170,15 +163,17 @@ def load_as_dict(haroshome: Path) -> Dict[str, Any]:
     path = path.resolve()
     with path.open(mode='r', encoding='utf-8') as f:
         settings = safe_load(f)
+    settings['home'] = haroshome
     return settings
 
 
 def load(haroshome: Path) -> Settings:
     settings = load_as_dict(haroshome)
     return Settings(
+        home=haroshome,
         environment=EnvironmentSettings(**settings['environment']),
         logging=LoggingSettings(**settings['logging']),
-        plugins=PluginSettings(**settings['plugins']),
+        plugins=settings['plugins'],
         parsing=ParsingSettings(**settings['parsing']),
     )
 
@@ -189,8 +184,9 @@ def defaults_as_dict() -> Dict[str, Any]:
 
 def defaults() -> Dict[str, Any]:
     return Settings(
+        home=Path.cwd(),  # FIXME
         environment=EnvironmentSettings(**DEFAULT_SETTINGS_ENVIRONMENT),
         logging=LoggingSettings(**DEFAULT_SETTINGS_LOGGING),
-        plugins=PluginSettings(**DEFAULT_SETTINGS_PLUGINS),
+        plugins=dict(DEFAULT_SETTINGS_PLUGINS),
         parsing=ParsingSettings(**DEFAULT_SETTINGS_PARSING),
     )
