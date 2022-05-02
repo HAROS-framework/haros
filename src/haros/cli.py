@@ -29,7 +29,6 @@ import sys
 from haros import __version__ as current_version
 from haros.internal import home
 from haros.internal.cli import analysis, init, project
-from haros.internal.plugins import load as load_plugins
 from haros.internal.settings import load as load_settings, defaults as default_settings
 
 ###############################################################################
@@ -82,8 +81,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             logger.info(f'running subprogram: project')
             rcode = project.subprogram(args['args'], settings)
         elif cmd == 'analysis':
-            plugins = load_plugins()
-            logger.info(f'Running analysis with plugins {plugins}')
+            logger.info(f'running subprogram: analysis')
             analysis.subprogram(args['args'], settings)
     except KeyboardInterrupt:
         logger.error('Aborted manually.')

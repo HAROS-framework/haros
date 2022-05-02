@@ -17,6 +17,8 @@ from pathlib import Path
 import re
 
 from haros.internal.fsutil import crawl_workspace, is_ros_package, is_workspace
+from haros.internal.plugins import load as load_plugins
+from haros.internal.settings import Settings
 
 ###############################################################################
 # Constants
@@ -36,7 +38,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
+def subprogram(argv: List[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -46,7 +48,8 @@ def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Dict[str, Any]) -> int:
+def run(args: Dict[str, Any], settings: Settings) -> int:
+    plugins = load_plugins(settings.plugins.asdict())
     paths = args['paths']
     if args['packages']:
         logger.error('analysis: discovery mode not yet supported')

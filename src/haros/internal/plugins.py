@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, List
+from typing import Any, Dict, Final, List
 
 from importlib import metadata
 import logging
@@ -23,7 +23,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def load() -> List[Any]:
+def load(settings: Dict[str, Any]) -> List[Any]:
     logger.info(f'plugins: searching {ENTRY_POINT}')
     plugins = []
     try:
@@ -32,10 +32,24 @@ def load() -> List[Any]:
             logger.info(f'plugins: found {ep.name} ({ep.value})')
             try:
                 plugin = ep.load()
+                logger.info(f'plugins: imported {ep.name}')
+                try:
+                    plugin.haros_setup()
+                setup = getattr(plugin, 'haros_setup', _noop)
+                setup()
                 plugins.append(plugin)
                 logger.info(f'plugins: loaded {ep.name}')
-            except ImportError as e:
+            except Exception as e:
                 logger.exception(f'plugins: error {ep.name}', e)
     except KeyError:
         logger.warning('plugins: none to load')
     return plugins
+
+
+###############################################################################
+# Helper Functions
+###############################################################################
+
+
+def _noop():
+    pass

@@ -15,13 +15,14 @@ import argparse
 from pathlib import Path
 
 from haros.internal import home
+from haros.internal.settings import Settings
 
 ###############################################################################
 # Entry Point
 ###############################################################################
 
 
-def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
+def subprogram(argv: List[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -31,7 +32,7 @@ def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Dict[str, Any]) -> int:
+def run(args: Dict[str, Any], settings: Settings) -> int:
     path = args['path'].resolve()
     print('Initializing HAROS home at: ' + str(path))
     home.make_at(path, overwrite=True)

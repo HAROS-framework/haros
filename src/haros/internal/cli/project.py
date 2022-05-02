@@ -15,6 +15,8 @@ import argparse
 import logging
 from pathlib import Path
 
+from haros.internal.settings import Settings
+
 ###############################################################################
 # Constants
 ###############################################################################
@@ -29,7 +31,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
+def subprogram(argv: List[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -39,7 +41,7 @@ def subprogram(argv: List[str], settings: Dict[str, Any]) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Dict[str, Any]) -> int:
+def run(args: Dict[str, Any], settings: Settings) -> int:
     action = args['action']
     if action == 'new':
         return action_new(args)
