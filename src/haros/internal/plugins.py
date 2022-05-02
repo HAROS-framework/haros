@@ -33,10 +33,8 @@ def load(settings: Dict[str, Any]) -> List[Any]:
             try:
                 plugin = ep.load()
                 logger.info(f'plugins: imported {ep.name}')
-                try:
-                    plugin.haros_setup()
                 setup = getattr(plugin, 'haros_setup', _noop)
-                setup()
+                setup(**settings.get(ep.name, {}))
                 plugins.append(plugin)
                 logger.info(f'plugins: loaded {ep.name}')
             except Exception as e:
@@ -51,5 +49,5 @@ def load(settings: Dict[str, Any]) -> List[Any]:
 ###############################################################################
 
 
-def _noop():
+def _noop(*args, **kwargs):
     pass
