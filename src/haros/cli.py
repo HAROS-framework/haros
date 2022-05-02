@@ -29,7 +29,11 @@ import sys
 from haros import __version__ as current_version
 from haros.internal import home
 from haros.internal.cli import analysis, init, project
-from haros.internal.settings import load as load_settings, defaults as default_settings
+from haros.internal.settings import (
+    defaults as default_settings,
+    load as load_settings,
+    Settings,
+)
 
 ###############################################################################
 # Entry Point
@@ -140,8 +144,8 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
 # Logging Configuration
 ###############################################################################
 
-def _setup_logging(homepath: Path, settings: Dict[str, Any]) -> None:
-    config = settings['logging']
+def _setup_logging(homepath: Path, settings: Settings) -> None:
+    config = settings.logging.asdict()
     config['disable_existing_loggers'] = False
     filename = config['handlers']['logfile']['filename']
     path = homepath / 'logs' / filename

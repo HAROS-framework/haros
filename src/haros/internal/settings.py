@@ -9,9 +9,9 @@ from typing import Any, Dict, Final
 
 from pathlib import Path
 try:
-    from yaml import CDumper as Dumper, CLoader as Loader
+    from yaml import CDumper as Dumper
 except ImportError:
-    from yaml import Dumper, Loader
+    from yaml import Dumper
 from yaml import dump, safe_load
 
 import attr
@@ -91,7 +91,7 @@ def _default_parsing_cpp() -> Dict[str, Any]:
     return { 'parser': 'clang' }
 
 
-DEFAULT_SETTIGNS_PARSING: Final[Dict[str, Any]] = {
+DEFAULT_SETTINGS_PARSING: Final[Dict[str, Any]] = {
     'cpp': _default_parsing_cpp(),
 }
 
@@ -99,7 +99,7 @@ DEFAULT_SETTINGS: Final[Dict[str, Any]] = {
     'logging': DEFAULT_SETTINGS_LOGGING,
     'environment': DEFAULT_SETTINGS_ENVIRONMENT,
     'plugins': DEFAULT_SETTINGS_PLUGINS,
-    'parsing': DEFAULT_SETTIGNS_PARSING,
+    'parsing': DEFAULT_SETTINGS_PARSING,
 }
 
 YAML_DEFAULT_SETTINGS: Final[str] = r"""%YAML 1.1
@@ -169,12 +169,18 @@ def load_as_dict(haroshome: Path) -> Dict[str, Any]:
     path = haroshome / SETTINGS_FILE
     path = path.resolve()
     with path.open(mode='r', encoding='utf-8') as f:
-        settings = safe_load(f, Loader=Loader)
+        settings = safe_load(f)
     return settings
 
 
 def load(haroshome: Path) -> Settings:
-    return Settings(**load_as_dict(haroshome))
+    settings = load_as_dict(haroshome)
+    return Settings(
+        environment=EnvironmentSettings(**settings['environment']),
+        logging=LoggingSettings(**settings['logging']),
+        plugins=PluginSettings(**settings['plugins']),
+        parsing=ParsingSettings(**settings['parsing']),
+    )
 
 
 def defaults_as_dict() -> Dict[str, Any]:
@@ -182,4 +188,9 @@ def defaults_as_dict() -> Dict[str, Any]:
 
 
 def defaults() -> Dict[str, Any]:
-    return Settings(**DEFAULT_SETTINGS)
+    return Settings(
+        environment=EnvironmentSettings(**DEFAULT_SETTINGS_ENVIRONMENT),
+        logging=LoggingSettings(**DEFAULT_SETTINGS_LOGGING),
+        plugins=PluginSettings(**DEFAULT_SETTINGS_PLUGINS),
+        parsing=ParsingSettings(**DEFAULT_SETTINGS_PARSING),
+    )
