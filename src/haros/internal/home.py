@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 
 from haros.internal.fsutil import ensure_structure, generate_dir
-from haros.internal.settings import SETTINGS_FILE, DEFAULT_SETTINGS
+from haros.internal.settings import SETTINGS_FILE, YAML_DEFAULT_SETTINGS
 
 ###############################################################################
 # Constants
@@ -26,7 +26,7 @@ DIR_STRUCTURE: Final[Dict[str, Any]] = {
     'data': {},
     'cache': {},
     'output': {},
-    SETTINGS_FILE: DEFAULT_SETTINGS,
+    SETTINGS_FILE: YAML_DEFAULT_SETTINGS,
 }
 
 DEFAULT_PATH: Final[Path] = Path.home() / DIR_NAME
