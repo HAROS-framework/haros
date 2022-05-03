@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, List
+from typing import Any, Callable, Dict, Final, List, Tuple
 
 from importlib import metadata
 import importlib.util
@@ -21,6 +21,12 @@ from haros.internal.settings import Settings
 ###############################################################################
 
 ENTRY_POINT: Final[str] = 'haros.plugins'
+
+HOOKS: Final[Tuple] = (
+    # 'setup',
+    'on_analysis_begin',
+    'on_analysis_end',
+)
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
@@ -39,31 +45,51 @@ class HarosPluginInterface:
     # Attributes
     name: str
     module: Any
-    # Hooks
-    setup: Callable = _noop
-    on_analysis_begin: Callable = _noop
-    on_analysis_end: Callable = _noop
+    args: Dict[str, Any] = attr.Factory(dict)
+    hooks: Dict[str, Callable] = attr.Factory(dict)
+
+    def __attrs_post_init__(self):
+        for name in HOOKS:
+            fn = self.hooks.get(name)
+            if fn is None:
+                self.hooks[name] = getattr(self.module, f'haros_{name}', _noop)
+
+    def setup(self):
+        setup = getattr(self.module, 'haros_setup', _noop)
+        return setup(**self.args)
 
 
-    @classmethod
-    def from_module(cls, name: str, module: Any, settings: Dict[str, Any]):
-        args = settings.get('args', {})
-        setup = getattr(module, 'haros_setup', _noop)
-        return cls(
-            name,
-            module,
-            setup=lambda: setup(**args),
-            on_analysis_begin=getattr(module, 'haros_on_analysis_begin', _noop),
-            on_analysis_end=getattr(module, 'haros_on_analysis_end', _noop),
-        )
+@attr.s(auto_attribs=True, slots=False, frozen=True)
+class PluginManager:
+    plugins: List[HarosPluginInterface] = attr.Factory(list)
+    # plugin name -> error message
+    # this serves to disable a plugin after it crashes
+    errors: Dict[str, str] = attr.Factory(dict)
+
+    def __attrs_post_init__(self):
+        for name in HOOKS:
+            object.__setattr__(self, name, self._hook(name))
+
+    def _hook(self, name):
+        def hook(*args, **kwargs):
+            for plugin in self.plugins:
+                if plugin.name in self.errors:
+                    logger.info(f'plugins: skip haros_{name} for {plugin.name} due to error')
+                    continue
+                try:
+                    plugin.hooks[name](*args, **kwargs)
+                except Exception as e:
+                    logger.error(f'plugins: error on {plugin.name}.haros_{name}:\n{e}')
+                    self.errors[plugin.name] = str(e)
+        return hook
 
 
-def load(haroshome: Path, settings: Dict[str, Dict[str, Any]]) -> List[HarosPluginInterface]:
+def load(haroshome: Path, settings: Dict[str, Dict[str, Any]]) -> PluginManager:
     plugins = _load_from_entrypoints(settings)
     plugins.extend(_load_from_haroshome(haroshome, settings))
     if not plugins:
         logger.warning('plugins: none to load')
-    return plugins
+    return PluginManager(plugins=plugins)
 
 
 ###############################################################################
@@ -85,7 +111,8 @@ def _load_from_entrypoints(settings: Dict[str, Dict[str, Any]]) -> List[HarosPlu
             try:
                 module = ep.load()
                 logger.info(f'plugins: imported {ep.name}')
-                plugin = HarosPluginInterface.from_module(ep.name, module, config)
+                args = config.get('args', {})
+                plugin = HarosPluginInterface(ep.name, module, args=args)
                 plugin.setup()
                 plugins.append(plugin)
                 logger.info(f'plugins: loaded {ep.name}')
@@ -123,7 +150,8 @@ def _load_from_haroshome(
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             logger.info(f'plugins: imported {name}')
-            plugin = HarosPluginInterface.from_module(name, module, config)
+            args = config.get('args', {})
+            plugin = HarosPluginInterface(name, module, args=args)
             plugin.setup()
             plugins.append(plugin)
             logger.info(f'plugins: loaded {name}')
