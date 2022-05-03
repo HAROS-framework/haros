@@ -77,8 +77,9 @@ DEFAULT_SETTINGS_ENVIRONMENT: Final[Dict[str, Any]] = {
 
 def _default_plugin_settings() -> Dict[str, Any]:
     return {
-        'enabled': False,
-        'args': {},  # keyword arguments provided at load/setup
+        'enabled': True,
+        'setup': {},  # keyword arguments provided at load/setup
+        'teardown': {},  # keyword arguments provided at teardown
     }
 
 

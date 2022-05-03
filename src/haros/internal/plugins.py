@@ -45,7 +45,7 @@ class HarosPluginInterface:
     # Attributes
     name: str
     module: Any
-    args: Dict[str, Any] = attr.Factory(dict)
+    settings: Dict[str, Any] = attr.Factory(dict)
     hooks: Dict[str, Callable] = attr.Factory(dict)
 
     def __attrs_post_init__(self):
@@ -56,15 +56,21 @@ class HarosPluginInterface:
 
     def setup(self):
         setup = getattr(self.module, 'haros_setup', _noop)
-        return setup(**self.args)
+        args = self.settings.get('setup', {})
+        return setup(**args)
+
+    def teardown(self):
+        teardown = getattr(self.module, 'haros_teardown', _noop)
+        args = self.settings.get('teardown', {})
+        return teardown(**args)
 
 
 @attr.s(auto_attribs=True, slots=False, frozen=True)
 class PluginManager:
     plugins: List[HarosPluginInterface] = attr.Factory(list)
-    # plugin name -> error message
+    # plugin name -> error
     # this serves to disable a plugin after it crashes
-    errors: Dict[str, str] = attr.Factory(dict)
+    errors: Dict[str, Exception] = attr.Factory(dict)
 
     def __attrs_post_init__(self):
         for name in HOOKS:
@@ -80,7 +86,11 @@ class PluginManager:
                     plugin.hooks[name](*args, **kwargs)
                 except Exception as e:
                     logger.error(f'plugins: error on {plugin.name}.haros_{name}:\n{e}')
-                    self.errors[plugin.name] = str(e)
+                    self.errors[plugin.name] = e
+                    try:
+                        plugin.teardown()
+                    except Exception:
+                        pass
         return hook
 
 
@@ -104,15 +114,14 @@ def _load_from_entrypoints(settings: Dict[str, Dict[str, Any]]) -> List[HarosPlu
         eps = metadata.entry_points()[ENTRY_POINT]
         for ep in eps:
             logger.info(f'plugins: found {ep.name} ({ep.value})')
-            config = settings.get(ep.name, {})
+            config = settings.get(ep.name, {'enabled': True})
             if config['enabled'] is False:
                 logger.info(f'plugins: skipping {ep.name} (disabled)')
                 continue
             try:
                 module = ep.load()
                 logger.info(f'plugins: imported {ep.name}')
-                args = config.get('args', {})
-                plugin = HarosPluginInterface(ep.name, module, args=args)
+                plugin = HarosPluginInterface(ep.name, module, settings=config)
                 plugin.setup()
                 plugins.append(plugin)
                 logger.info(f'plugins: loaded {ep.name}')
@@ -141,7 +150,7 @@ def _load_from_haroshome(
             continue
         name = path.stem
         logger.info(f'plugins: found {name} ({path})')
-        config = settings.get(name, {})
+        config = settings.get(name, {'enabled': True})
         if config['enabled'] is False:
             logger.info(f'plugins: skipping {name} (disabled)')
             continue
@@ -150,8 +159,7 @@ def _load_from_haroshome(
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             logger.info(f'plugins: imported {name}')
-            args = config.get('args', {})
-            plugin = HarosPluginInterface(name, module, args=args)
+            plugin = HarosPluginInterface(name, module, settings=config)
             plugin.setup()
             plugins.append(plugin)
             logger.info(f'plugins: loaded {name}')
