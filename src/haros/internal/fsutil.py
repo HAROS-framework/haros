@@ -129,9 +129,17 @@ def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
     return packages
 
 
-def get_package_path(name: str, *, workspaces: Iterable[Path] = None) -> Path:
+###############################################################################
+# ROS Package Functions
+###############################################################################
+
+AMENT_PREFIX_PATH_ENV_VAR: Final[str] = 'AMENT_PREFIX_PATH'
+RESOURCE_INDEX_SUBFOLDER: Final[str] = 'share/ament_index/resource_index'
+
+
+def _get_installed_package_path(name: str) -> Path:
     """
-    Find the file system path for a given ROS package.
+    Find the file system path for a given ROS package's 'share' directory.
     This essentially duplicates the behaviour of ament.
     See https://github.com/ros2/ros2cli/tree/master/ros2pkg for the original.
     """
@@ -139,22 +147,8 @@ def get_package_path(name: str, *, workspaces: Iterable[Path] = None) -> Path:
     # from ament_index_python import get_package_prefix
     # from ament_index_python import get_packages_with_prefixes
 
-    workspaces = workspaces or ()
-    for ws in workspaces:
-        pass  # TODO
-
-    if not True:
-        _get_ament_prefix_path(name)
-
-    return
-
-
-###############################################################################
-# ROS Package Functions
-###############################################################################
-
-AMENT_PREFIX_PATH_ENV_VAR: Final[str] = 'AMENT_PREFIX_PATH'
-RESOURCE_INDEX_SUBFOLDER: Final[str] = 'share/ament_index/resource_index'
+    prefix = _get_ament_prefix_path(name)  # raise LookupError
+    return prefix / 'share' / name
 
 
 def _get_ament_search_paths() -> List[Path]:
@@ -172,7 +166,7 @@ def _get_ament_prefix_path(name: str) -> Path:
         try:
             path = path.resolve(strict=True)
             if path.is_file():
-                return path
+                return prefix
         except FileNotFoundError:
             pass
     raise LookupError(f'package: {name}')
