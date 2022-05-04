@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List
+from typing import Any, Dict, Final, Iterable, List, Union
 
 import os
 from pathlib import Path
@@ -15,6 +15,8 @@ from pathlib import Path
 ###############################################################################
 
 EXCLUDED_DIRS: Final = ('doc', 'cmake', '__pycache__')
+
+AnyPath: Final = Union[str, Path]
 
 ###############################################################################
 # Interface
@@ -127,6 +129,28 @@ def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
         else:
             stack.extend(path.iterdir())
     return packages
+
+
+###############################################################################
+# Storage Data Management
+###############################################################################
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class StorageManager:
+    workspaces: List[Path] = attr.Factory(list)
+    packages: Dict[str, Path] = attr.Factory(dict)
+
+    def crawl(self):
+        for ws in self.workspaces:
+            packages = crawl_workspace(ws, relative=False)
+            self.packages.update(packages)
+
+    def get_file_path(self, pkg: str, relative_path: AnyPath) -> Path:
+        # raise KeyError
+        path = self.packages[pkg] / Path(relative_path)
+        # raise FileNotFoundError
+        return path.resolve(strict=True)
 
 
 ###############################################################################
