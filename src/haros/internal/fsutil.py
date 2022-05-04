@@ -95,6 +95,8 @@ def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
             continue
         if not path.is_dir():
             continue
+        if path.name.startswith('.'):
+            continue
         ignore = path / 'COLCON_IGNORE'
         if ignore.is_file():
             continue
