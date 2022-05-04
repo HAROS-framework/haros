@@ -61,7 +61,6 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     logger.info(f'analysis: packages: {storage.packages}')
     plugins.on_analysis_begin()
     print(f'analysis: packages: {list(storage.packages.keys())}')
-
     plugins.on_analysis_end()
     return 0
 

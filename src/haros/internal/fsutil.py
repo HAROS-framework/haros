@@ -92,6 +92,27 @@ def is_ros_package(path: Path) -> bool:
     return manifest.is_file()
 
 
+def is_ignored_dir(path: Path) -> bool:
+    assert path.is_dir(), 'not a directory: ' + str(path)
+    if path.name.startswith('.'):
+        return True
+    if path.name in EXCLUDED_DIRS:
+        return True
+    ignore = path / 'COLCON_IGNORE'
+    if ignore.is_file():
+        return True
+    ignore = path / 'AMENT_IGNORE'
+    if ignore.is_file():
+        return True
+    ignore = path / 'CATKIN_IGNORE'
+    if ignore.is_file():
+        return True
+    ignore = path / 'HAROS_IGNORE'
+    if ignore.is_file():
+        return True
+    return False
+
+
 def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
     packages = {}
     stack = [ws]
@@ -103,21 +124,7 @@ def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
             continue
         if not path.is_dir():
             continue
-        if path.name.startswith('.'):
-            continue
-        if path.name in EXCLUDED_DIRS:
-            continue
-        ignore = path / 'COLCON_IGNORE'
-        if ignore.is_file():
-            continue
-        ignore = path / 'AMENT_IGNORE'
-        if ignore.is_file():
-            continue
-        ignore = path / 'CATKIN_IGNORE'
-        if ignore.is_file():
-            continue
-        ignore = path / 'HAROS_IGNORE'
-        if ignore.is_file():
+        if is_ignored_dir(path):
             continue
         manifest = path / 'package.xml'
         if manifest.is_file():
@@ -129,6 +136,27 @@ def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
         else:
             stack.extend(path.iterdir())
     return packages
+
+
+def crawl_package(pkg: Path) -> List[Path]:
+    """Returns a list of file paths found within the given package."""
+    if is_ignored_dir(pkg):
+        return []
+    files = []
+    stack = list(pkg.iterdir())
+    while stack:
+        path = stack.pop()
+        try:
+            path = path.resolve(strict=True)
+        except FileNotFoundError:
+            continue
+        if path.is_dir():
+            if is_ignored_dir(path):
+                continue
+            stack.extend(path.iterdir())
+        elif path.is_file():
+            files.append(path.relative_to(pkg))
+    return files
 
 
 ###############################################################################
