@@ -11,6 +11,12 @@ import os
 from pathlib import Path
 
 ###############################################################################
+# Constants
+###############################################################################
+
+EXCLUDED_DIRS: Final = ('doc', 'cmake', '__pycache__')
+
+###############################################################################
 # Interface
 ###############################################################################
 
@@ -96,6 +102,8 @@ def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
         if not path.is_dir():
             continue
         if path.name.startswith('.'):
+            continue
+        if path.name in EXCLUDED_DIRS:
             continue
         ignore = path / 'COLCON_IGNORE'
         if ignore.is_file():
