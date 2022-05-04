@@ -61,6 +61,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     logger.info(f'analysis: packages: {storage.packages}')
     plugins.on_analysis_begin()
     print(f'analysis: packages: {list(storage.packages.keys())}')
+
     plugins.on_analysis_end()
     return 0
 
@@ -90,10 +91,10 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
     )
 
     parser.add_argument(
-        '-s',
-        '--store',
+        '-n',
+        '--name',
         default=DEFAULT_PROJECT,
-        help=f'database name [default: {DEFAULT_PROJECT}]',
+        help=f'project name [default: {DEFAULT_PROJECT}]',
     )
 
     args = parser.parse_args(args=argv)

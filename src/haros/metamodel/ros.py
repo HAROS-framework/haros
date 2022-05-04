@@ -126,7 +126,7 @@ class RosAdvertiseCall:
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class File:
+class FileModel:
     # Parameters
     package: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
     path: str  # relative path within package (e.g. 'src/code.cpp')
@@ -157,7 +157,7 @@ class File:
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class Package:
+class PackageModel:
     # Parameters
     name: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
     # Defaults
@@ -178,7 +178,7 @@ class Package:
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class Node:
+class NodeModel:
     # Parameters
     package: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
     name: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
@@ -208,7 +208,7 @@ class Node:
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class Metamodel:
+class ProjectModel:
     name: str
     packages: Dict[str, Package] = attr.Factory(dict)
     files: Dict[str, File] = attr.Factory(dict)
