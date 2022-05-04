@@ -161,7 +161,6 @@ class Package:
     # Parameters
     name: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
     # Defaults
-    is_metapackage: bool = False
     files: List[str] = attr.Factory(list)
     nodes: List[str] = attr.Factory(list)
     # storage: StorageMetadata = attr.Factory(StorageMetadata)
