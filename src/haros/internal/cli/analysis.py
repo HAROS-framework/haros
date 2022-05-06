@@ -14,9 +14,9 @@ from typing import Any, Dict, Final, List
 import argparse
 import logging
 from pathlib import Path
-import re
 
-from haros.internal.fsutil import crawl_workspace, is_ros_package, is_workspace, StorageManager
+from haros.internal.fsutil import is_ros_package, is_workspace, StorageManager
+from haros.metamodel.builder.projects import build_from_package_paths
 from haros.internal.plugins import load as load_plugins
 from haros.internal.settings import Settings
 
@@ -25,8 +25,6 @@ from haros.internal.settings import Settings
 ###############################################################################
 
 DEFAULT_PROJECT: Final[str] = 'my-ros-project'
-
-RE_PACKAGE_NAME: Final[re.Pattern] = re.compile(r'([a-zA-Z][a-zA-Z0-9_]*)')
 
 DEFAULT_FILE_NAME: Final[str] = 'project.haros.yaml'
 DEFAULT_PATH: Final[Path] = Path.cwd() / DEFAULT_FILE_NAME
@@ -60,7 +58,11 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         return 1
     logger.info(f'analysis: packages: {storage.packages}')
     plugins.on_analysis_begin()
-    print(f'analysis: packages: {list(storage.packages.keys())}')
+    # print(f'analysis: packages: {list(storage.packages.keys())}')
+    model = build_from_package_paths(args['name'], storage.packages)
+    print('project:', model.name)
+    for package in model.packages.values():
+        print('  package:', package.name)
     plugins.on_analysis_end()
     return 0
 

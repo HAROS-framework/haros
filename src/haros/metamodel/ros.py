@@ -210,9 +210,9 @@ class NodeModel:
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class ProjectModel:
     name: str
-    packages: Dict[str, Package] = attr.Factory(dict)
-    files: Dict[str, File] = attr.Factory(dict)
-    nodes: Dict[str, Node] = attr.Factory(dict)
+    packages: Dict[str, PackageModel] = attr.Factory(dict)
+    files: Dict[str, FileModel] = attr.Factory(dict)
+    nodes: Dict[str, NodeModel] = attr.Factory(dict)
     # NOTE: still not sure whether to include storage here
     # storage: Dict[str, StorageMetadata] = attr.Factory(dict)
 

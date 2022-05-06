@@ -5,6 +5,8 @@
 # Imports
 ###############################################################################
 
+from typing import Final
+
 import logging
 from pathlib import Path
 

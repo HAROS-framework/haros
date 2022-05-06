@@ -5,12 +5,12 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Iterable
+from typing import Final, Iterable, Mapping
 
 import logging
 from pathlib import Path
 
-from haros.internal.fsutil import is_ros_package, is_workspace, StorageManager
+from haros.internal.fsutil import crawl_workspace
 from haros.metamodel.builder.packages import build_from_path as build_package
 from haros.metamodel.ros import ProjectModel
 
@@ -24,25 +24,15 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 # Interface
 ###############################################################################
 
-def build_from_paths(name: str, paths: Iterable[Path]) -> ProjectModel:
-    storage = StorageManager()
-    adhoc = []
-    for path in paths:
-        if is_ros_package(path):
-            adhoc.append(path)
-        else:
-            storage.workspaces.append(path)
-            if not is_workspace(path):
-                logger.warning(f'builder: workspace without "src" directory: {str(path)}')
-    storage.crawl()
-    for path in adhoc:
-        storage.packages[path.name] = path
-    return build(name, storage)
+
+def build_from_ws(name: str, ws: Path) -> ProjectModel:
+    packages = crawl_workspace(ws)
+    return build_from_package_paths(name, packages)
 
 
-def build(name: str, storage: StorageManager) -> ProjectModel:
+def build_from_package_paths(name: str, packages: Mapping[str, Path]) -> ProjectModel:
     model = ProjectModel(name)
-    _build_packages_and_files(model, storage)
+    _build_packages_and_files(model, packages)
     return model
 
 
@@ -51,8 +41,8 @@ def build(name: str, storage: StorageManager) -> ProjectModel:
 ###############################################################################
 
 
-def _build_packages_and_files(model: ProjectModel, storage: StorageManager):
-    for name, path in storage.packages.items():
+def _build_packages_and_files(model: ProjectModel, packages: Mapping[str, Path]):
+    for name, path in packages.items():
         try:
             package = build_package(path)
             assert package.name == name, f'(package.name) {package.name} != {name} (name)'
