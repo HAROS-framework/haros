@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 
 from haros.internal.fsutil import crawl_workspace
+from haros.metamodel.builder.files import build_from_package as build_file
 from haros.metamodel.builder.packages import build_from_path as build_package
 from haros.metamodel.ros import ProjectModel
 
@@ -48,6 +49,7 @@ def _build_packages_and_files(model: ProjectModel, packages: Mapping[str, Path])
             assert package.name == name, f'(package.name) {package.name} != {name} (name)'
         except ValueError as e:
             logger.warning(f'builder: the package {name} will be ignored:\n{e}')
-        model.packages[name] = package
+        model.packages[package.uid] = package
         for fp in package.files:
-            pass  # TODO: build file
+            file = build_file(name, fp, path)
+            model.files[file.uid] = file

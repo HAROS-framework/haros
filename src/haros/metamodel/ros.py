@@ -24,6 +24,7 @@ RE_NAME: Final = r'(^[a-zA-Z][a-zA-Z0-9_]*$)'
 @enum.unique
 class Languages(enum.Enum):
     TEXT = 'Text'
+    BINARY = 'Binary'
     XML = 'XML'
     YAML = 'YAML'
     JSON = 'JSON'

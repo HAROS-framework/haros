@@ -14,7 +14,7 @@ from haros.internal.fsutil import crawl_package, is_ros_package
 from haros.metamodel.ros import PackageModel
 
 ###############################################################################
-# Globals
+# Constants
 ###############################################################################
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)

@@ -63,6 +63,9 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     print('project:', model.name)
     for package in model.packages.values():
         print('  package:', package.name)
+        for fp in package.files:
+            file = model.files[f'{package.name}/{fp}']
+            print('    file:', file.path, f'({file.source.language})')
     plugins.on_analysis_end()
     return 0
 
