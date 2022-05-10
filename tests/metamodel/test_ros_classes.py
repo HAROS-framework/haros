@@ -7,7 +7,7 @@
 
 from attr.exceptions import FrozenInstanceError
 
-from haros.metamodel.ros import File, Package
+from haros.metamodel.ros import FileModel, PackageModel
 
 ###############################################################################
 # File Tests
@@ -15,18 +15,18 @@ from haros.metamodel.ros import File, Package
 
 
 def test_file_slots():
-    assert 'uid' not in File.__slots__
-    assert 'package' in File.__slots__
-    assert 'path' in File.__slots__
-    assert 'directory' not in File.__slots__
-    assert 'source' in File.__slots__
-    assert 'dependencies' in File.__slots__
-    assert 'name' not in File.__slots__
-    assert 'storage' not in File.__slots__
+    assert 'uid' not in FileModel.__slots__
+    assert 'package' in FileModel.__slots__
+    assert 'path' in FileModel.__slots__
+    assert 'directory' not in FileModel.__slots__
+    assert 'source' in FileModel.__slots__
+    assert 'dependencies' in FileModel.__slots__
+    assert 'name' not in FileModel.__slots__
+    assert 'storage' not in FileModel.__slots__
 
 
 def test_file_creation():
-    f = File('pkg', 'file.txt')
+    f = FileModel('pkg', 'file.txt')
     assert f.uid == 'pkg/file.txt'
     assert f.package == 'pkg'
     assert f.path == 'file.txt'
@@ -44,15 +44,15 @@ def test_file_creation():
 
 def test_file_requires_args():
     try:
-        File()
+        FileModel()
         raise AssertionError('constructor should expect arguments')
     except TypeError:
         pass
 
 
 def test_two_files_equal():
-    f1 = File('pkg', 'file.txt')
-    f2 = File('pkg', 'file.txt')
+    f1 = FileModel('pkg', 'file.txt')
+    f2 = FileModel('pkg', 'file.txt')
     assert f1 == f2
     assert f1 is not f2
     assert f1.uid == f2.uid
@@ -62,8 +62,8 @@ def test_two_files_equal():
 
 
 def test_two_files_not_equal():
-    f1 = File('pkg', 'file1.txt')
-    f2 = File('pkg', 'file2.txt')
+    f1 = FileModel('pkg', 'file1.txt')
+    f2 = FileModel('pkg', 'file2.txt')
     assert f1 != f2
     assert f1.uid != f2.uid
     assert f1.package == f2.package
@@ -72,7 +72,7 @@ def test_two_files_not_equal():
 
 
 def test_file_change_frozen():
-    f = File('pkg', 'file.txt')
+    f = FileModel('pkg', 'file.txt')
     try:
         f.package = 'other'
         raise AssertionError('frozen instance should be immutable')
@@ -81,7 +81,7 @@ def test_file_change_frozen():
 
 
 def test_file_change_metadata():
-    f = File('pkg', 'file.txt')
+    f = FileModel('pkg', 'file.txt')
     # f.storage.path = '/etc/file'
     # assert f.storage.path == '/etc/file'
     # f.storage.size = 1
@@ -97,7 +97,7 @@ def test_file_change_metadata():
 
 
 def test_file_json():
-    data = File('pkg', 'file.txt').asdict()
+    data = FileModel('pkg', 'file.txt').asdict()
     assert data['uid'] == 'pkg/file.txt'
     assert data['package'] == 'pkg'
     assert data['path'] == 'file.txt'
@@ -119,21 +119,19 @@ def test_file_json():
 
 
 def test_pkg_slots():
-    assert 'uid' not in Package.__slots__
-    assert 'name' in Package.__slots__
-    assert 'is_metapackage' in Package.__slots__
-    assert 'files' in Package.__slots__
-    assert 'nodes' in Package.__slots__
-    assert 'metadata' in Package.__slots__
-    assert 'dependencies' in Package.__slots__
-    assert 'storage' not in Package.__slots__
+    assert 'uid' not in PackageModel.__slots__
+    assert 'name' in PackageModel.__slots__
+    assert 'files' in PackageModel.__slots__
+    assert 'nodes' in PackageModel.__slots__
+    assert 'metadata' in PackageModel.__slots__
+    assert 'dependencies' in PackageModel.__slots__
+    assert 'storage' not in PackageModel.__slots__
 
 
 def test_pkg_creation():
-    p = Package('name')
+    p = PackageModel('name')
     assert p.uid == 'name'
     assert p.name == 'name'
-    assert p.is_metapackage is False
     assert p.files == []
     assert p.nodes == []
     # assert p.storage.path is None
@@ -153,20 +151,19 @@ def test_pkg_creation():
 
 def test_pkg_requires_args():
     try:
-        Package()
+        PackageModel()
         raise AssertionError('constructor should expect arguments')
     except TypeError:
         pass
 
 
 def test_two_pkgs_equal():
-    p1 = Package('pkg')
-    p2 = Package('pkg')
+    p1 = PackageModel('pkg')
+    p2 = PackageModel('pkg')
     assert p1 == p2
     assert p1 is not p2
     assert p1.uid == p2.uid
     assert p1.name == p2.name
-    assert p1.is_metapackage == p2.is_metapackage
     assert p1.files == p2.files
     assert p1.nodes == p2.nodes
     # assert p1.storage == p2.storage
@@ -174,18 +171,17 @@ def test_two_pkgs_equal():
 
 
 def test_two_pkgs_not_equal():
-    p1 = Package('pkg1')
-    p2 = Package('pkg2')
+    p1 = PackageModel('pkg1')
+    p2 = PackageModel('pkg2')
     assert p1 != p2
     assert p1.uid != p2.uid
     assert p1.name != p2.name
-    assert p1.is_metapackage == p2.is_metapackage
     assert p1.files == p2.files
     assert p1.nodes == p2.nodes
 
 
 def test_pkg_change_frozen():
-    p = Package('pkg')
+    p = PackageModel('pkg')
     try:
         p.name = 'other'
         raise AssertionError('frozen instance should be immutable')
@@ -194,7 +190,7 @@ def test_pkg_change_frozen():
 
 
 def test_pkg_change_metadata():
-    p = Package('pkg')
+    p = PackageModel('pkg')
     # p.storage.path = '/etc/pkg'
     # assert p.storage.path == '/etc/pkg'
     # p.storage.size = 1
@@ -220,10 +216,9 @@ def test_pkg_change_metadata():
 
 
 def test_pkg_json():
-    data = Package('pkg').asdict()
+    data = PackageModel('pkg').asdict()
     assert data['uid'] == 'pkg'
     assert data['name'] == 'pkg'
-    assert data['is_metapackage'] is False
     assert data['files'] == []
     assert data['nodes'] == []
     # assert data['storage']['path'] is None

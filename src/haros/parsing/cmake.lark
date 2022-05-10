@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: MIT
+// Copyright © 2022 André Santos
+
+start: file
+
+///////////////////////////////////////////////////////////////////////////////
+// Source Files
+
+file: file_element*
+
+file_element: command_invocation line_ending
+            | bracket_comment* line_ending
+
+?line_ending:  line_comment? _NL
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Command Invocations
+
+command_invocation: identifier "(" arguments ")"
+
+!identifier: /[a-zA-Z][a-zA-Z0-9_]*/
+
+arguments: line_ending* separated_arguments*
+
+separated_arguments: argument line_ending*
+                   | "(" arguments ")" line_ending*
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Command Arguments
+
+?argument: bracket_argument | quoted_argument | unquoted_argument
+
+//// Bracket Argument ////
+// This can be improved by using regex with backtracking for the tokens.
+
+bracket_argument: BRACKET_OPEN_0 _NL? BRACKET_CONTENT_0
+                | BRACKET_OPEN_1 _NL? BRACKET_CONTENT_1
+                | BRACKET_OPEN_2 _NL? BRACKET_CONTENT_2
+                | BRACKET_OPEN_3 _NL? BRACKET_CONTENT_3
+                | BRACKET_OPEN_4 _NL? BRACKET_CONTENT_4
+                | BRACKET_OPEN_5 _NL? BRACKET_CONTENT_5
+                | BRACKET_OPEN_6 _NL? BRACKET_CONTENT_6
+                | BRACKET_OPEN_7 _NL? BRACKET_CONTENT_7
+                | BRACKET_OPEN_8 _NL? BRACKET_CONTENT_8
+                | BRACKET_OPEN_9 _NL? BRACKET_CONTENT_9
+                | BRACKET_OPEN_N _NL? BRACKET_CONTENT_N
+
+_BRACKET_OPEN: "[" "="* "["
+
+BRACKET_OPEN_0: "[["
+BRACKET_OPEN_1: "[=["
+BRACKET_OPEN_2: "[==["
+BRACKET_OPEN_3: "[===["
+BRACKET_OPEN_4: "[====["
+BRACKET_OPEN_5: "[=====["
+BRACKET_OPEN_6: "[======["
+BRACKET_OPEN_7: "[=======["
+BRACKET_OPEN_8: "[========["
+BRACKET_OPEN_9: "[=========["
+BRACKET_OPEN_N: "[=========" "="+ "["
+
+BRACKET_CONTENT_0: /(.*?)\]\]/
+BRACKET_CONTENT_1: /(.*?)\]=\]/
+BRACKET_CONTENT_2: /(.*?)\]==\]/
+BRACKET_CONTENT_3: /(.*?)\]===\]/
+BRACKET_CONTENT_4: /(.*?)\]====\]/
+BRACKET_CONTENT_5: /(.*?)\]=====\]/
+BRACKET_CONTENT_6: /(.*?)\]======\]/
+BRACKET_CONTENT_7: /(.*?)\]=======\]/
+BRACKET_CONTENT_8: /(.*?)\]========\]/
+BRACKET_CONTENT_9: /(.*?)\]=========\]/
+BRACKET_CONTENT_N: /(.*?)\]==========+\]/
+
+BRACKET_CLOSE_0: "]]"
+BRACKET_CLOSE_1: "]=]"
+BRACKET_CLOSE_2: "]==]"
+BRACKET_CLOSE_3: "]===]"
+BRACKET_CLOSE_4: "]====]"
+BRACKET_CLOSE_5: "]=====]"
+BRACKET_CLOSE_6: "]======]"
+BRACKET_CLOSE_7: "]=======]"
+BRACKET_CLOSE_8: "]========]"
+BRACKET_CLOSE_9: "]=========]"
+BRACKET_CLOSE_N: "]=========" "="+ "]"
+
+//// Quoted Argument ////
+
+quoted_argument: "\"" quoted_element* "\""
+
+quoted_element: QUOTED_ELEMENT
+              | ESCAPE_SEQUENCE
+              | _QUOTED_CONTINUATION
+
+_QUOTED_CONTINUATION: "\\" _NL
+
+QUOTED_ELEMENT: /[^\\"]/
+
+//// Unquoted Argument ////
+
+unquoted_argument: UNQUOTED_ELEMENT+
+//               | unquoted_legacy
+
+UNQUOTED_ELEMENT: /[^ \t\r\n#\\"\(\)]/
+                | ESCAPE_SEQUENCE
+
+// unquoted_legacy:
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Escape Sequences
+
+ESCAPE_SEQUENCE: ESCAPE_IDENTITY
+               | ESCAPE_ENCODED
+               | ESCAPE_SEMICOLON
+
+ESCAPE_IDENTITY: "\\" /[^A-Za-z0-9;]/
+
+ESCAPE_ENCODED: "\\t" | "\\r" | "\\n"
+
+ESCAPE_SEMICOLON: "\\;"
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Variable References
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Comments
+
+bracket_comment.2: "#" bracket_argument
+
+line_comment: /#[^\r\n]*/
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Imports
+
+%import common.NEWLINE -> _NL
+%import common.WS_INLINE  // -> _WS
+%ignore WS_INLINE

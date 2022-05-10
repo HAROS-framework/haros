@@ -50,7 +50,7 @@ setup(
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     include_package_data=True,
-    package_data={},  # {PYTHON_PKG: ['dir/*.file']},
+    package_data={'haros.parsing': ['*.lark']},  # {PYTHON_PKG: ['dir/*.file']},
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
@@ -71,7 +71,7 @@ setup(
         'console_scripts': [f'{PROJECT}={PYTHON_PKG}.cli:main'],
     },
     python_requires='>=3.8, <4',
-    install_requires=['attrs>=20', 'pyyaml>=5.3.1'],
+    install_requires=['attrs>=20', 'pyyaml>=5.3.1', 'lark>=1.1'],
     extras_require={
         'dev': ['pytest', 'tox'],
     },
