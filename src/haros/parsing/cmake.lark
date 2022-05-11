@@ -52,7 +52,7 @@ unquoted_argument: UNQUOTED_ARGUMENT
 
 UNQUOTED_ARGUMENT: UNQUOTED_ELEMENT+
 
-UNQUOTED_ELEMENT: /[^ \t\r\n#\\"()]/
+UNQUOTED_ELEMENT: /[^\s#\\"()]/
                 | ESCAPE_SEQUENCE
 
 // unquoted_legacy: TODO
