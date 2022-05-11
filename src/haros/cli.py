@@ -28,7 +28,7 @@ import sys
 
 from haros import __version__ as current_version
 from haros.internal import home
-from haros.internal.cli import analysis, init, project
+from haros.internal.cli import analysis, debug, init, project
 from haros.internal.settings import (
     defaults as default_settings,
     load as load_settings,
@@ -82,11 +82,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif cmd == 'cache':
             pass
         elif cmd == 'project':
-            logger.info(f'running subprogram: project')
+            logger.info('running subprogram: project')
             rcode = project.subprogram(args['args'], settings)
         elif cmd == 'analysis':
-            logger.info(f'running subprogram: analysis')
+            logger.info('running subprogram: analysis')
             analysis.subprogram(args['args'], settings)
+        elif cmd == 'debug':
+            logger.info('running subprogram: debug')
+            debug.subprogram(args['args'], settings)
     except KeyboardInterrupt:
         logger.error('Aborted manually.')
         return 1
@@ -125,6 +128,7 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
             'cache',
             'analysis',
             'echo-args',
+            'debug',
         ],
         help='A concrete HAROS command to run.',
     )

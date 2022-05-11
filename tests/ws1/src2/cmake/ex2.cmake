@@ -1,5 +1,11 @@
+#[[
+This is a block comment.
+]]
 cmake_minimum_required(VERSION 3.5)
 
+#[=[
+This is another block comment.
+]=]
 project(rclrs_example_msgs)
 
 # Default to C++14
@@ -10,6 +16,11 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+#[======[
+This is yet
+  another
+block comment.
+]======]
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 

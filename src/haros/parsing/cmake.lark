@@ -8,8 +8,9 @@ start: file
 
 file: file_element*
 
-file_element: command_invocation line_ending
-            | bracket_comment* line_ending
+file_element: command_invocation
+            | bracket_comment
+            | line_ending
 
 ?line_ending:  line_comment? _NL
 
@@ -19,12 +20,12 @@ file_element: command_invocation line_ending
 
 command_invocation: identifier "(" arguments ")"
 
-!identifier: /[a-zA-Z][a-zA-Z0-9_]*/
+identifier: /[a-zA-Z][a-zA-Z0-9_]*/
 
-arguments: line_ending* separated_arguments*
+arguments: line_ending* _separated_arguments*
 
-separated_arguments: argument line_ending*
-                   | "(" arguments ")" line_ending*
+_separated_arguments: argument line_ending*
+                    | "(" arguments ")" line_ending*
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -87,23 +88,25 @@ BRACKET_CLOSE_N: "]=========" "="+ "]"
 
 //// Quoted Argument ////
 
-quoted_argument: "\"" quoted_element* "\""
+quoted_argument: "\"" QUOTED_ELEMENT? "\""
 
-quoted_element: QUOTED_ELEMENT
-              | ESCAPE_SEQUENCE
-              | _QUOTED_CONTINUATION
+QUOTED_ELEMENT: QUOTED_ELEMENT_CHAR+
+
+QUOTED_ELEMENT_CHAR: /[^\\"]/
+                   | ESCAPE_SEQUENCE
+                   | _QUOTED_CONTINUATION
 
 _QUOTED_CONTINUATION: "\\" _NL
 
-QUOTED_ELEMENT: /[^\\"]/
-
 //// Unquoted Argument ////
 
-unquoted_argument: UNQUOTED_ELEMENT+
+unquoted_argument: UNQUOTED_ELEMENT
 //               | unquoted_legacy
 
-UNQUOTED_ELEMENT: /[^ \t\r\n#\\"\(\)]/
-                | ESCAPE_SEQUENCE
+UNQUOTED_ELEMENT: UNQUOTED_ELEMENT_CHAR+
+
+UNQUOTED_ELEMENT_CHAR: /[^ \t\r\n#\\"\(\)]/
+                     | ESCAPE_SEQUENCE
 
 // unquoted_legacy:
 
@@ -129,9 +132,11 @@ ESCAPE_SEMICOLON: "\\;"
 ///////////////////////////////////////////////////////////////////////////////
 // Comments
 
-bracket_comment.2: "#" bracket_argument
+bracket_comment.2: BRACKET_COMMENT
 
-line_comment: /#[^\r\n]*/
+line_comment: /#(?!\[=*\[).*?$/
+
+BRACKET_COMMENT.2: /#\[(=*)\[(.*?)\]/ //\1\]/
 
 
 ///////////////////////////////////////////////////////////////////////////////
