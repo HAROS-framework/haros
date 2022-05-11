@@ -6,26 +6,26 @@ start: file
 ///////////////////////////////////////////////////////////////////////////////
 // Source Files
 
-file: file_element*
+file: _file_element*
 
-file_element: command_invocation
-            | bracket_comment
-            | line_ending
-
-?line_ending:  line_comment? _NL
+_file_element: command_invocation
+             | comment
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // Command Invocations
 
-command_invocation: identifier "(" arguments ")"
+command_invocation: identifier _parenthesized_arguments
 
-identifier: /[a-zA-Z][a-zA-Z0-9_]*/
+identifier: CNAME
 
-arguments: line_ending* _separated_arguments*
+_parenthesized_arguments: "(" arguments ")"
 
-_separated_arguments: argument line_ending*
-                    | "(" arguments ")" line_ending*
+arguments: _commented_arguments*
+
+_commented_arguments: comment
+                    | argument
+                    | _parenthesized_arguments
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -34,81 +34,38 @@ _separated_arguments: argument line_ending*
 ?argument: bracket_argument | quoted_argument | unquoted_argument
 
 //// Bracket Argument ////
-// This can be improved by using regex with backtracking for the tokens.
 
-bracket_argument: BRACKET_OPEN_0 _NL? BRACKET_CONTENT_0
-                | BRACKET_OPEN_1 _NL? BRACKET_CONTENT_1
-                | BRACKET_OPEN_2 _NL? BRACKET_CONTENT_2
-                | BRACKET_OPEN_3 _NL? BRACKET_CONTENT_3
-                | BRACKET_OPEN_4 _NL? BRACKET_CONTENT_4
-                | BRACKET_OPEN_5 _NL? BRACKET_CONTENT_5
-                | BRACKET_OPEN_6 _NL? BRACKET_CONTENT_6
-                | BRACKET_OPEN_7 _NL? BRACKET_CONTENT_7
-                | BRACKET_OPEN_8 _NL? BRACKET_CONTENT_8
-                | BRACKET_OPEN_9 _NL? BRACKET_CONTENT_9
-                | BRACKET_OPEN_N _NL? BRACKET_CONTENT_N
+bracket_argument: BRACKET_ARGUMENT
 
-_BRACKET_OPEN: "[" "="* "["
-
-BRACKET_OPEN_0: "[["
-BRACKET_OPEN_1: "[=["
-BRACKET_OPEN_2: "[==["
-BRACKET_OPEN_3: "[===["
-BRACKET_OPEN_4: "[====["
-BRACKET_OPEN_5: "[=====["
-BRACKET_OPEN_6: "[======["
-BRACKET_OPEN_7: "[=======["
-BRACKET_OPEN_8: "[========["
-BRACKET_OPEN_9: "[=========["
-BRACKET_OPEN_N: "[=========" "="+ "["
-
-BRACKET_CONTENT_0: /(.*?)\]\]/
-BRACKET_CONTENT_1: /(.*?)\]=\]/
-BRACKET_CONTENT_2: /(.*?)\]==\]/
-BRACKET_CONTENT_3: /(.*?)\]===\]/
-BRACKET_CONTENT_4: /(.*?)\]====\]/
-BRACKET_CONTENT_5: /(.*?)\]=====\]/
-BRACKET_CONTENT_6: /(.*?)\]======\]/
-BRACKET_CONTENT_7: /(.*?)\]=======\]/
-BRACKET_CONTENT_8: /(.*?)\]========\]/
-BRACKET_CONTENT_9: /(.*?)\]=========\]/
-BRACKET_CONTENT_N: /(.*?)\]==========+\]/
-
-BRACKET_CLOSE_0: "]]"
-BRACKET_CLOSE_1: "]=]"
-BRACKET_CLOSE_2: "]==]"
-BRACKET_CLOSE_3: "]===]"
-BRACKET_CLOSE_4: "]====]"
-BRACKET_CLOSE_5: "]=====]"
-BRACKET_CLOSE_6: "]======]"
-BRACKET_CLOSE_7: "]=======]"
-BRACKET_CLOSE_8: "]========]"
-BRACKET_CLOSE_9: "]=========]"
-BRACKET_CLOSE_N: "]=========" "="+ "]"
+BRACKET_ARGUMENT: /\[(=*)\[(.*?)\]\1\]/s
 
 //// Quoted Argument ////
 
-quoted_argument: "\"" QUOTED_ELEMENT? "\""
+quoted_argument: QUOTED_ARGUMENT
 
-QUOTED_ELEMENT: QUOTED_ELEMENT_CHAR+
+QUOTED_ARGUMENT: /"(.*?)(?=[^\\]")."/s
 
-QUOTED_ELEMENT_CHAR: /[^\\"]/
-                   | ESCAPE_SEQUENCE
-                   | _QUOTED_CONTINUATION
+// quoted_argument: "\"" QUOTED_ELEMENT? "\""
 
-_QUOTED_CONTINUATION: "\\" _NL
+// QUOTED_ELEMENT: QUOTED_ELEMENT_CHAR+
+
+// QUOTED_ELEMENT_CHAR: /[^\\"]/
+//                    | ESCAPE_SEQUENCE
+//                    | _QUOTED_CONTINUATION
+
+// _QUOTED_CONTINUATION: "\\" // _NL
 
 //// Unquoted Argument ////
 
-unquoted_argument: UNQUOTED_ELEMENT
+unquoted_argument: UNQUOTED_ARGUMENT
 //               | unquoted_legacy
 
-UNQUOTED_ELEMENT: UNQUOTED_ELEMENT_CHAR+
+UNQUOTED_ARGUMENT: UNQUOTED_ELEMENT+
 
-UNQUOTED_ELEMENT_CHAR: /[^ \t\r\n#\\"\(\)]/
-                     | ESCAPE_SEQUENCE
+UNQUOTED_ELEMENT: /[^ \t\r\n#\\"()]/
+                | ESCAPE_SEQUENCE
 
-// unquoted_legacy:
+// unquoted_legacy: TODO
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -118,7 +75,7 @@ ESCAPE_SEQUENCE: ESCAPE_IDENTITY
                | ESCAPE_ENCODED
                | ESCAPE_SEMICOLON
 
-ESCAPE_IDENTITY: "\\" /[^A-Za-z0-9;]/
+ESCAPE_IDENTITY: /\\[^A-Za-z0-9;]/
 
 ESCAPE_ENCODED: "\\t" | "\\r" | "\\n"
 
@@ -132,16 +89,21 @@ ESCAPE_SEMICOLON: "\\;"
 ///////////////////////////////////////////////////////////////////////////////
 // Comments
 
-bracket_comment.2: BRACKET_COMMENT
+comment: bracket_comment
+       | line_comment
 
-line_comment: /#(?!\[=*\[).*?$/
+bracket_comment: BRACKET_COMMENT
 
-BRACKET_COMMENT.2: /#\[(=*)\[(.*?)\]/ //\1\]/
+line_comment: LINE_COMMENT
+
+BRACKET_COMMENT.2: /#\[(=*)\[(.*?)\]\1\]/s
+
+LINE_COMMENT.2: /#(?!\[=*\[)[^\r\n]*/
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // Imports
 
-%import common.NEWLINE -> _NL
-%import common.WS_INLINE  // -> _WS
-%ignore WS_INLINE
+%import common.WS
+%import common.CNAME
+%ignore WS
