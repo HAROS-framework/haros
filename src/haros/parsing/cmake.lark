@@ -45,16 +45,6 @@ quoted_argument: QUOTED_ARGUMENT
 
 QUOTED_ARGUMENT: /"(.*?)(?=[^\\]")."/s
 
-// quoted_argument: "\"" QUOTED_ELEMENT? "\""
-
-// QUOTED_ELEMENT: QUOTED_ELEMENT_CHAR+
-
-// QUOTED_ELEMENT_CHAR: /[^\\"]/
-//                    | ESCAPE_SEQUENCE
-//                    | _QUOTED_CONTINUATION
-
-// _QUOTED_CONTINUATION: "\\" // _NL
-
 //// Unquoted Argument ////
 
 unquoted_argument: UNQUOTED_ARGUMENT
@@ -80,10 +70,6 @@ ESCAPE_IDENTITY: /\\[^A-Za-z0-9;]/
 ESCAPE_ENCODED: "\\t" | "\\r" | "\\n"
 
 ESCAPE_SEMICOLON: "\\;"
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Variable References
 
 
 ///////////////////////////////////////////////////////////////////////////////
