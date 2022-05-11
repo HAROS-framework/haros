@@ -41,7 +41,9 @@ BRACKET_ARGUMENT: /\[(=*)\[(.*?)\]\1\]/s
 
 //// Quoted Argument ////
 
-quoted_argument: QUOTED_ARGUMENT
+quoted_argument: EMPTY_STRING | QUOTED_ARGUMENT
+
+EMPTY_STRING: "\"\""
 
 QUOTED_ARGUMENT: /"(.*?)(?=[^\\]")."/s
 
