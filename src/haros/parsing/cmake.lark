@@ -15,13 +15,13 @@ _file_element: command_invocation
 ///////////////////////////////////////////////////////////////////////////////
 // Command Invocations
 
-command_invocation: identifier _parenthesized_arguments
+command_invocation: _identifier _parenthesized_arguments
 
-identifier: CNAME
+_identifier: CNAME
 
-_parenthesized_arguments: "(" arguments ")"
+_parenthesized_arguments: "(" _arguments ")"
 
-arguments: _commented_arguments*
+_arguments: _commented_arguments*
 
 _commented_arguments: comment
                     | argument
@@ -77,8 +77,8 @@ ESCAPE_SEMICOLON: "\\;"
 ///////////////////////////////////////////////////////////////////////////////
 // Comments
 
-comment: bracket_comment
-       | line_comment
+?comment: bracket_comment
+        | line_comment
 
 bracket_comment: BRACKET_COMMENT
 

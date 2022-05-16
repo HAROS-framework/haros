@@ -52,7 +52,6 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     parser = cmake_parser()
     text = path.read_text()
     tree = parser.parse(text)
-    print('Parse Tree:')
     print(tree.pretty())
     return 0
 
