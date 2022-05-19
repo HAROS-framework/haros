@@ -9,11 +9,14 @@ Module that contains the command line sub-program.
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List
+from typing import Any, Dict, Final, Iterable, List
 
 import argparse
 import logging
 from pathlib import Path
+import re
+
+import attr
 
 from haros.internal.settings import Settings
 from haros.parsing.cmake import parser as cmake_parser
@@ -52,8 +55,136 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     parser = cmake_parser()
     text = path.read_text()
     tree = parser.parse(text)
-    print(tree.pretty())
+    # print(tree.pretty())
+    nodes = get_nodes_from_cmake(tree)
+    if not nodes:
+        print('<there are no nodes>')
+    else:
+        for key, value in nodes.items():
+            print(key, ':', value)
     return 0
+
+
+###############################################################################
+# Helper Functions
+###############################################################################
+
+
+def get_nodes_from_cmake(cmake):
+    context = CMakeContext()
+    for cmd in cmake.commands:
+        args = context.interpret_all(arg.value for arg in cmd.arguments)
+        if cmd.name == 'set':
+            context.cmake_set(args)
+        elif cmd.name == 'add_executable':
+            context.cmake_add_executable(args)
+        elif cmd.name == 'add_library':
+            pass
+        elif cmd.name == 'project':
+            context.cmake_set(('PROJECT_NAME', args[0]))
+    return context.executables
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class CMakeContext:
+    parent: Any = None
+    variables: Dict[str, str] = attr.Factory(dict)
+    environment: Dict[str, str] = attr.Factory(dict)
+    cache: Dict[str, str] = attr.Factory(dict)
+    executables: Dict[str, List[str]] = attr.Factory(dict)
+    libraries: Dict[str, List[str]] = attr.Factory(dict)
+
+    _RE_VARIABLE = re.compile(r'\${(\w+)}')
+
+    def interpret(self, value: str) -> str:
+        # TODO environment variables
+        parts = []
+        i = 0
+        match = self._RE_VARIABLE.search(value)
+        while match:
+            parts.append(value[i:match.start()])
+            key = match.group(1)
+            replacement = self.variables.get(key)
+            if replacement is None:
+                replacement = self.cache[key]  # KeyError
+            parts.append(replacement)
+            i = match.end()
+            match = self._RE_VARIABLE.search(value, i)
+        if i < len(value):
+            parts.append(value[i:])
+        return ''.join(parts)
+
+    def interpret_all(self, values: Iterable[str]) -> List[str]:
+        return [self.interpret(v) for v in values]
+
+    _RE_ENV_VAR = re.compile(r'ENV{(.+)}')
+
+    def cmake_set(self, args: Iterable[str]):
+        if len(args) < 1:
+            raise ValueError('set() expects at least one argument')
+        name = args[0]
+        match = self._RE_ENV_VAR.fullmatch(name)
+        if match:
+            # environment variable
+            name = match.group(1)
+            if len(args) == 1:
+                # clear variable from environment
+                if name in self.environment:
+                    del self.environment[name]
+            else:
+                # set environment variable
+                self.environment[name] = args[1]
+        else:
+            if len(args) < 2:
+                raise ValueError('set() expects a name and a value')
+            values = []
+            on_parent = False
+            for i in range(1, len(args)):
+                if args[i] == 'CACHE':
+                    break
+                elif args[i] == 'PARENT_SCOPE':
+                    on_parent = True
+                    break
+                values.append(args[i])
+            value = ' '.join(values)
+            if args[i] == 'CACHE':
+                var_type = args[i+1]
+                docstring = args[i+2]
+                force = i+3 < len(args) and args[i+3] == 'FORCE'
+                if force or name not in cache:
+                    self.cache[name] = (value, var_type, docstring)
+            else:
+                if on_parent:
+                    if self.parent is None:
+                        raise ValueError('no parent context')
+                    self.parent.variables[name] = value
+                else:
+                    self.variables[name] = value
+
+    _ADD_EXECUTABLE_OPTIONS = ('WIN32', 'MACOSX_BUNDLE', 'EXCLUDE_FROM_ALL')
+
+    def cmake_add_executable(self, args: Iterable[str]):
+        if len(args) < 1:
+            print('Malformed add_executable():', args)
+            return
+
+        name = args[0]
+        if name in self.executables:
+            print('Duplicate executable name:', name)
+            return
+
+        sources = []
+        self.executables[name] = sources
+        for i in range(1, len(args)):
+            if args[i] not in self._ADD_EXECUTABLE_OPTIONS:
+                break
+        if i >= len(args):
+            # New in version 3.11: The source files can be omitted
+            # if they are added later using target_sources().
+            print('Command add_executable() with no sources')
+            return
+        for i in range(i, len(args)):
+            sources.append(args[i])
 
 
 ###############################################################################
