@@ -76,6 +76,8 @@ def get_nodes_from_cmake(cmake):
         args = context.interpret_all(arg.value for arg in cmd.arguments)
         if cmd.name == 'set':
             context.cmake_set(args)
+        elif cmd.name == 'unset':
+            context.cmake_unset(args)
         elif cmd.name == 'add_executable':
             context.cmake_add_executable(args)
         elif cmd.name == 'add_library':
@@ -97,22 +99,25 @@ class CMakeContext:
     _RE_VARIABLE = re.compile(r'\${(\w+)}')
 
     def interpret(self, value: str) -> str:
-        # TODO environment variables
-        parts = []
-        i = 0
+        # TODO: $ENV{variable}
+        # TODO: $CACHE{variable}
         match = self._RE_VARIABLE.search(value)
+        if not match:
+            return value
+        i = 0
+        parts = []
         while match:
             parts.append(value[i:match.start()])
             key = match.group(1)
-            replacement = self.variables.get(key)
-            if replacement is None:
-                replacement = self.cache[key]  # KeyError
+            replacement = self.variables.get(key, self.cache.get(key, ''))
             parts.append(replacement)
             i = match.end()
             match = self._RE_VARIABLE.search(value, i)
+        # completed a pass through the string
         if i < len(value):
             parts.append(value[i:])
-        return ''.join(parts)
+        # must take nested variables into account
+        return self.interpret(''.join(parts))
 
     def interpret_all(self, values: Iterable[str]) -> List[str]:
         return [self.interpret(v) for v in values]
@@ -160,6 +165,32 @@ class CMakeContext:
                     self.parent.variables[name] = value
                 else:
                     self.variables[name] = value
+
+    def cmake_unset(self, args: Iterable[str]):
+        if len(args) < 1:
+            raise ValueError('unset() expects at least one argument')
+        name = args[0]
+        mapping = self.variables
+        match = self._RE_ENV_VAR.fullmatch(name)
+        if match:  # environment variable
+            if len(args) > 1:
+                raise ValueError(f'too many arguments: unset({", ".join(args)})')
+            name = match.group(1)
+            mapping = self.environment
+        else:
+            if len(args) > 2:
+                raise ValueError(f'too many arguments: unset({", ".join(args)})')
+            if len(args) == 2:
+                if args[1] == 'CACHE':
+                    mapping = self.cache
+                elif args[1] == 'PARENT_SCOPE':
+                    if not self.parent:
+                        raise ValueError(f'no parent scope: unset({", ".join(args)})')
+                    mapping = self.parent.variables
+                else:
+                    raise ValueError(f'unknown unset() argument: {args[1]}')
+        if name in mapping:
+            del mapping[name]
 
     _ADD_EXECUTABLE_OPTIONS = ('WIN32', 'MACOSX_BUNDLE', 'EXCLUDE_FROM_ALL')
 
