@@ -57,21 +57,16 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     text = path.read_text()
     tree = parser.parse(text)
     # print(tree.pretty())
-    executables, libraries = get_nodes_from_cmake(tree, parser)
+    targets = get_nodes_from_cmake(tree, parser)
     print()
-    print('executables:')
-    if not executables:
-        print('<there are no executables>')
+    print('targets:')
+    if not targets:
+        print('<there are no targets>')
     else:
-        for key, value in executables.items():
-            print(' >', key, ':', value)
-    print()
-    print('libraries:')
-    if not libraries:
-        print('<there are no libraries>')
-    else:
-        for key, value in libraries.items():
-            print(' >', key, ':', value)
+        for target in targets.values():
+            t = '[exe]' if target.is_executable else '[lib]'
+            print(f' > {t} {target.name}: {target.sources}')
+            print('    <deps>', target.dependencies)
     return 0
 
 
@@ -94,7 +89,19 @@ def get_nodes_from_cmake(cmake, parser):
             context.cmake_add_library(args)
         elif cmd.name == 'project':
             context.cmake_set(('PROJECT_NAME', args[0]))
-    return context.executables, context.libraries
+    return context.targets
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class CMakeTarget:
+    name: str
+    is_executable: bool = True
+    sources: List[str] = attr.Factory(list)
+    dependencies: List[str] = attr.Factory(list)
+
+    @property
+    def is_library(self) -> bool:
+        return not self.is_executable
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -104,8 +111,7 @@ class CMakeContext:
     variables: Dict[str, str] = attr.Factory(dict)
     environment: Dict[str, str] = attr.Factory(dict)
     cache: Dict[str, str] = attr.Factory(dict)
-    executables: Dict[str, List[str]] = attr.Factory(dict)
-    libraries: Dict[str, List[str]] = attr.Factory(dict)
+    targets: Dict[str, CMakeTarget] = attr.Factory(dict)
 
     def process_arguments(self, arguments: List[CMakeArgument]) -> List[str]:
         if not arguments:
@@ -221,11 +227,11 @@ class CMakeContext:
             raise ValueError('expected one or more arguments: add_executable()')
 
         name = args[0]
-        if name in self.executables:
+        if name in self.targets:
             raise ValueError('duplicate executable name:', name)
 
-        sources = []
-        self.executables[name] = sources
+        target = CMakeTarget(name, is_executable=True)
+        self.targets[name] = target
         for i in range(1, len(args)):
             if args[i] not in self._ADD_EXECUTABLE_OPTIONS:
                 break
@@ -234,7 +240,7 @@ class CMakeContext:
             # if they are added later using target_sources().
             raise ValueError(f'no sources: add_executable({", ".join(args)})')
         for i in range(i, len(args)):
-            sources.append(args[i])
+            target.sources.append(args[i])
 
     def cmake_add_library(self, args: Iterable[str]):
         if len(args) < 1:
@@ -254,11 +260,11 @@ class CMakeContext:
             return
 
         name = args[0]
-        if name in self.libraries:
+        if name in self.targets:
             raise ValueError('duplicate library name:', name)
 
-        sources = []
-        self.libraries[name] = sources
+        target = CMakeTarget(name, is_executable=False)
+        self.targets[name] = target
 
         i = 1
         if args[i] in ('STATIC', 'SHARED', 'MODULE'):
@@ -271,7 +277,7 @@ class CMakeContext:
             # if they are added later using target_sources().
             raise ValueError(f'no sources: add_library({", ".join(args)})')
         for i in range(i, len(args)):
-            sources.append(args[i])
+            target.sources.append(args[i])
 
 
 ###############################################################################
