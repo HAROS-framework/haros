@@ -57,12 +57,21 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     text = path.read_text()
     tree = parser.parse(text)
     # print(tree.pretty())
-    nodes = get_nodes_from_cmake(tree, parser)
-    if not nodes:
-        print('<there are no nodes>')
+    executables, libraries = get_nodes_from_cmake(tree, parser)
+    print()
+    print('executables:')
+    if not executables:
+        print('<there are no executables>')
     else:
-        for key, value in nodes.items():
-            print(key, ':', value)
+        for key, value in executables.items():
+            print(' >', key, ':', value)
+    print()
+    print('libraries:')
+    if not libraries:
+        print('<there are no libraries>')
+    else:
+        for key, value in libraries.items():
+            print(' >', key, ':', value)
     return 0
 
 
@@ -82,10 +91,10 @@ def get_nodes_from_cmake(cmake, parser):
         elif cmd.name == 'add_executable':
             context.cmake_add_executable(args)
         elif cmd.name == 'add_library':
-            pass
+            context.cmake_add_library(args)
         elif cmd.name == 'project':
             context.cmake_set(('PROJECT_NAME', args[0]))
-    return context.executables
+    return context.executables, context.libraries
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -209,13 +218,11 @@ class CMakeContext:
 
     def cmake_add_executable(self, args: Iterable[str]):
         if len(args) < 1:
-            print('Malformed add_executable():', args)
-            return
+            raise ValueError('expected one or more arguments: add_executable()')
 
         name = args[0]
         if name in self.executables:
-            print('Duplicate executable name:', name)
-            return
+            raise ValueError('duplicate executable name:', name)
 
         sources = []
         self.executables[name] = sources
@@ -225,8 +232,44 @@ class CMakeContext:
         if i >= len(args):
             # New in version 3.11: The source files can be omitted
             # if they are added later using target_sources().
-            print('Command add_executable() with no sources')
+            raise ValueError(f'no sources: add_executable({", ".join(args)})')
+        for i in range(i, len(args)):
+            sources.append(args[i])
+
+    def cmake_add_library(self, args: Iterable[str]):
+        if len(args) < 1:
+            raise ValueError('expected one or more arguments: add_library()')
+
+        # TODO Object Libraries
+        if 'OBJECT' in args:
             return
+        # TODO Interface Libraries
+        if 'INTERFACE' in args:
+            return
+        # TODO Imported Libraries
+        if 'IMPORTED' in args:
+            return
+        # TODO Alias Libraries
+        if 'ALIAS' in args:
+            return
+
+        name = args[0]
+        if name in self.libraries:
+            raise ValueError('duplicate library name:', name)
+
+        sources = []
+        self.libraries[name] = sources
+
+        i = 1
+        if args[i] in ('STATIC', 'SHARED', 'MODULE'):
+            i += 1
+        if args[i] == 'EXCLUDE_FROM_ALL':
+            i += 1
+
+        if i >= len(args):
+            # New in version 3.11: The source files can be omitted
+            # if they are added later using target_sources().
+            raise ValueError(f'no sources: add_library({", ".join(args)})')
         for i in range(i, len(args)):
             sources.append(args[i])
 
