@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final, List
+from typing import Final, List, Tuple
 
 from pathlib import Path
 import re
@@ -114,14 +114,20 @@ class _ToAst(Transformer):
         )
 
     def command_invocation(self, children) -> CMakeCommand:
-        assert len(children) >= 1, 'expected at least an identifier'
+        assert len(children) == 2, 'expected an identifier and a tuple (arguments, comments)'
+        arguments, comments = children[1]
         return CMakeCommand(
             str(children[0]),
-            [c for c in children if isinstance(c, CMakeArgument)],
+            arguments,
             line=children[0].line,
             column=children[0].column,
-            comments=[c for c in children if isinstance(c, CMakeComment)],
+            comments=comments,
         )
+
+    def arguments(self, children) -> Tuple[List[CMakeArgument], List[CMakeComment]]:
+        arguments = [c for c in children if isinstance(c, CMakeArgument)]
+        comments = [c for c in children if isinstance(c, CMakeComment)]
+        return arguments, comments
 
     @v_args(inline=True)
     def bracket_argument(self, token) -> CMakeArgument:
@@ -176,13 +182,19 @@ class _ToAst(Transformer):
 
 
 class _CMakeParser:
-    def __init__(self, grammar):
+    def __init__(self, grammar: str):
         self._parser = Lark(grammar)
+        self._arg_parser = Lark(grammar, start='arguments')
         self._transformer = _ToAst()
 
-    def parse(self, text) -> CMakeFile:
+    def parse(self, text: str) -> CMakeFile:
         tree = self._parser.parse(text)
         return self._transformer.transform(tree)
+
+    def parse_arguments(self, text: str) -> List[CMakeArgument]:
+        tree = self._arg_parser.parse(text)
+        arguments, comments = self._transformer.transform(tree)
+        return arguments
 
 
 _parser = None

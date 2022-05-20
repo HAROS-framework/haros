@@ -19,9 +19,9 @@ command_invocation: _identifier _parenthesized_arguments
 
 _identifier: CNAME
 
-_parenthesized_arguments: "(" _arguments ")"
+_parenthesized_arguments: "(" arguments ")"
 
-_arguments: _commented_arguments*
+arguments: _commented_arguments*
 
 _commented_arguments: comment
                     | argument

@@ -19,6 +19,7 @@ import re
 import attr
 
 from haros.internal.settings import Settings
+from haros.parsing.cmake import CMakeArgument
 from haros.parsing.cmake import parser as cmake_parser
 
 ###############################################################################
@@ -56,7 +57,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     text = path.read_text()
     tree = parser.parse(text)
     # print(tree.pretty())
-    nodes = get_nodes_from_cmake(tree)
+    nodes = get_nodes_from_cmake(tree, parser)
     if not nodes:
         print('<there are no nodes>')
     else:
@@ -70,10 +71,10 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 ###############################################################################
 
 
-def get_nodes_from_cmake(cmake):
-    context = CMakeContext()
+def get_nodes_from_cmake(cmake, parser):
+    context = CMakeContext(parser)
     for cmd in cmake.commands:
-        args = context.interpret_all(arg.value for arg in cmd.arguments)
+        args = context.process_arguments(cmd.arguments)
         if cmd.name == 'set':
             context.cmake_set(args)
         elif cmd.name == 'unset':
@@ -89,12 +90,24 @@ def get_nodes_from_cmake(cmake):
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class CMakeContext:
+    parser: Any
     parent: Any = None
     variables: Dict[str, str] = attr.Factory(dict)
     environment: Dict[str, str] = attr.Factory(dict)
     cache: Dict[str, str] = attr.Factory(dict)
     executables: Dict[str, List[str]] = attr.Factory(dict)
     libraries: Dict[str, List[str]] = attr.Factory(dict)
+
+    def process_arguments(self, arguments: List[CMakeArgument]) -> List[str]:
+        if not arguments:
+            return []
+        # first pass: variable substitution
+        args: List[str] = self.interpret_all(arg.value for arg in arguments)
+        # second pass: join text and break it down again in separate arguments
+        text: str = ' '.join(args)
+        arguments = self.parser.parse_arguments(text)
+        # there should be no further variable references at this point
+        return [arg.value for arg in arguments]
 
     _RE_VARIABLE = re.compile(r'\${(\w+)}')
 
