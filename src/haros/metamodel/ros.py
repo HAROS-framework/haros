@@ -184,7 +184,6 @@ class NodeModel:
     package: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
     name: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
     # Defaults
-    is_nodelet: bool = False
     # TODO rosname: typing.Optional[RosName] = None
     files: List[str] = attr.Factory(list)
     source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
