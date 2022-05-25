@@ -138,7 +138,7 @@ class FileModel:
 
     @property
     def uid(self) -> str:
-        return f'{self.package}/{self.path}'
+        return file_id(self.package, self.path)
 
     @property
     def name(self) -> str:
@@ -218,3 +218,12 @@ class ProjectModel:
 
     def asdict(self) -> Dict[str, Any]:
         return attr.asdict(self)
+
+
+###############################################################################
+# Convenience Functions
+###############################################################################
+
+
+def file_id(package: str, relative_path: str) -> str:
+    return f'{package}/{relative_path}'
