@@ -87,6 +87,8 @@ def get_nodes_from_cmake(cmake, parser):
             context.cmake_add_executable(args)
         elif cmd.name == 'add_library':
             context.cmake_add_library(args)
+        elif cmd.name == 'ament_target_dependencies':
+            context.cmake_ament_target_dependencies(args)
         elif cmd.name == 'project':
             context.cmake_set(('PROJECT_NAME', args[0]))
     return context.targets
@@ -278,6 +280,17 @@ class CMakeContext:
             raise ValueError(f'no sources: add_library({", ".join(args)})')
         for i in range(i, len(args)):
             target.sources.append(args[i])
+
+    def cmake_ament_target_dependencies(self, args: Iterable[str]):
+        msg = '{}: ament_target_dependencies({})'
+        if len(args) < 2:
+            raise ValueError(msg.format('too few arguments', ', '.join(args)))
+
+        target = self.targets.get(args[0])
+        if target is None:
+            raise ValueError(msg.format('invalid target', ', '.join(args)))
+
+        target.dependencies.extend(args[1:])
 
 
 ###############################################################################
