@@ -138,7 +138,7 @@ class FileModel:
 
     @property
     def uid(self) -> str:
-        return file_id(self.package, self.path)
+        return uid_file(self.package, self.path)
 
     @property
     def name(self) -> str:
@@ -225,5 +225,5 @@ class ProjectModel:
 ###############################################################################
 
 
-def file_id(package: str, relative_path: str) -> str:
+def uid_file(package: str, relative_path: str) -> str:
     return f'{package}/{relative_path}'
