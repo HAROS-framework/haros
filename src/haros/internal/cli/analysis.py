@@ -65,7 +65,11 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         print('  package:', package.name)
         for fp in package.files:
             file = model.files[f'{package.name}/{fp}']
-            print('    file:', file.path, f'({file.source.language})')
+            print('    file:', file.path, f'({file.source.language.value})')
+    for node in model.nodes.values():
+        print('  node:', node.uid, f'({node.source.language.value})')
+        for uid in node.files:
+            print('    file:', uid)
     plugins.on_analysis_end()
     return 0
 
