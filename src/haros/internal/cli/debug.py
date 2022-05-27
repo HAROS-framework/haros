@@ -15,7 +15,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from haros.analysis.cmake import get_targets_from_cmake
+from haros.parsing.python import parse as parse_python
 from haros.internal.settings import Settings
 
 ###############################################################################
@@ -48,16 +48,9 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     if not path.is_file():
         logger.error(f'debug: not a file: "{path}"')
         return 1
-    targets = get_targets_from_cmake(path)
-    print()
-    print('targets:')
-    if not targets:
-        print('<there are no targets>')
-    else:
-        for target in targets.values():
-            t = '[exe]' if target.is_executable else '[lib]'
-            print(f' > {t} {target.name}: {target.sources}')
-            print('    <deps>', target.dependencies)
+    text = path.read_text()
+    tree = parse_python(text)
+    print(tree.pretty())
     return 0
 
 
