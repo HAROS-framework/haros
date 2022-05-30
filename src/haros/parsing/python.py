@@ -7,13 +7,60 @@
 
 # from typing import Final, List, Tuple
 
-from lark import Lark
-# from lark import Lark, Transformer, v_args
+import attr
+
+from lark import Lark, Transformer, v_args
 from lark.indenter import PythonIndenter
 
 ###############################################################################
-# Constants
+# AST
 ###############################################################################
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonAst:
+    line: int
+    column: int
+
+
+###############################################################################
+# Transformer
+###############################################################################
+
+
+class _ToAst(Transformer):
+    @v_args(inline=True)
+    def number(self, n):
+        return n
+
+    @v_args(inline=True)
+    def string(self, s):
+        return str(s)
+
+    @v_args(inline=True)
+    def name(self, n):
+        return
+
+    def DEC_NUMBER(self, n):
+        return int(n)
+
+    def HEX_NUMBER(self, n):
+        return int(n, 16)
+
+    def OCT_NUMBER(self, n):
+        return int(n, 8)
+
+    def BIN_NUMBER(self, n):
+        return int(n, 2)
+
+    def DECIMAL(self, n):
+        return float(n)
+
+    def FLOAT_NUMBER(self, n):
+        return float(n)
+
+    def IMAG_NUMBER(self, n):
+        return complex(0, float(n[:-1]))
 
 
 ###############################################################################
@@ -31,12 +78,11 @@ class _PythonParser:
             postlex=PythonIndenter(),
             start='file_input',
         )
-        # self._transformer = _ToAst()
+        self._transformer = _ToAst()
 
     def parse(self, text: str):
         tree = self._parser.parse(text)
-        # return self._transformer.transform(tree)
-        return tree
+        return self._transformer.transform(tree)
 
 
 _parser = None

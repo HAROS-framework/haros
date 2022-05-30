@@ -48,9 +48,11 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     if not path.is_file():
         logger.error(f'debug: not a file: "{path}"')
         return 1
-    text = path.read_text()
+    # text = path.read_text()
+    text = '0b00100\n'
     tree = parse_python(text)
-    print(tree.pretty())
+    # print(tree.pretty())
+    print(tree)
     return 0
 
 
