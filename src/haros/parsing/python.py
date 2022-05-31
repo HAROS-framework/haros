@@ -5,11 +5,11 @@
 # Imports
 ###############################################################################
 
-# from typing import Final, List, Tuple
+from typing import Callable, Union
 
 import attr
 
-from lark import Lark, Transformer, v_args
+from lark import Lark, Token, Transformer, v_args
 from lark.indenter import PythonIndenter
 
 ###############################################################################
@@ -17,10 +17,74 @@ from lark.indenter import PythonIndenter
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonAst:
-    line: int
-    column: int
+    @property
+    def is_statement(self) -> bool:
+        return False
+
+    @property
+    def is_expression(self) -> bool:
+        return False
+
+
+class PythonExpression(PythonAst):
+    @property
+    def is_expression(self) -> bool:
+        return True
+
+    @property
+    def is_literal(self) -> bool:
+        return False
+
+
+class PythonLiteral(PythonExpression):
+    @property
+    def is_literal(self) -> bool:
+        return True
+
+    @property
+    def is_number(self) -> bool:
+        return False
+
+    @property
+    def is_string(self) -> bool:
+        return False
+
+    @property
+    def is_tuple(self) -> bool:
+        return False
+
+    @property
+    def is_list(self) -> bool:
+        return False
+
+    @property
+    def is_dict(self) -> bool:
+        return False
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonNumberLiteral(PythonLiteral):
+    value: Union[int, float, complex]
+    # meta
+    line: int = 1
+    column: int = 1
+
+    @property
+    def is_number(self) -> bool:
+        return True
+
+    @property
+    def is_int(self) -> bool:
+        return isinstance(self.value, int)
+
+    @property
+    def is_float(self) -> bool:
+        return isinstance(self.value, float)
+
+    @property
+    def is_complex(self) -> bool:
+        return isinstance(self.value, complex)
 
 
 ###############################################################################
@@ -30,10 +94,6 @@ class PythonAst:
 
 class _ToAst(Transformer):
     @v_args(inline=True)
-    def number(self, n):
-        return n
-
-    @v_args(inline=True)
     def string(self, s):
         return str(s)
 
@@ -41,26 +101,37 @@ class _ToAst(Transformer):
     def name(self, n):
         return
 
-    def DEC_NUMBER(self, n):
-        return int(n)
+    # @v_args(inline=True)
+    # def number(self, n):
+    #     return n
 
-    def HEX_NUMBER(self, n):
-        return int(n, 16)
+    def DEC_NUMBER(self, n: Token) -> PythonNumberLiteral:
+        v = int(n)
+        return PythonNumberLiteral(v, line=n.line, column=n.column)
 
-    def OCT_NUMBER(self, n):
-        return int(n, 8)
+    def HEX_NUMBER(self, n: Token) -> PythonNumberLiteral:
+        v = int(n, 16)
+        return PythonNumberLiteral(v, line=n.line, column=n.column)
 
-    def BIN_NUMBER(self, n):
-        return int(n, 2)
+    def OCT_NUMBER(self, n: Token) -> PythonNumberLiteral:
+        v = int(n, 8)
+        return PythonNumberLiteral(v, line=n.line, column=n.column)
 
-    def DECIMAL(self, n):
-        return float(n)
+    def BIN_NUMBER(self, n: Token) -> PythonNumberLiteral:
+        v = int(n, 2)
+        return PythonNumberLiteral(v, line=n.line, column=n.column)
 
-    def FLOAT_NUMBER(self, n):
-        return float(n)
+    def DECIMAL(self, n: Token) -> PythonNumberLiteral:
+        v = float(n)
+        return PythonNumberLiteral(v, line=n.line, column=n.column)
 
-    def IMAG_NUMBER(self, n):
-        return complex(0, float(n[:-1]))
+    def FLOAT_NUMBER(self, n: Token) -> PythonNumberLiteral:
+        v = float(n)
+        return PythonNumberLiteral(v, line=n.line, column=n.column)
+
+    def IMAG_NUMBER(self, n: Token) -> PythonNumberLiteral:
+        v = complex(0, float(n[:-1]))
+        return PythonNumberLiteral(v, line=n.line, column=n.column)
 
 
 ###############################################################################
