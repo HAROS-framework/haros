@@ -5,12 +5,27 @@
 # Imports
 ###############################################################################
 
-from typing import Callable, Union
+from typing import Final, Callable, Tuple, Union
+
+import re
 
 import attr
-
 from lark import Lark, Token, Transformer, v_args
 from lark.indenter import PythonIndenter
+
+###############################################################################
+# Constants
+###############################################################################
+
+STRING: Final[re.Pattern] = re.compile(
+    r'([ubf]?r?|r[ubf])("(?!"").*?(?<!\\)(\\\\)*?"|\'(?!\'\').*?(?<!\\)(\\\\)*?\')',
+    re.I
+)
+
+LONG_STRING: Final[re.Pattern] = re.compile(
+    r'([ubf]?r?|r[ubf])(""".*?(?<!\\)(\\\\)*?"""|\'\'\'.*?(?<!\\)(\\\\)*?\'\'\')',
+    re.I | re.S
+)
 
 ###############################################################################
 # AST
@@ -87,23 +102,98 @@ class PythonNumberLiteral(PythonLiteral):
         return isinstance(self.value, complex)
 
 
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonStringLiteral(PythonLiteral):
+    value: str
+    is_raw: bool = False
+    is_unicode: bool = True
+    is_format: bool = False
+    is_long: bool = False
+    # meta
+    line: int = 1
+    column: int = 1
+
+    @property
+    def is_string(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonTupleLiteral(PythonLiteral):
+    values: Tuple[str]
+    is_comprehension: bool = False
+    # meta
+    line: int = 1
+    column: int = 1
+
+    @property
+    def is_tuple(self) -> bool:
+        return True
+
+
 ###############################################################################
 # Transformer
 ###############################################################################
 
 
 class _ToAst(Transformer):
-    @v_args(inline=True)
-    def string(self, s):
-        return str(s)
+    def tuple(self, items):
+        return PythonTupleLiteral(
+            tuple(items),
+            is_comprehension=False,
+            line=0,
+            column=0,
+        )
 
     @v_args(inline=True)
     def name(self, n):
         return
 
-    # @v_args(inline=True)
-    # def number(self, n):
-    #     return n
+    @v_args(inline=True)
+    def string(self, s):
+        return s
+
+    STRING_PREFIX = re.compile(r'([ubf]?r?|r[ubf])("|\')', re.I)
+
+    def STRING(self, s: Token) -> PythonStringLiteral:
+        match = self.STRING_PREFIX.match(s)
+        assert match is not None, f'expected a match: {s}'
+        prefix = match.group(1)
+        is_raw = 'r' in prefix
+        is_unicode = not 'b' in prefix
+        is_format = 'f' in prefix
+        value = s[match.end():-1]
+        return PythonStringLiteral(
+            value,
+            is_raw=is_raw,
+            is_unicode=is_unicode,
+            is_format=is_format,
+            is_long=False,
+            line=s.line,
+            column=s.column,
+        )
+
+    def LONG_STRING(self, s: Token) -> PythonStringLiteral:
+        match = self.STRING_PREFIX.match(s)
+        assert match is not None, f'expected a match: {s}'
+        prefix = match.group(1)
+        is_raw = 'r' in prefix
+        is_unicode = not 'b' in prefix
+        is_format = 'f' in prefix
+        value = s[match.end()+2:-3]
+        return PythonStringLiteral(
+            value,
+            is_raw=is_raw,
+            is_unicode=is_unicode,
+            is_format=is_format,
+            is_long=True,
+            line=s.line,
+            column=s.column,
+        )
+
+    @v_args(inline=True)
+    def number(self, n):
+        return n
 
     def DEC_NUMBER(self, n: Token) -> PythonNumberLiteral:
         v = int(n)
