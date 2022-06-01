@@ -5,27 +5,13 @@
 # Imports
 ###############################################################################
 
-from typing import Final, Callable, Tuple, Union
+from typing import Final, Callable, Iterable, Tuple, Union
 
 import re
 
 import attr
 from lark import Lark, Token, Transformer, v_args
 from lark.indenter import PythonIndenter
-
-###############################################################################
-# Constants
-###############################################################################
-
-STRING: Final[re.Pattern] = re.compile(
-    r'([ubf]?r?|r[ubf])("(?!"").*?(?<!\\)(\\\\)*?"|\'(?!\'\').*?(?<!\\)(\\\\)*?\')',
-    re.I
-)
-
-LONG_STRING: Final[re.Pattern] = re.compile(
-    r'([ubf]?r?|r[ubf])(""".*?(?<!\\)(\\\\)*?"""|\'\'\'.*?(?<!\\)(\\\\)*?\'\'\')',
-    re.I | re.S
-)
 
 ###############################################################################
 # AST
@@ -58,6 +44,14 @@ class PythonLiteral(PythonExpression):
         return True
 
     @property
+    def is_none(self) -> bool:
+        return False
+
+    @property
+    def is_bool(self) -> bool:
+        return False
+
+    @property
     def is_number(self) -> bool:
         return False
 
@@ -79,11 +73,38 @@ class PythonLiteral(PythonExpression):
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonNoneLiteral(PythonLiteral):
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def value(self) -> None:
+        return None
+
+    @property
+    def is_none(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonBooleanLiteral(PythonLiteral):
+    value: bool
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_bool(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonNumberLiteral(PythonLiteral):
     value: Union[int, float, complex]
     # meta
-    line: int = 1
-    column: int = 1
+    line: int = 0
+    column: int = 0
 
     @property
     def is_number(self) -> bool:
@@ -110,8 +131,8 @@ class PythonStringLiteral(PythonLiteral):
     is_format: bool = False
     is_long: bool = False
     # meta
-    line: int = 1
-    column: int = 1
+    line: int = 0
+    column: int = 0
 
     @property
     def is_string(self) -> bool:
@@ -120,14 +141,65 @@ class PythonStringLiteral(PythonLiteral):
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonTupleLiteral(PythonLiteral):
-    values: Tuple[str]
-    is_comprehension: bool = False
+    values: Tuple[PythonExpression]
     # meta
-    line: int = 1
-    column: int = 1
+    line: int = 0
+    column: int = 0
 
     @property
     def is_tuple(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return False
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonTupleComprehension(PythonLiteral):
+    expression: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_tuple(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonListLiteral(PythonLiteral):
+    values: Tuple[PythonExpression]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_list(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return False
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonListComprehension(PythonLiteral):
+    expression: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_list(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
         return True
 
 
@@ -137,20 +209,47 @@ class PythonTupleLiteral(PythonLiteral):
 
 
 class _ToAst(Transformer):
-    def tuple(self, items):
-        return PythonTupleLiteral(
-            tuple(items),
-            is_comprehension=False,
-            line=0,
-            column=0,
-        )
-
     @v_args(inline=True)
     def name(self, n):
         return
 
+    # Complex Literals #####################################
+
+    def tuple(self, items: Iterable[PythonExpression]) -> PythonTupleLiteral:
+        # missing: line and column; requires modified grammar
+        return PythonTupleLiteral(tuple(items))
+
+    def tuple_comprehension(self, items: Iterable[PythonExpression]) -> PythonTupleComprehension:
+        # missing: line and column; requires modified grammar
+        return PythonTupleComprehension(items[0])
+
+    def list(self, items: Iterable[PythonExpression]) -> PythonListLiteral:
+        # missing: line and column; requires modified grammar
+        return PythonListLiteral(tuple(items))
+
+    def list_comprehension(self, items: Iterable[PythonExpression]) -> PythonListComprehension:
+        # missing: line and column; requires modified grammar
+        return PythonListComprehension(items[0])
+
+    # Atomic Literals ######################################
+
+    def const_none(self, children) -> PythonNoneLiteral:
+        # missing: line and column; requires modified grammar
+        assert not children
+        return PythonNoneLiteral()
+
+    def const_true(self, children) -> PythonBooleanLiteral:
+        # missing: line and column; requires modified grammar
+        assert not children
+        return PythonBooleanLiteral(True)
+
+    def const_false(self, children) -> PythonBooleanLiteral:
+        # missing: line and column; requires modified grammar
+        assert not children
+        return PythonBooleanLiteral(False)
+
     @v_args(inline=True)
-    def string(self, s):
+    def string(self, s: PythonStringLiteral) -> PythonStringLiteral:
         return s
 
     STRING_PREFIX = re.compile(r'([ubf]?r?|r[ubf])("|\')', re.I)
@@ -192,7 +291,7 @@ class _ToAst(Transformer):
         )
 
     @v_args(inline=True)
-    def number(self, n):
+    def number(self, n: PythonNumberLiteral) -> PythonNumberLiteral:
         return n
 
     def DEC_NUMBER(self, n: Token) -> PythonNumberLiteral:
