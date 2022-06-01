@@ -27,6 +27,10 @@ class PythonAst:
     def is_expression(self) -> bool:
         return False
 
+    @property
+    def is_helper(self) -> bool:
+        return False
+
 
 class PythonExpression(PythonAst):
     @property
@@ -35,6 +39,16 @@ class PythonExpression(PythonAst):
 
     @property
     def is_literal(self) -> bool:
+        return False
+
+
+class PythonHelperNode(PythonAst):
+    @property
+    def is_helper(self) -> bool:
+        return True
+
+    @property
+    def is_key_value(self) -> bool:
         return False
 
 
@@ -69,6 +83,10 @@ class PythonLiteral(PythonExpression):
 
     @property
     def is_dict(self) -> bool:
+        return False
+
+    @property
+    def is_set(self) -> bool:
         return False
 
 
@@ -203,6 +221,86 @@ class PythonListComprehension(PythonLiteral):
         return True
 
 
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonKeyValuePair(PythonHelperNode):
+    key: PythonExpression
+    value: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_key_value(self) -> bool:
+        return True
+
+
+PythonDictEntry = Union[PythonKeyValuePair, PythonExpression]
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonDictLiteral(PythonLiteral):
+    entries: Tuple[PythonDictEntry]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_dict(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return False
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonDictComprehension(PythonLiteral):
+    expression: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_dict(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonSetLiteral(PythonLiteral):
+    values: Tuple[PythonExpression]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_set(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return False
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonSetComprehension(PythonLiteral):
+    expression: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_set(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return True
+
+
 ###############################################################################
 # Transformer
 ###############################################################################
@@ -212,6 +310,12 @@ class _ToAst(Transformer):
     @v_args(inline=True)
     def name(self, n):
         return
+
+    # Helper Nodes #########################################
+
+    @v_args(inline=True)
+    def key_value(self, key: PythonExpression, value: PythonExpression) -> PythonKeyValuePair:
+        return PythonKeyValuePair(key, value)
 
     # Complex Literals #####################################
 
@@ -230,6 +334,22 @@ class _ToAst(Transformer):
     def list_comprehension(self, items: Iterable[PythonExpression]) -> PythonListComprehension:
         # missing: line and column; requires modified grammar
         return PythonListComprehension(items[0])
+
+    def dict(self, entries: Iterable[PythonDictEntry]) -> PythonDictLiteral:
+        # missing: line and column; requires modified grammar
+        return PythonDictLiteral(tuple(entries))
+
+    def dict_comprehension(self, items: Iterable[PythonExpression]) -> PythonDictComprehension:
+        # missing: line and column; requires modified grammar
+        return PythonDictComprehension(items[0])
+
+    def set(self, items: Iterable[PythonExpression]) -> PythonSetLiteral:
+        # missing: line and column; requires modified grammar
+        return PythonSetLiteral(tuple(items))
+
+    def set_comprehension(self, items: Iterable[PythonExpression]) -> PythonSetComprehension:
+        # missing: line and column; requires modified grammar
+        return PythonSetComprehension(items[0])
 
     # Atomic Literals ######################################
 
