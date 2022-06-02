@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final, Callable, Iterable, Tuple, Union
+from typing import Any, Final, Callable, Iterable, Optional, Tuple, Union
 
 import re
 
@@ -41,6 +41,14 @@ class PythonExpression(PythonAst):
     def is_literal(self) -> bool:
         return False
 
+    @property
+    def is_reference(self) -> bool:
+        return False
+
+    @property
+    def is_function_call(self) -> bool:
+        return False
+
 
 class PythonHelperNode(PythonAst):
     @property
@@ -49,6 +57,10 @@ class PythonHelperNode(PythonAst):
 
     @property
     def is_key_value(self) -> bool:
+        return False
+
+    @property
+    def is_iterator(self) -> bool:
         return False
 
 
@@ -174,22 +186,6 @@ class PythonTupleLiteral(PythonLiteral):
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class PythonTupleComprehension(PythonLiteral):
-    expression: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
-
-    @property
-    def is_tuple(self) -> bool:
-        return True
-
-    @property
-    def is_comprehension(self) -> bool:
-        return True
-
-
-@attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonListLiteral(PythonLiteral):
     values: Tuple[PythonExpression]
     # meta
@@ -203,22 +199,6 @@ class PythonListLiteral(PythonLiteral):
     @property
     def is_comprehension(self) -> bool:
         return False
-
-
-@attr.s(auto_attribs=True, slots=True, frozen=True)
-class PythonListComprehension(PythonLiteral):
-    expression: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
-
-    @property
-    def is_list(self) -> bool:
-        return True
-
-    @property
-    def is_comprehension(self) -> bool:
-        return True
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -254,22 +234,6 @@ class PythonDictLiteral(PythonLiteral):
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
-class PythonDictComprehension(PythonLiteral):
-    expression: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
-
-    @property
-    def is_dict(self) -> bool:
-        return True
-
-    @property
-    def is_comprehension(self) -> bool:
-        return True
-
-
-@attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonSetLiteral(PythonLiteral):
     values: Tuple[PythonExpression]
     # meta
@@ -286,8 +250,88 @@ class PythonSetLiteral(PythonLiteral):
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonReference(PythonExpression):
+    name: str
+    object: Optional[PythonExpression] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_reference(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonIterator(PythonHelperNode):
+    variables: Tuple[PythonExpression]
+    iterable: PythonExpression
+    asynchronous: bool = False
+
+    @property
+    def is_iterator(self):
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonTupleComprehension(PythonLiteral):
+    expression: PythonExpression
+    iterators: Tuple[PythonIterator]
+    test: Optional[PythonExpression] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_tuple(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonListComprehension(PythonLiteral):
+    expression: PythonExpression
+    iterators: Tuple[PythonIterator]
+    test: Optional[PythonExpression] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_list(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonDictComprehension(PythonLiteral):
+    entry: PythonKeyValuePair
+    iterators: Tuple[PythonIterator]
+    test: Optional[PythonExpression] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_dict(self) -> bool:
+        return True
+
+    @property
+    def is_comprehension(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonSetComprehension(PythonLiteral):
     expression: PythonExpression
+    iterators: Tuple[PythonIterator]
+    test: Optional[PythonExpression] = None
     # meta
     line: int = 0
     column: int = 0
@@ -301,15 +345,31 @@ class PythonSetComprehension(PythonLiteral):
         return True
 
 
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonFunctionCall(PythonExpression):
+    function: PythonExpression
+    arguments: Tuple[PythonExpression]
+
+    @property
+    def is_function_call(self) -> bool:
+        return True
+
+
 ###############################################################################
 # Transformer
 ###############################################################################
 
 
 class _ToAst(Transformer):
+    # Top Level Rules ######################################
+
     @v_args(inline=True)
-    def name(self, n):
-        return
+    def file_input(self, item):
+        return item
+
+    @v_args(inline=True)
+    def expr_stmt(self, expression):
+        return expression
 
     # Helper Nodes #########################################
 
@@ -317,39 +377,90 @@ class _ToAst(Transformer):
     def key_value(self, key: PythonExpression, value: PythonExpression) -> PythonKeyValuePair:
         return PythonKeyValuePair(key, value)
 
+    def comprehension(self, children: Iterable[Any]) -> Tuple[PythonAst]:
+        assert len(children) >= 2, f'comprehension: {children}'
+        result = children[0]
+        iterators = children[1]
+        test = None if len(children) == 2 else children[2]
+        return result, iterators, test
+
+    def comp_fors(self, children: Iterable[PythonIterator]) -> Tuple[PythonIterator]:
+        return tuple(children)
+
+    def comp_for(self, children: Iterable[Any]) -> PythonIterator:
+        assert len(children) >= 2 and len(children) <= 3, str(children)
+        asynchronous = children[0] == 'async'
+        c = children[-2]
+        variables = c if isinstance(c, tuple) else (c,)
+        iterator = children[-1]
+        return PythonIterator(variables, iterator, asynchronous=asynchronous)
+
     # Complex Literals #####################################
 
     def tuple(self, items: Iterable[PythonExpression]) -> PythonTupleLiteral:
         # missing: line and column; requires modified grammar
         return PythonTupleLiteral(tuple(items))
 
-    def tuple_comprehension(self, items: Iterable[PythonExpression]) -> PythonTupleComprehension:
+    @v_args(inline=True)
+    def tuple_comprehension(self, children: Iterable[Any]) -> PythonTupleComprehension:
         # missing: line and column; requires modified grammar
-        return PythonTupleComprehension(items[0])
+        assert len(children) == 3, f'tuple_comprehension: {children}'
+        return PythonTupleComprehension(children[0], children[1], test=children[2])
 
     def list(self, items: Iterable[PythonExpression]) -> PythonListLiteral:
         # missing: line and column; requires modified grammar
         return PythonListLiteral(tuple(items))
 
-    def list_comprehension(self, items: Iterable[PythonExpression]) -> PythonListComprehension:
+    @v_args(inline=True)
+    def list_comprehension(self, children: Iterable[Any]) -> PythonListComprehension:
         # missing: line and column; requires modified grammar
-        return PythonListComprehension(items[0])
+        assert len(children) == 3, f'list_comprehension: {children}'
+        return PythonListComprehension(children[0], children[1], test=children[2])
 
     def dict(self, entries: Iterable[PythonDictEntry]) -> PythonDictLiteral:
         # missing: line and column; requires modified grammar
         return PythonDictLiteral(tuple(entries))
 
-    def dict_comprehension(self, items: Iterable[PythonExpression]) -> PythonDictComprehension:
+    @v_args(inline=True)
+    def dict_comprehension(self, children: Iterable[Any]) -> PythonDictComprehension:
         # missing: line and column; requires modified grammar
-        return PythonDictComprehension(items[0])
+        assert len(children) == 3, f'dict_comprehension: {children}'
+        assert isinstance(children[0], PythonKeyValuePair), repr(children[0])
+        assert isinstance(children[1], tuple), repr(children[1])
+        assert children[2] is None or isinstance(children[2], PythonExpression), repr(children[2])
+        return PythonDictComprehension(children[0], children[1], test=children[2])
 
     def set(self, items: Iterable[PythonExpression]) -> PythonSetLiteral:
         # missing: line and column; requires modified grammar
         return PythonSetLiteral(tuple(items))
 
-    def set_comprehension(self, items: Iterable[PythonExpression]) -> PythonSetComprehension:
+    @v_args(inline=True)
+    def set_comprehension(self, children: Iterable[Any]) -> PythonSetComprehension:
         # missing: line and column; requires modified grammar
-        return PythonSetComprehension(items[0])
+        assert len(children) == 3, f'set_comprehension: {children}'
+        return PythonSetComprehension(children[0], children[1], test=children[2])
+
+    # Simple Expressions ###################################
+
+    @v_args(inline=True)
+    def var(self, name: Token) -> PythonReference:
+        return PythonReference(
+            str(name),
+            object=None,
+            line=name.line,
+            column=name.column,
+        )
+
+    def funccall(self, children: Iterable[Any]) -> PythonFunctionCall:
+        function = children[0]
+        arguments = () if len(children) == 1 else children[1]
+        return PythonFunctionCall(function, arguments)
+
+    def arguments(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
+        return tuple(children)
+
+    def exprlist(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
+        return tuple(children)
 
     # Atomic Literals ######################################
 
