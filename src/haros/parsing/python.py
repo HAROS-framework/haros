@@ -49,6 +49,14 @@ class PythonExpression(PythonAst):
     def is_function_call(self) -> bool:
         return False
 
+    @property
+    def is_star_argument(self) -> bool:
+        return False
+
+    @property
+    def is_keyword_argument(self) -> bool:
+        return False
+
 
 class PythonHelperNode(PythonAst):
     @property
@@ -61,6 +69,10 @@ class PythonHelperNode(PythonAst):
 
     @property
     def is_iterator(self) -> bool:
+        return False
+
+    @property
+    def is_argument(self) -> bool:
         return False
 
 
@@ -345,14 +357,70 @@ class PythonSetComprehension(PythonLiteral):
         return True
 
 
+class PythonArgument(PythonHelperNode):
+    @property
+    def is_argument(self) -> bool:
+        return True
+
+    @property
+    def is_positional(self) -> bool:
+        return False
+
+    @property
+    def is_key_value(self) -> bool:
+        return False
+
+    @property
+    def is_star(self) -> bool:
+        return False
+
+    @property
+    def is_keyword(self) -> bool:
+        return False
+
+
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonFunctionCall(PythonExpression):
     function: PythonExpression
-    arguments: Tuple[PythonExpression]
+    arguments: Tuple[PythonArgument]
 
     @property
     def is_function_call(self) -> bool:
         return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonSimpleArgument(PythonArgument):
+    argument: PythonExpression
+    name: Optional[str] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_positional(self) -> bool:
+        return self.name is None
+
+    @property
+    def is_key_value(self) -> bool:
+        return self.name is not None
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonSpecialArgument(PythonArgument):
+    argument: PythonExpression
+    is_double_star: bool = False
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_star(self) -> bool:
+        return not self.is_double_star
+
+    @property
+    def is_keyword(self) -> bool:
+        return self.is_double_star
 
 
 ###############################################################################
@@ -456,8 +524,70 @@ class _ToAst(Transformer):
         arguments = () if len(children) == 1 else children[1]
         return PythonFunctionCall(function, arguments)
 
-    def arguments(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
-        return tuple(children)
+    def arguments(self, children: Iterable[PythonAst]) -> Tuple[PythonExpression]:
+        args = []
+        for arg in children:
+            if isinstance(arg, tuple):
+                args.extend(arg)
+            elif arg.is_expression:
+                args.append(PythonSimpleArgument(arg, line=arg.line, column=arg.column))
+            elif arg.is_helper and arg.is_argument:
+                args.append(arg)
+            else:
+                assert False, f'unexpected argument: {arg}'
+        return tuple(args)
+
+    def starargs(self, children: Iterable[PythonAst]) -> Tuple[PythonArgument]:
+        args = []
+        for arg in children:
+            if isinstance(arg, tuple):
+                args.extend(arg)
+            elif arg.is_expression:
+                args.append(PythonSimpleArgument(arg, line=arg.line, column=arg.column))
+            elif arg.is_helper and arg.is_argument:
+                args.append(arg)
+            else:
+                assert False, f'unexpected argument: {arg}'
+        return tuple(args)
+
+    @v_args(inline=True)
+    def stararg(self, argument: PythonExpression) -> PythonSpecialArgument:
+        return PythonSpecialArgument(
+            argument,
+            is_double_star=False,
+            line=argument.line,
+            column=argument.column,
+        )
+
+    def kwargs(self, children: Iterable[PythonAst]) -> Tuple[PythonArgument]:
+        assert len(children) >= 1
+        args = [PythonSpecialArgument(
+            children[0],
+            is_double_star=True,
+            line=children[0].line,
+            column=children[0].column,
+        )]
+        for i in range(1, len(children)):
+            arg = children[1]
+            args.append(
+                PythonSimpleArgument(arg, line=arg.line, column=arg.column)
+                if arg.is_expression
+                else arg
+            )
+        return tuple(args)
+
+    def argvalue(self, children: Iterable[PythonExpression]) -> PythonSimpleArgument:
+        assert len(children) >= 1 and len(children) <= 2, f'argvalue: {children}'
+        value = children[-1]
+        name = None
+        if len(children) == 2:
+            assert children[0].is_expression, f'expected reference: {children[0]}'
+            assert children[0].is_reference, f'expected reference: {children[0]}'
+            assert children[0].object is None, f'expected name: {children[0]}'
+            name = children[0].name
+        else:
+            print('>> argvalue with len(children) == 1')
+        return PythonSimpleArgument(value, name=name, line=value.line, column=value.column)
 
     def exprlist(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
         return tuple(children)

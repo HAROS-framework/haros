@@ -49,7 +49,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
     # text = path.read_text()
-    text = '{k: v for k, v in zip("abcdefghij", range(10))}\n'
+    text = 'func(a, b, *c, d=1, **e)\n'
     tree = parse_python(text)
     # print(tree.pretty())
     print(tree)
