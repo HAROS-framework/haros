@@ -57,6 +57,10 @@ class PythonExpression(PythonAst):
     def is_keyword_argument(self) -> bool:
         return False
 
+    @property
+    def is_generator(self) -> bool:
+        return False
+
 
 class PythonHelperNode(PythonAst):
     @property
@@ -357,6 +361,20 @@ class PythonSetComprehension(PythonLiteral):
         return True
 
 
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonGenerator(PythonExpression):
+    result: PythonAst
+    iterators: Tuple[PythonIterator]
+    test: Optional[PythonExpression] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_generator(self) -> bool:
+        return True
+
+
 class PythonArgument(PythonHelperNode):
     @property
     def is_argument(self) -> bool:
@@ -445,12 +463,12 @@ class _ToAst(Transformer):
     def key_value(self, key: PythonExpression, value: PythonExpression) -> PythonKeyValuePair:
         return PythonKeyValuePair(key, value)
 
-    def comprehension(self, children: Iterable[Any]) -> Tuple[PythonAst]:
+    def comprehension(self, children: Iterable[Any]) -> PythonGenerator:
         assert len(children) >= 2, f'comprehension: {children}'
         result = children[0]
         iterators = children[1]
         test = None if len(children) == 2 else children[2]
-        return result, iterators, test
+        return PythonGenerator(result, iterators, test=test)
 
     def comp_fors(self, children: Iterable[PythonIterator]) -> Tuple[PythonIterator]:
         return tuple(children)
@@ -470,43 +488,41 @@ class _ToAst(Transformer):
         return PythonTupleLiteral(tuple(items))
 
     @v_args(inline=True)
-    def tuple_comprehension(self, children: Iterable[Any]) -> PythonTupleComprehension:
+    def tuple_comprehension(self, gen: PythonGenerator) -> PythonTupleComprehension:
         # missing: line and column; requires modified grammar
-        assert len(children) == 3, f'tuple_comprehension: {children}'
-        return PythonTupleComprehension(children[0], children[1], test=children[2])
+        assert gen.result.is_expression, f'tuple_comprehension: {gen}'
+        return PythonTupleComprehension(gen.result, gen.iterators, test=gen.test)
 
     def list(self, items: Iterable[PythonExpression]) -> PythonListLiteral:
         # missing: line and column; requires modified grammar
         return PythonListLiteral(tuple(items))
 
     @v_args(inline=True)
-    def list_comprehension(self, children: Iterable[Any]) -> PythonListComprehension:
+    def list_comprehension(self, gen: PythonGenerator) -> PythonListComprehension:
         # missing: line and column; requires modified grammar
-        assert len(children) == 3, f'list_comprehension: {children}'
-        return PythonListComprehension(children[0], children[1], test=children[2])
+        assert gen.result.is_expression, f'list_comprehension: {gen}'
+        return PythonListComprehension(gen.result, gen.iterators, test=gen.test)
 
     def dict(self, entries: Iterable[PythonDictEntry]) -> PythonDictLiteral:
         # missing: line and column; requires modified grammar
         return PythonDictLiteral(tuple(entries))
 
     @v_args(inline=True)
-    def dict_comprehension(self, children: Iterable[Any]) -> PythonDictComprehension:
+    def dict_comprehension(self, gen: PythonGenerator) -> PythonDictComprehension:
         # missing: line and column; requires modified grammar
-        assert len(children) == 3, f'dict_comprehension: {children}'
-        assert isinstance(children[0], PythonKeyValuePair), repr(children[0])
-        assert isinstance(children[1], tuple), repr(children[1])
-        assert children[2] is None or isinstance(children[2], PythonExpression), repr(children[2])
-        return PythonDictComprehension(children[0], children[1], test=children[2])
+        assert gen.result.is_helper, f'dict_comprehension: {gen}'
+        assert gen.result.is_key_value, f'dict_comprehension: {gen}'
+        return PythonDictComprehension(gen.result, gen.iterators, test=gen.test)
 
     def set(self, items: Iterable[PythonExpression]) -> PythonSetLiteral:
         # missing: line and column; requires modified grammar
         return PythonSetLiteral(tuple(items))
 
     @v_args(inline=True)
-    def set_comprehension(self, children: Iterable[Any]) -> PythonSetComprehension:
+    def set_comprehension(self, gen: PythonGenerator) -> PythonSetComprehension:
         # missing: line and column; requires modified grammar
-        assert len(children) == 3, f'set_comprehension: {children}'
-        return PythonSetComprehension(children[0], children[1], test=children[2])
+        assert gen.result.is_expression, f'set_comprehension: {gen}'
+        return PythonSetComprehension(gen.result, gen.iterators, test=gen.test)
 
     # Simple Expressions ###################################
 
