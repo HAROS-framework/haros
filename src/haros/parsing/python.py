@@ -79,6 +79,18 @@ class PythonHelperNode(PythonAst):
     def is_argument(self) -> bool:
         return False
 
+    @property
+    def is_import_base(self) -> bool:
+        return False
+
+    @property
+    def is_alias_name(self) -> bool:
+        return False
+
+    @property
+    def is_imported_name(self) -> bool:
+        return False
+
 
 class PythonLiteral(PythonExpression):
     @property
@@ -441,6 +453,122 @@ class PythonSpecialArgument(PythonArgument):
         return self.is_double_star
 
 
+class PythonStatement(PythonAst):
+    @property
+    def is_statement(self) -> bool:
+        return True
+
+    @property
+    def is_import(self) -> bool:
+        return False
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonImportBase(PythonHelperNode):
+    names: Tuple[str]
+    dots: int = 0
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_import_base(self) -> bool:
+        return True
+
+    @property
+    def dotted_name(self) -> str:
+        return ('.' * self.dots) + '.'.join(self.names)
+
+    @property
+    def is_relative(self) -> bool:
+        return self.dots >= 1
+
+    @property
+    def is_parent(self) -> bool:
+        return self.dots >= 2
+
+    @property
+    def is_global(self) -> bool:
+        return not self.is_relative
+
+    def add_dots(self, dots: int, line: int = 0, column: int = 0) -> 'PythonImportBase':
+        return PythonImportBase(
+            self.names,
+            dots=(self.dots + dots),
+            line=(line or self.line),
+            column=(column or self.column),
+        )
+
+    def append(self, names: Iterable[str]) -> 'PythonImportBase':
+        return PythonImportBase(
+            self.names + names,
+            dots=self.dots,
+            line=self.line,
+            column=self.column,
+        )
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonAliasName(PythonHelperNode):
+    name: str
+    alias: str
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_alias_name(self) -> bool:
+        return True
+
+    @property
+    def is_wildcard(self) -> bool:
+        return self.name == '*'
+
+    @classmethod
+    def wildcard(cls, line: int = 0, column: int = 0) -> 'PythonAliasName':
+        return cls('*', '*', line=line, column=column)
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonImportedName(PythonHelperNode):
+    base: PythonImportBase
+    name: PythonAliasName
+
+    @property
+    def is_imported_name(self) -> bool:
+        return True
+
+    @property
+    def line(self) -> int:
+        return self.base.line
+
+    @property
+    def column(self) -> int:
+        return self.base.column
+
+    @property
+    def is_wildcard(self) -> bool:
+        return self.name.is_wildcard
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonImportStatement(PythonStatement):
+    names: Tuple[PythonImportedName]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_import(self) -> bool:
+        return True
+
+
+class PythonExpressionStatement(PythonStatement):
+    @property
+    def is_expression(self) -> bool:
+        return True
+
+
 ###############################################################################
 # Transformer
 ###############################################################################
@@ -449,9 +577,10 @@ class PythonSpecialArgument(PythonArgument):
 class _ToAst(Transformer):
     # Top Level Rules ######################################
 
-    @v_args(inline=True)
-    def file_input(self, item):
-        return item
+    def file_input(self, items):
+        if len(items) == 0:
+            return items[0]
+        return items
 
     @v_args(inline=True)
     def expr_stmt(self, expression):
@@ -480,6 +609,92 @@ class _ToAst(Transformer):
         variables = c if isinstance(c, tuple) else (c,)
         iterator = children[-1]
         return PythonIterator(variables, iterator, asynchronous=asynchronous)
+
+    # Import Statements ####################################
+
+    def dotted_name(self, names: Iterable[Token]) -> Tuple[Token]:
+        return tuple(names)
+
+    @v_args(inline=True)
+    def dotted_as_name(
+        self,
+        dotted_name: Tuple[Token],
+        alias: Optional[Token] = None,
+    ) -> PythonImportedName:
+        name = dotted_name[-1]
+        alias = alias or name
+        name = PythonAliasName(name, alias, line=name.line, column=name.column)
+        base = PythonImportBase(
+            dotted_name[:-1],
+            line=dotted_name[0].line,
+            column=dotted_name[0].column,
+        )
+        return PythonImportedName(base, name)
+
+    def dotted_as_names(self, names: Iterable[PythonImportedName]) -> Tuple[PythonImportedName]:
+        return tuple(names)
+
+    @v_args(inline=True)
+    def import_name(self, dotted_as_names: Tuple[PythonImportedName]) -> PythonImportStatement:
+        assert len(dotted_as_names) > 0, f'import_name: {dotted_as_names}'
+        return PythonImportStatement(
+            dotted_as_names,
+            line=dotted_as_names[0].line,
+            column=dotted_as_names[0].column,
+        )
+
+    @v_args(inline=True)
+    def import_as_name(self, name: Token, alias: Optional[Token] = None) -> PythonAliasName:
+        return PythonAliasName(name, alias or name, line=name.line, column=name.column)
+
+    def import_as_names(self, names: Iterable[PythonAliasName]) -> Tuple[PythonAliasName]:
+        return tuple(names)
+
+    def import_from(self, children: Iterable) -> PythonImportStatement:
+        assert len(children) > 0, f'import_from: {children}'
+        i = 0
+        dots = 0
+        line = 0
+        column = 0
+        if isinstance(children[0], Token):
+            # e.g.: from ..
+            i += 1
+            dots = len(children[0])
+            line=children[0].line
+            column=children[0].column
+        base = PythonImportBase((), dots=dots, line=line, column=column)
+
+        items = children[i]
+        assert isinstance(items, tuple), f'import_from: {children}'
+        if isinstance(items[0], Token):
+            # e.g.: from dotted_name
+            # e.g.: from .dotted_name
+            i += 1
+            line = line or items[0].line
+            column = column or items[0].column
+            base = PythonImportBase(items, dots=dots, line=line, column=column)
+        # else: from ..
+
+        assert i > 0, f'import_from: missing "from" part: {children}'
+        if i == len(children):
+            # e.g.: from .. import *
+            # e.g.: from .dotted_name import *
+            # FIXME: line and column are wrong, there's no Token for *
+            wildcard = PythonAliasName.wildcard(line=line, column=column)
+            names = (PythonImportedName(base, wildcard),)
+            return PythonImportStatement(names, line=line, column=column)
+
+        # e.g.: from . import name as alias
+        # e.g.: from .dotted_name import name as alias, name as alias
+        items = children[i]
+        assert isinstance(items, tuple), f'import_from: {children}'
+        assert isinstance(items[0], PythonAliasName), f'import_from: {children}'
+        names = tuple(PythonImportedName(base, name) for name in items)
+        return PythonImportStatement(names, line=line, column=column)
+
+    @v_args(inline=True)
+    def import_stmt(self, statement: PythonImportStatement) -> PythonImportStatement:
+        return statement
 
     # Complex Literals #####################################
 
