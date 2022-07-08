@@ -91,6 +91,10 @@ class PythonHelperNode(PythonAst):
     def is_imported_name(self) -> bool:
         return False
 
+    @property
+    def is_function_parameter(self) -> bool:
+        return False
+
 
 class PythonLiteral(PythonExpression):
     @property
@@ -462,6 +466,10 @@ class PythonStatement(PythonAst):
     def is_import(self) -> bool:
         return False
 
+    @property
+    def is_function_def(self) -> bool:
+        return False
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonImportBase(PythonHelperNode):
@@ -561,6 +569,77 @@ class PythonImportStatement(PythonStatement):
     @property
     def is_import(self) -> bool:
         return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonFunctionParameter(PythonHelperNode):
+    name: str
+    default_value: Optional[PythonExpression] = None
+    type_hint: Optional[str] = None
+    modifier: str = ''
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_function_parameter(self) -> bool:
+        return True
+
+    @property
+    def is_standard(self) -> bool:
+        return not self.modifier
+
+    @property
+    def is_positional(self) -> bool:
+        return self.modifier == '/'
+
+    @property
+    def is_keyword(self) -> bool:
+        return self.modifier == '='
+
+    @property
+    def is_variadic_list(self) -> bool:
+        return self.modifier == '*'
+
+    @property
+    def is_variadic_keywords(self) -> bool:
+        return self.modifier == '**'
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonFunctionDefStatement(PythonStatement):
+    name: str
+    parameters: Tuple[PythonFunctionParameter]
+    body: PythonStatement
+    type_hint: Optional[str] = None
+    is_async: bool = False
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_function_def(self) -> bool:
+        return True
+
+    @property
+    def positional_parameters(self) -> Tuple[PythonFunctionParameter]:
+        return tuple(p for p in self.parameters if p.is_positional)
+
+    @property
+    def standard_parameters(self) -> Tuple[PythonFunctionParameter]:
+        return tuple(p for p in self.parameters if p.is_standard)
+
+    @property
+    def keyword_parameters(self) -> Tuple[PythonFunctionParameter]:
+        return tuple(p for p in self.parameters if p.is_keyword)
+
+    @property
+    def has_variadic_list(self) -> bool:
+        return any(p.is_variadic_list for p in self.parameters)
+
+    @property
+    def has_variadic_keywords(self) -> bool:
+        return any(p.is_variadic_keywords for p in self.parameters)
 
 
 class PythonExpressionStatement(PythonStatement):
@@ -696,6 +775,131 @@ class _ToAst(Transformer):
     def import_stmt(self, statement: PythonImportStatement) -> PythonImportStatement:
         return statement
 
+    # Function Definition ##################################
+
+    @v_args(inline=True)
+    def funcdef(
+        self,
+        name: Token,
+        parameters: Optional[Tuple[PythonFunctionParameter]],
+        type_hint: Optional[PythonExpression],
+        body: PythonStatement,
+    ) -> PythonFunctionDefStatement:
+        parameters = parameters or ()
+        type_hint = None if type_hint is None else str(type_hint)  # FIXME
+        return PythonFunctionDefStatement(
+            name,
+            parameters or (),
+            body,
+            type_hint=type_hint,
+            is_async=False,
+            line=name.line,
+            column=name.column,
+        )
+
+    @v_args(inline=True)
+    def async_funcdef(self, funcdef: PythonFunctionDefStatement) -> PythonFunctionDefStatement:
+        object.__setattr__(funcdef, 'is_async', True)
+        return funcdef
+
+    def parameters(self, children: Iterable[Any]) -> Tuple[PythonFunctionParameter]:
+        params = []
+        assert len(children) > 1, f'parameters: {children}'
+        for i in range(len(children)):
+            child = children[i]
+            if child is None:
+                continue  # because of square brackets in the grammar
+            if child == '/':
+                # positional only -> standard
+                for j in range(i):
+                    object.__setattr__(children[j], 'modifier', '/')
+            elif isinstance(child, tuple):
+                # starparams
+                params.extend(child)
+            else:
+                # paramvalue | kwparams
+                assert isinstance(child, PythonFunctionParameter), f'parameters: {children}'
+                params.append(child)
+        return tuple(params)
+
+    @v_args(inline=True)
+    def starparams(
+        self,
+        starparam: Union[PythonFunctionParameter, Token],
+        poststarparams: Iterable[PythonFunctionParameter],
+    ) -> Tuple[PythonFunctionParameter]:
+        if starparam == '*':
+            return tuple(poststarparams)
+        return (starparam,) + tuple(poststarparams)
+
+    @v_args(inline=True)
+    def starparam(
+        self,
+        param: Union[PythonFunctionParameter, Token],
+    ) -> PythonFunctionParameter:
+        if not isinstance(param, PythonFunctionParameter):
+            param = PythonFunctionParameter(param, line=param.line, column=param.column)
+        assert param.default_value is None, f'starparam: {param}'
+        object.__setattr__(param, 'modifier', '*')
+        return param
+
+    def poststarparams(
+        self,
+        params: Iterable[Union[PythonFunctionParameter, Token]],
+    ) -> Tuple[PythonFunctionParameter]:
+        return tuple(
+            PythonFunctionParameter(
+                param,
+                modifier='=',
+                line=name.line,
+                column=name.column,
+            )
+            if not isinstance(param, PythonFunctionParameter)
+            else param
+            for param in params
+        )
+
+    @v_args(inline=True)
+    def kwparams(
+        self,
+        param: Union[PythonFunctionParameter, Token],
+    ) -> PythonFunctionParameter:
+        if not isinstance(param, PythonFunctionParameter):
+            param = PythonFunctionParameter(param, line=param.line, column=param.column)
+        assert param.default_value is None, f'kwparams: {param}'
+        object.__setattr__(param, 'modifier', '**')
+        return param
+
+    @v_args(inline=True)
+    def paramvalue(
+        self,
+        param: Union[PythonFunctionParameter, Token],
+        default_value: Optional[PythonExpression] = None,
+    ) -> PythonFunctionParameter:
+        if isinstance(param, PythonFunctionParameter):
+            object.__setattr__(param, 'default_value', default_value)
+        else:
+            param = PythonFunctionParameter(
+                param,
+                default_value=default_value,
+                line=param.line,
+                column=param.column,
+            )
+        return param
+
+    @v_args(inline=True)
+    def typedparam(
+        self,
+        name: Token,
+        type_hint: Optional[PythonExpression] = None,
+    ) -> PythonFunctionParameter:
+        return PythonFunctionParameter(
+            name,
+            type_hint=str(type_hint),  # FIXME
+            line=name.line,
+            column=name.column,
+        )
+
     # Complex Literals #####################################
 
     def tuple(self, items: Iterable[PythonExpression]) -> PythonTupleLiteral:
@@ -816,8 +1020,8 @@ class _ToAst(Transformer):
             assert children[0].is_reference, f'expected reference: {children[0]}'
             assert children[0].object is None, f'expected name: {children[0]}'
             name = children[0].name
-        else:
-            print('>> argvalue with len(children) == 1')
+        # else:
+        #     print('>> argvalue with len(children) == 1')
         return PythonSimpleArgument(value, name=name, line=value.line, column=value.column)
 
     def exprlist(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:

@@ -52,7 +52,11 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     # text = '(a for a in seq)\n'
     tree = parse_python(text)
     # print(tree.pretty())
-    print(tree)
+    if isinstance(tree, list):
+        for child in tree:
+            print('>>', child)
+    else:
+        print(tree)
     return 0
 
 
