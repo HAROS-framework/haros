@@ -54,6 +54,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     # print(tree.pretty())
     if isinstance(tree, list):
         for child in tree:
+            print('')
             print('>>', child)
     else:
         print(tree)

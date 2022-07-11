@@ -61,6 +61,10 @@ class PythonExpression(PythonAst):
     def is_generator(self) -> bool:
         return False
 
+    @property
+    def is_operator(self) -> bool:
+        return False
+
 
 class PythonHelperNode(PythonAst):
     @property
@@ -93,6 +97,10 @@ class PythonHelperNode(PythonAst):
 
     @property
     def is_function_parameter(self) -> bool:
+        return False
+
+    @property
+    def is_conditional_block(self) -> bool:
         return False
 
 
@@ -391,6 +399,47 @@ class PythonGenerator(PythonExpression):
         return True
 
 
+class PythonOperator(PythonExpression):
+    @property
+    def is_operator(self) -> bool:
+        return True
+
+    @property
+    def arity(self) -> int:
+        return 0
+
+    @property
+    def is_unary(self) -> bool:
+        return self.arity == 1
+
+    @property
+    def is_binary(self) -> bool:
+        return self.arity == 2
+
+    @property
+    def is_ternary(self) -> bool:
+        return self.arity == 3
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonBinaryOperator(PythonOperator):
+    operator: str
+    operand1: PythonExpression
+    operand2: PythonExpression
+
+    @property
+    def arity(self) -> int:
+        return 2
+
+    @property
+    def is_arithmetic(self) -> bool:
+        return self.operator in ('+', '-', '*', '/', '**')
+
+    @property
+    def is_comparison(self) -> bool:
+        return self.operator in ('==', '!=', '<', '<=', '>', '>=')
+
+
 class PythonArgument(PythonHelperNode):
     @property
     def is_argument(self) -> bool:
@@ -468,6 +517,10 @@ class PythonStatement(PythonAst):
 
     @property
     def is_function_def(self) -> bool:
+        return False
+
+    @property
+    def is_if(self) -> bool:
         return False
 
 
@@ -642,7 +695,39 @@ class PythonFunctionDefStatement(PythonStatement):
         return any(p.is_variadic_keywords for p in self.parameters)
 
 
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonConditionalBlock(PythonHelperNode):
+    condition: PythonExpression
+    body: Tuple[PythonStatement]
+
+    @property
+    def is_conditional_block(self) -> bool:
+        return True
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
+class PythonIfStatement(PythonStatement):
+    then_branch: PythonConditionalBlock
+    elif_branches: Tuple[PythonConditionalBlock]
+    else_branch: Optional[PythonConditionalBlock]
+
+    @property
+    def is_if(self) -> bool:
+        return True
+
+    @property
+    def condition(self) -> PythonExpression:
+        return self.then_branch.condition
+
+    @property
+    def body(self) -> Tuple[PythonStatement]:
+        return self.then_branch.body
+
+
+@attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonExpressionStatement(PythonStatement):
+    expression: PythonExpression
+
     @property
     def is_expression(self) -> bool:
         return True
@@ -664,6 +749,16 @@ class _ToAst(Transformer):
     @v_args(inline=True)
     def expr_stmt(self, expression):
         return expression
+
+    def suite(self, children) -> Tuple[PythonStatement]:
+        if len(children) == 1:
+            stmt = children[0]
+            if not stmt.is_statement:
+                assert stmt.is_expression, f'suite: {children}'
+                stmt = PythonExpressionStatement(stmt)
+            return (stmt,)
+        # newline indent stmt+ dedent
+        return tuple(children)
 
     # Helper Nodes #########################################
 
@@ -899,6 +994,45 @@ class _ToAst(Transformer):
             line=name.line,
             column=name.column,
         )
+
+    # If Statements ########################################
+
+    @v_args(inline=True)
+    def if_stmt(
+        self,
+        condition: PythonExpression,
+        body: Tuple[PythonStatement],
+        elif_branches: Tuple[PythonConditionalBlock],
+        else_branch: Optional[PythonConditionalBlock]
+    ) -> PythonIfStatement:
+        then_branch = PythonConditionalBlock(condition, body)
+        return PythonIfStatement(then_branch, elif_branches, else_branch)
+
+    def elifs(self, children: Iterable[PythonConditionalBlock]) -> Tuple[PythonConditionalBlock]:
+        return tuple(children)
+
+    @v_args(inline=True)
+    def elif_(
+        self,
+        condition: PythonExpression,
+        body: Tuple[PythonStatement]
+    ) -> PythonConditionalBlock:
+        return PythonConditionalBlock(condition, body)
+
+    # Operators ############################################
+
+    def comparison(self, children) -> PythonBinaryOperator:
+        assert len(children) % 2 == 1, f'comparison: {children}'
+        op = children[0]
+        for i in range(1, len(children), 2):
+            assert isinstance(children[i], Token), f'comparison: {children}'
+            assert isinstance(children[i+1], PythonExpression), f'comparison: {children}'
+            op = PythonBinaryOperator(children[i], op, children[i+1])
+        return op
+
+    @v_args(inline=True)
+    def comp_op(self, operator: Token) -> Token:
+        return operator
 
     # Complex Literals #####################################
 
