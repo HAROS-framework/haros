@@ -426,6 +426,9 @@ class PythonBinaryOperator(PythonOperator):
     operator: str
     operand1: PythonExpression
     operand2: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
 
     @property
     def arity(self) -> int:
@@ -466,6 +469,9 @@ class PythonArgument(PythonHelperNode):
 class PythonFunctionCall(PythonExpression):
     function: PythonExpression
     arguments: Tuple[PythonArgument]
+    # meta
+    line: int = 0
+    column: int = 0
 
     @property
     def is_function_call(self) -> bool:
@@ -699,6 +705,9 @@ class PythonFunctionDefStatement(PythonStatement):
 class PythonConditionalBlock(PythonHelperNode):
     condition: PythonExpression
     body: Tuple[PythonStatement]
+    # meta
+    line: int = 0
+    column: int = 0
 
     @property
     def is_conditional_block(self) -> bool:
@@ -723,10 +732,21 @@ class PythonIfStatement(PythonStatement):
     def body(self) -> Tuple[PythonStatement]:
         return self.then_branch.body
 
+    @property
+    def line(self) -> int:
+        return self.then_branch.line
+
+    @property
+    def column(self) -> int:
+        return self.then_branch.column
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonExpressionStatement(PythonStatement):
     expression: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
 
     @property
     def is_expression(self) -> bool:
@@ -755,7 +775,7 @@ class _ToAst(Transformer):
             stmt = children[0]
             if not stmt.is_statement:
                 assert stmt.is_expression, f'suite: {children}'
-                stmt = PythonExpressionStatement(stmt)
+                stmt = PythonExpressionStatement(stmt, line=stmt.line, column=stmt.column)
             return (stmt,)
         # newline indent stmt+ dedent
         return tuple(children)
@@ -1005,7 +1025,12 @@ class _ToAst(Transformer):
         elif_branches: Tuple[PythonConditionalBlock],
         else_branch: Optional[PythonConditionalBlock]
     ) -> PythonIfStatement:
-        then_branch = PythonConditionalBlock(condition, body)
+        then_branch = PythonConditionalBlock(
+            condition,
+            body,
+            line=condition.line,
+            column=condition.column,
+        )
         return PythonIfStatement(then_branch, elif_branches, else_branch)
 
     def elifs(self, children: Iterable[PythonConditionalBlock]) -> Tuple[PythonConditionalBlock]:
@@ -1027,7 +1052,13 @@ class _ToAst(Transformer):
         for i in range(1, len(children), 2):
             assert isinstance(children[i], Token), f'comparison: {children}'
             assert isinstance(children[i+1], PythonExpression), f'comparison: {children}'
-            op = PythonBinaryOperator(children[i], op, children[i+1])
+            op = PythonBinaryOperator(
+                children[i],
+                op,
+                children[i+1],
+                line=children[1].line,
+                column=children[1].column,
+            )
         return op
 
     @v_args(inline=True)
@@ -1088,10 +1119,28 @@ class _ToAst(Transformer):
             column=name.column,
         )
 
+    @v_args(inline=True)
+    def getattr(self, expr: PythonExpression, name: Token) -> PythonReference:
+        try:
+            line = expr.line
+            column = expr.column
+        except AttributeError:
+            line = name.line
+            column = name.column
+        return PythonReference(name, object=expr, line=line, column=column)
+
+    # @v_args(inline=True)
+    # def getitem(
+    #     self,
+    #     expr: PythonExpression,
+    #     subscripts: Union[PythonExpression, Tuple[PythonExpression]],
+    # ) -> PythonSubscript:
+    #     pass
+
     def funccall(self, children: Iterable[Any]) -> PythonFunctionCall:
         function = children[0]
         arguments = () if len(children) == 1 else children[1]
-        return PythonFunctionCall(function, arguments)
+        return PythonFunctionCall(function, arguments, line=function.line, column=function.column)
 
     def arguments(self, children: Iterable[PythonAst]) -> Tuple[PythonExpression]:
         args = []
