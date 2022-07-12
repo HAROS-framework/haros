@@ -31,6 +31,10 @@ class PythonAst:
     def is_helper(self) -> bool:
         return False
 
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws = ' ' * indent
+        return ws + str(self)
+
 
 class PythonExpression(PythonAst):
     @property
@@ -156,6 +160,10 @@ class PythonNoneLiteral(PythonLiteral):
     def is_none(self) -> bool:
         return True
 
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws = ' ' * indent
+        return ws + 'None Literal'
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonBooleanLiteral(PythonLiteral):
@@ -167,6 +175,11 @@ class PythonBooleanLiteral(PythonLiteral):
     @property
     def is_bool(self) -> bool:
         return True
+
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws1 = ' ' * indent
+        ws2 = ' ' * (indent + step)
+        return f'{ws1}Boolean Literal\n{ws2}{self.value}'
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -192,6 +205,11 @@ class PythonNumberLiteral(PythonLiteral):
     def is_complex(self) -> bool:
         return isinstance(self.value, complex)
 
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws1 = ' ' * indent
+        ws2 = ' ' * (indent + step)
+        return f'{ws1}Number Literal\n{ws2}{self.value}'
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonStringLiteral(PythonLiteral):
@@ -207,6 +225,11 @@ class PythonStringLiteral(PythonLiteral):
     @property
     def is_string(self) -> bool:
         return True
+
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws1 = ' ' * indent
+        ws2 = ' ' * (indent + step)
+        return f'{ws1}String Literal\n{ws2}{repr(self.value)}'
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -224,6 +247,11 @@ class PythonTupleLiteral(PythonLiteral):
     def is_comprehension(self) -> bool:
         return False
 
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws = ' ' * indent
+        values = '\n'.join(v.pretty(indent=(indent+step)) for v in self.values)
+        return f'{ws}Tuple Literal\n{values}'
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonListLiteral(PythonLiteral):
@@ -240,6 +268,11 @@ class PythonListLiteral(PythonLiteral):
     def is_comprehension(self) -> bool:
         return False
 
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws = ' ' * indent
+        values = '\n'.join(v.pretty(indent=(indent+step)) for v in self.values)
+        return f'{ws}List Literal\n{values}'
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonKeyValuePair(PythonHelperNode):
@@ -252,6 +285,12 @@ class PythonKeyValuePair(PythonHelperNode):
     @property
     def is_key_value(self) -> bool:
         return True
+
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws = ' ' * indent
+        key = self.key.pretty(indent=(indent+step))
+        value = self.value.pretty(indent=(indent+step))
+        return f'{ws}Key Value\n{key}\n{value}'
 
 
 PythonDictEntry = Union[PythonKeyValuePair, PythonExpression]
@@ -272,6 +311,11 @@ class PythonDictLiteral(PythonLiteral):
     def is_comprehension(self) -> bool:
         return False
 
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws = ' ' * indent
+        entries = '\n'.join(e.pretty(indent=(indent+step)) for e in self.entries)
+        return f'{ws}Dict Literal\n{entries}'
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonSetLiteral(PythonLiteral):
@@ -288,6 +332,11 @@ class PythonSetLiteral(PythonLiteral):
     def is_comprehension(self) -> bool:
         return False
 
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws = ' ' * indent
+        values = '\n'.join(v.pretty(indent=(indent+step)) for v in self.values)
+        return f'{ws}Set Literal\n{values}'
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonReference(PythonExpression):
@@ -301,6 +350,14 @@ class PythonReference(PythonExpression):
     def is_reference(self) -> bool:
         return True
 
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws1 = ' ' * indent
+        ws2 = ' ' * (indent + step)
+        if self.object is None:
+            return f'{ws1}Reference\n{ws2}{name}'
+        object = self.object.pretty(indent=(indent+step))
+        return f'{ws1}Reference\n{ws2}{name}\n{object}'
+
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
 class PythonIterator(PythonHelperNode):
@@ -311,6 +368,14 @@ class PythonIterator(PythonHelperNode):
     @property
     def is_iterator(self):
         return True
+
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws1 = ' ' * indent
+        ws2 = ' ' * (indent + step)
+        vs = '\n'.join(v.pretty(indent=(indent+step+step)) for v in self.variables)
+        it = self.iterable.pretty(indent=(indent+step))
+        asynchronous = f'{ws2}async\n' if self.asynchronous else ''
+        return f'{ws1}Iterator\n{asynchronous}{ws2}variables\n{vs}\niterable\n{it}'
 
 
 @attr.s(auto_attribs=True, slots=True, frozen=True)
@@ -1145,6 +1210,8 @@ class _ToAst(Transformer):
     def arguments(self, children: Iterable[PythonAst]) -> Tuple[PythonExpression]:
         args = []
         for arg in children:
+            if arg is None:
+                continue  # [ starargs | kwargs ]
             if isinstance(arg, tuple):
                 args.extend(arg)
             elif arg.is_expression:
