@@ -35,8 +35,11 @@ class PythonStatement(PythonAst):
             self.is_assignment
             or self.is_delete
             or self.is_pass
-            or self.is_flow
-            or self.is_import
+            or self.is_break
+            or self.is_continue
+            or self.is_return
+            or self.is_raise
+            or self.is_yield
             or self.is_global
             or self.is_nonlocal
             or self.is_assert
@@ -59,7 +62,23 @@ class PythonStatement(PythonAst):
         return False
 
     @property
-    def is_flow(self) -> bool:
+    def is_break(self) -> bool:
+        return False
+
+    @property
+    def is_continue(self) -> bool:
+        return False
+
+    @property
+    def is_return(self) -> bool:
+        return False
+
+    @property
+    def is_raise(self) -> bool:
+        return False
+
+    @property
+    def is_yield(self) -> bool:
         return False
 
     @property

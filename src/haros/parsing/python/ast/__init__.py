@@ -46,10 +46,16 @@ from haros.parsing.python.ast.helpers import (
     PythonSpecialArgument,
 )
 from haros.parsing.python.ast.statements import (
+    PythonBreakStatement,
     PythonClassDefStatement,
+    PythonContinueStatement,
     PythonDeleteStatement,
     PythonExpressionStatement,
     PythonFunctionDefStatement,
     PythonIfStatement,
     PythonImportStatement,
+    PythonPassStatement,
+    PythonRaiseStatement,
+    PythonReturnStatement,
+    PythonYieldStatement,
 )

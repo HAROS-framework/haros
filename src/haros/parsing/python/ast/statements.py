@@ -23,6 +23,87 @@ from haros.parsing.python.ast.helpers import (
 
 
 @frozen
+class PythonPassStatement(PythonStatement):
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_pass(self) -> bool:
+        return True
+
+
+@frozen
+class PythonBreakStatement(PythonStatement):
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_break(self) -> bool:
+        return True
+
+
+@frozen
+class PythonContinueStatement(PythonStatement):
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_continue(self) -> bool:
+        return True
+
+
+@frozen
+class PythonDeleteStatement(PythonStatement):
+    expressions: Tuple[PythonExpression]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_delete(self) -> bool:
+        return True
+
+
+@frozen
+class PythonReturnStatement(PythonStatement):
+    # TODO
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_return(self) -> bool:
+        return True
+
+
+@frozen
+class PythonRaiseStatement(PythonStatement):
+    # TODO
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_raise(self) -> bool:
+        return True
+
+
+@frozen
+class PythonYieldStatement(PythonStatement):
+    # TOOD
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_yield(self) -> bool:
+        return True
+
+
+@frozen
 class PythonExpressionStatement(PythonStatement):
     expression: PythonExpression
     # meta
@@ -43,18 +124,6 @@ class PythonImportStatement(PythonStatement):
 
     @property
     def is_import(self) -> bool:
-        return True
-
-
-@frozen
-class PythonDeleteStatement(PythonStatement):
-    expressions: Tuple[PythonExpression]
-    # meta
-    line: int = 0
-    column: int = 0
-
-    @property
-    def is_delete(self) -> bool:
         return True
 
 
