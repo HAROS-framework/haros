@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from attr.exceptions import FrozenInstanceError
+from attrs.exceptions import FrozenInstanceError
 
 from haros.metamodel.ros import FileModel, PackageModel
 

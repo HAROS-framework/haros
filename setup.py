@@ -71,7 +71,7 @@ setup(
         'console_scripts': [f'{PROJECT}={PYTHON_PKG}.cli:main'],
     },
     python_requires='>=3.8, <4',
-    install_requires=['attrs>=21.4', 'pyyaml>=5.3.1', 'lark>=1.1'],
+    install_requires=['attrs>=22.1', 'pyyaml>=5.3.1', 'lark>=1.1'],
     extras_require={
         'dev': ['pytest', 'tox'],
     },

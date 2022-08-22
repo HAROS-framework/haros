@@ -9,7 +9,8 @@ from typing import Any, Dict, Final, List
 
 import enum
 
-import attr
+from attrs import asdict, field, frozen
+from attrs.validators import matches_re
 
 from haros.metamodel.common import DevelopmentMetadata, SourceCodeDependencies, SourceCodeMetadata
 
@@ -43,17 +44,17 @@ class Languages(enum.Enum):
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class RosType:
     # Parameters
-    package: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
-    name: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
+    package: str = field(validator=matches_re(RE_NAME))
+    name: str = field(validator=matches_re(RE_NAME))
 
     def __str__(self) -> str:
         return f'{self.package}/{self.name}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class RosName:
     # Parameters
     text: str
@@ -114,7 +115,7 @@ class RosName:
         return self.text
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class RosAdvertiseCall:
     # Parameters
     name: str
@@ -126,15 +127,15 @@ class RosAdvertiseCall:
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class FileModel:
     # Parameters
-    package: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
+    package: str = field(validator=matches_re(RE_NAME))
     path: str  # relative path within package (e.g. 'src/code.cpp')
     # Defaults
-    # storage: StorageMetadata = attr.Factory(StorageMetadata)
-    source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
-    dependencies: SourceCodeDependencies = attr.Factory(SourceCodeDependencies)
+    # storage: StorageMetadata = field(factory=StorageMetadata)
+    source: SourceCodeMetadata = field(factory=SourceCodeMetadata)
+    dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
 
     @property
     def uid(self) -> str:
@@ -152,43 +153,43 @@ class FileModel:
         return '.'
 
     def asdict(self) -> Dict[str, Any]:
-        data = attr.asdict(self)
+        data = asdict(self)
         data['uid'] = self.uid
         return data
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PackageModel:
     # Parameters
-    name: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
+    name: str = field(validator=matches_re(RE_NAME))
     # Defaults
-    files: List[str] = attr.Factory(list)
-    nodes: List[str] = attr.Factory(list)
-    # storage: StorageMetadata = attr.Factory(StorageMetadata)
-    metadata: DevelopmentMetadata = attr.Factory(DevelopmentMetadata)
-    dependencies: SourceCodeDependencies = attr.Factory(SourceCodeDependencies)
+    files: List[str] = field(factory=list)
+    nodes: List[str] = field(factory=list)
+    # storage: StorageMetadata = field(factory=StorageMetadata)
+    metadata: DevelopmentMetadata = field(factory=DevelopmentMetadata)
+    dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
 
     @property
     def uid(self) -> str:
         return self.name
 
     def asdict(self) -> Dict[str, Any]:
-        data = attr.asdict(self)
+        data = asdict(self)
         data['uid'] = self.uid
         return data
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class NodeModel:
     # Parameters
-    package: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
-    name: str = attr.ib(validator=attr.validators.matches_re(RE_NAME))
+    package: str = field(validator=matches_re(RE_NAME))
+    name: str = field(validator=matches_re(RE_NAME))
     # Defaults
     is_library: bool = False
     # TODO rosname: typing.Optional[RosName] = None
-    files: List[str] = attr.Factory(list)
-    source: SourceCodeMetadata = attr.Factory(SourceCodeMetadata)
-    dependencies: SourceCodeDependencies = attr.Factory(SourceCodeDependencies)
+    files: List[str] = field(factory=list)
+    source: SourceCodeMetadata = field(factory=SourceCodeMetadata)
+    dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
     # TODO function calls
 
     @property
@@ -196,7 +197,7 @@ class NodeModel:
         return f'{self.package}/{self.name}'
 
     def asdict(self) -> Dict[str, Any]:
-        return attr.asdict(self)
+        return asdict(self)
 
 
 ###############################################################################
@@ -209,17 +210,17 @@ class NodeModel:
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class ProjectModel:
     name: str
-    packages: Dict[str, PackageModel] = attr.Factory(dict)
-    files: Dict[str, FileModel] = attr.Factory(dict)
-    nodes: Dict[str, NodeModel] = attr.Factory(dict)
+    packages: Dict[str, PackageModel] = field(factory=dict)
+    files: Dict[str, FileModel] = field(factory=dict)
+    nodes: Dict[str, NodeModel] = field(factory=dict)
     # NOTE: still not sure whether to include storage here
-    # storage: Dict[str, StorageMetadata] = attr.Factory(dict)
+    # storage: Dict[str, StorageMetadata] = field(factory=dict)
 
     def asdict(self) -> Dict[str, Any]:
-        return attr.asdict(self)
+        return asdict(self)
 
 
 ###############################################################################

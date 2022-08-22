@@ -10,7 +10,7 @@ from typing import Any, Dict, Final, Iterable, List, Union
 import os
 from pathlib import Path
 
-import attr
+from attrs import field, frozen
 
 ###############################################################################
 # Constants
@@ -166,10 +166,10 @@ def crawl_package(pkg: Path) -> List[Path]:
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class StorageManager:
-    workspaces: List[Path] = attr.Factory(list)
-    packages: Dict[str, Path] = attr.Factory(dict)
+    workspaces: List[Path] = field(factory=list)
+    packages: Dict[str, Path] = field(factory=dict)
 
     def crawl(self):
         for ws in self.workspaces:

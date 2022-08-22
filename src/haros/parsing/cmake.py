@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 import sys
 
-import attr
+from attrs import field, frozen
 from lark import Lark, Transformer, v_args
 
 ###############################################################################
@@ -29,7 +29,7 @@ _INDENT_SPACE: Final[str] = '  '
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class CMakeComment:
     text: str
     line: int = 1
@@ -43,7 +43,7 @@ class CMakeComment:
         ))
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class CMakeArgument:
     value: str
     line: int = 1
@@ -57,13 +57,13 @@ class CMakeArgument:
         ))
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class CMakeCommand:
     name: str
     arguments: List[CMakeArgument]
     line: int = 1
     column: int = 1
-    comments: List[CMakeComment] = attr.Factory(list)
+    comments: List[CMakeComment] = field(factory=list)
 
     def pretty(self, indent: int = 0) -> str:
         ws = _INDENT_SPACE * indent
@@ -81,10 +81,10 @@ class CMakeCommand:
         return '\n'.join(parts)
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class CMakeFile:
-    commands: List[CMakeCommand] = attr.Factory(list)
-    comments: List[CMakeComment] = attr.Factory(list)
+    commands: List[CMakeCommand] = field(factory=list)
+    comments: List[CMakeComment] = field(factory=list)
 
     def pretty(self) -> str:
         parts = ['file:']

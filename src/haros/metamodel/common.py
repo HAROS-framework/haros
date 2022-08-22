@@ -7,14 +7,14 @@
 
 from typing import Any, Optional, Set
 
-import attr
+from attrs import define, field, frozen
 
 ###############################################################################
 # File System
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True)
+@define
 class StorageMetadata:
     path: Optional[str] = None  # real path (e.g. '/home/user/file')
     size: Optional[int] = None  # in bytes
@@ -26,18 +26,18 @@ class StorageMetadata:
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True)
+@define
 class SourceCodeMetadata:
     language: str = 'Text'  # e.g. C++, Python...
     lines: int = 1  # always at least 1, even if the file is empty
     ast: Any = None
 
 
-@attr.s(auto_attribs=True, slots=True)
+@define
 class DevelopmentMetadata:
     description: str = ''
-    authors: Set[str] = attr.Factory(set)
-    maintainers: Set[str] = attr.Factory(set)
+    authors: Set[str] = field(factory=set)
+    maintainers: Set[str] = field(factory=set)
     version: str = 'unknown'
     license: str = 'unknown'
     url_home: Optional[str] = None
@@ -45,7 +45,7 @@ class DevelopmentMetadata:
     url_tracker: Optional[str] = None
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class SourceCodeDependencies:
-    build: Set[str] = attr.Factory(set)
-    runtime: Set[str] = attr.Factory(set)
+    build: Set[str] = field(factory=set)
+    runtime: Set[str] = field(factory=set)

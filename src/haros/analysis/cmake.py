@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 import re
 
-import attr
+from attrs import field, frozen
 
 from haros.parsing.cmake import CMakeArgument
 from haros.parsing.cmake import parser as cmake_parser
@@ -27,26 +27,26 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class CMakeTarget:
     name: str
     is_executable: bool = True
-    sources: List[str] = attr.Factory(list)
-    dependencies: List[str] = attr.Factory(list)
+    sources: List[str] = field(factory=list)
+    dependencies: List[str] = field(factory=list)
 
     @property
     def is_library(self) -> bool:
         return not self.is_executable
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class CMakeContext:
     parser: Any
     parent: Any = None
-    variables: Dict[str, str] = attr.Factory(dict)
-    environment: Dict[str, str] = attr.Factory(dict)
-    cache: Dict[str, str] = attr.Factory(dict)
-    targets: Dict[str, CMakeTarget] = attr.Factory(dict)
+    variables: Dict[str, str] = field(factory=dict)
+    environment: Dict[str, str] = field(factory=dict)
+    cache: Dict[str, str] = field(factory=dict)
+    targets: Dict[str, CMakeTarget] = field(factory=dict)
 
     def process_arguments(self, arguments: List[CMakeArgument]) -> List[str]:
         if not arguments:

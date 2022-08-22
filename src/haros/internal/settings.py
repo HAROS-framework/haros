@@ -14,7 +14,7 @@ except ImportError:
     from yaml import Dumper
 from yaml import dump, safe_load
 
-import attr
+from attrs import asdict, define, field
 
 ###############################################################################
 # Constants
@@ -112,46 +112,46 @@ YAML_DEFAULT_SETTINGS: Final[str] = r"""%YAML 1.1
 # Data Types
 ###############################################################################
 
-@attr.s(auto_attribs=True, slots=True, frozen=False)
+@define
 class EnvironmentSettings:
     copy: bool = DEFAULT_SETTINGS_ENVIRONMENT['copy']
-    variables: Dict[str, str] = attr.Factory(dict)
+    variables: Dict[str, str] = field(factory=dict)
 
     def asdict(self) -> Dict[str, Any]:
-        return attr.asdict(self)
+        return asdict(self)
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=False)
+@define
 class LoggingSettings:
     # follows Python's Dictionary configuration schema
     # https://docs.python.org/3.8/library/logging.config.html#dictionary-schema-details
     version: int = DEFAULT_SETTINGS_LOGGING['version']
-    formatters: Dict[str, Any] = attr.Factory(_default_logging_formatters)
-    handlers: Dict[str, Any] = attr.Factory(_default_logging_handlers)
-    root: Dict[str, Any] = attr.Factory(_default_logging_root)
+    formatters: Dict[str, Any] = field(factory=_default_logging_formatters)
+    handlers: Dict[str, Any] = field(factory=_default_logging_handlers)
+    root: Dict[str, Any] = field(factory=_default_logging_root)
 
     def asdict(self) -> Dict[str, Any]:
-        return attr.asdict(self)
+        return asdict(self)
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=False)
+@define
 class ParsingSettings:
-    cpp: Dict[str, str] = attr.Factory(_default_parsing_cpp)
+    cpp: Dict[str, str] = field(factory=_default_parsing_cpp)
 
     def asdict(self) -> Dict[str, Any]:
-        return attr.asdict(self)
+        return asdict(self)
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=False)
+@define
 class Settings:
     home: Path
-    environment: EnvironmentSettings = attr.Factory(EnvironmentSettings)
-    logging: LoggingSettings = attr.Factory(LoggingSettings)
-    plugins: Dict[str, Dict[str, Any]] = attr.Factory(dict)
-    parsing: ParsingSettings = attr.Factory(ParsingSettings)
+    environment: EnvironmentSettings = field(factory=EnvironmentSettings)
+    logging: LoggingSettings = field(factory=LoggingSettings)
+    plugins: Dict[str, Dict[str, Any]] = field(factory=dict)
+    parsing: ParsingSettings = field(factory=ParsingSettings)
 
     def asdict(self) -> Dict[str, Any]:
-        return attr.asdict(self)
+        return asdict(self)
 
 
 ###############################################################################

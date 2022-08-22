@@ -9,7 +9,7 @@ from typing import Any, Final, Callable, Iterable, Optional, Tuple, Union
 
 import re
 
-import attr
+from attrs import frozen
 from lark import Lark, Token, Transformer, v_args
 from lark.indenter import PythonIndenter
 
@@ -146,7 +146,7 @@ class PythonLiteral(PythonExpression):
         return False
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonNoneLiteral(PythonLiteral):
     # meta
     line: int = 0
@@ -165,7 +165,7 @@ class PythonNoneLiteral(PythonLiteral):
         return ws + 'None Literal'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonBooleanLiteral(PythonLiteral):
     value: bool
     # meta
@@ -182,7 +182,7 @@ class PythonBooleanLiteral(PythonLiteral):
         return f'{ws1}Boolean Literal\n{ws2}{self.value}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonNumberLiteral(PythonLiteral):
     value: Union[int, float, complex]
     # meta
@@ -211,7 +211,7 @@ class PythonNumberLiteral(PythonLiteral):
         return f'{ws1}Number Literal\n{ws2}{self.value}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonStringLiteral(PythonLiteral):
     value: str
     is_raw: bool = False
@@ -232,7 +232,7 @@ class PythonStringLiteral(PythonLiteral):
         return f'{ws1}String Literal\n{ws2}{repr(self.value)}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonTupleLiteral(PythonLiteral):
     values: Tuple[PythonExpression]
     # meta
@@ -253,7 +253,7 @@ class PythonTupleLiteral(PythonLiteral):
         return f'{ws}Tuple Literal\n{values}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonListLiteral(PythonLiteral):
     values: Tuple[PythonExpression]
     # meta
@@ -274,7 +274,7 @@ class PythonListLiteral(PythonLiteral):
         return f'{ws}List Literal\n{values}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonKeyValuePair(PythonHelperNode):
     key: PythonExpression
     value: PythonExpression
@@ -296,7 +296,7 @@ class PythonKeyValuePair(PythonHelperNode):
 PythonDictEntry = Union[PythonKeyValuePair, PythonExpression]
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonDictLiteral(PythonLiteral):
     entries: Tuple[PythonDictEntry]
     # meta
@@ -317,7 +317,7 @@ class PythonDictLiteral(PythonLiteral):
         return f'{ws}Dict Literal\n{entries}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonSetLiteral(PythonLiteral):
     values: Tuple[PythonExpression]
     # meta
@@ -338,7 +338,7 @@ class PythonSetLiteral(PythonLiteral):
         return f'{ws}Set Literal\n{values}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonReference(PythonExpression):
     name: str
     object: Optional[PythonExpression] = None
@@ -359,7 +359,7 @@ class PythonReference(PythonExpression):
         return f'{ws1}Reference\n{ws2}{name}\n{object}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonIterator(PythonHelperNode):
     variables: Tuple[PythonExpression]
     iterable: PythonExpression
@@ -378,7 +378,7 @@ class PythonIterator(PythonHelperNode):
         return f'{ws1}Iterator\n{asynchronous}{ws2}variables\n{vs}\niterable\n{it}'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonTupleComprehension(PythonLiteral):
     expression: PythonExpression
     iterators: Tuple[PythonIterator]
@@ -396,7 +396,7 @@ class PythonTupleComprehension(PythonLiteral):
         return True
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonListComprehension(PythonLiteral):
     expression: PythonExpression
     iterators: Tuple[PythonIterator]
@@ -414,7 +414,7 @@ class PythonListComprehension(PythonLiteral):
         return True
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonDictComprehension(PythonLiteral):
     entry: PythonKeyValuePair
     iterators: Tuple[PythonIterator]
@@ -432,7 +432,7 @@ class PythonDictComprehension(PythonLiteral):
         return True
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonSetComprehension(PythonLiteral):
     expression: PythonExpression
     iterators: Tuple[PythonIterator]
@@ -450,7 +450,7 @@ class PythonSetComprehension(PythonLiteral):
         return True
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonGenerator(PythonExpression):
     result: PythonAst
     iterators: Tuple[PythonIterator]
@@ -486,7 +486,7 @@ class PythonOperator(PythonExpression):
         return self.arity == 3
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonBinaryOperator(PythonOperator):
     operator: str
     operand1: PythonExpression
@@ -530,7 +530,7 @@ class PythonArgument(PythonHelperNode):
         return False
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonFunctionCall(PythonExpression):
     function: PythonExpression
     arguments: Tuple[PythonArgument]
@@ -543,7 +543,7 @@ class PythonFunctionCall(PythonExpression):
         return True
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonSimpleArgument(PythonArgument):
     argument: PythonExpression
     name: Optional[str] = None
@@ -560,7 +560,7 @@ class PythonSimpleArgument(PythonArgument):
         return self.name is not None
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonSpecialArgument(PythonArgument):
     argument: PythonExpression
     is_double_star: bool = False
@@ -595,7 +595,7 @@ class PythonStatement(PythonAst):
         return False
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonImportBase(PythonHelperNode):
     names: Tuple[str]
     dots: int = 0
@@ -640,7 +640,7 @@ class PythonImportBase(PythonHelperNode):
         )
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonAliasName(PythonHelperNode):
     name: str
     alias: str
@@ -661,7 +661,7 @@ class PythonAliasName(PythonHelperNode):
         return cls('*', '*', line=line, column=column)
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonImportedName(PythonHelperNode):
     base: PythonImportBase
     name: PythonAliasName
@@ -683,7 +683,7 @@ class PythonImportedName(PythonHelperNode):
         return self.name.is_wildcard
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonImportStatement(PythonStatement):
     names: Tuple[PythonImportedName]
     # meta
@@ -695,7 +695,7 @@ class PythonImportStatement(PythonStatement):
         return True
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonFunctionParameter(PythonHelperNode):
     name: str
     default_value: Optional[PythonExpression] = None
@@ -730,7 +730,7 @@ class PythonFunctionParameter(PythonHelperNode):
         return self.modifier == '**'
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonFunctionDefStatement(PythonStatement):
     name: str
     parameters: Tuple[PythonFunctionParameter]
@@ -766,7 +766,7 @@ class PythonFunctionDefStatement(PythonStatement):
         return any(p.is_variadic_keywords for p in self.parameters)
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonConditionalBlock(PythonHelperNode):
     condition: PythonExpression
     body: Tuple[PythonStatement]
@@ -779,7 +779,7 @@ class PythonConditionalBlock(PythonHelperNode):
         return True
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonIfStatement(PythonStatement):
     then_branch: PythonConditionalBlock
     elif_branches: Tuple[PythonConditionalBlock]
@@ -806,7 +806,7 @@ class PythonIfStatement(PythonStatement):
         return self.then_branch.column
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class PythonExpressionStatement(PythonStatement):
     expression: PythonExpression
     # meta

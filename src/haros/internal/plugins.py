@@ -12,7 +12,7 @@ import importlib.util
 import logging
 from pathlib import Path
 
-import attr
+from attrs import field, frozen
 
 from haros.internal.settings import Settings
 
@@ -40,13 +40,13 @@ def _noop(*args, **kwargs):
 ###############################################################################
 
 
-@attr.s(auto_attribs=True, slots=True, frozen=True)
+@frozen
 class HarosPluginInterface:
     # Attributes
     name: str
     module: Any
-    settings: Dict[str, Any] = attr.Factory(dict)
-    hooks: Dict[str, Callable] = attr.Factory(dict)
+    settings: Dict[str, Any] = field(factory=dict)
+    hooks: Dict[str, Callable] = field(factory=dict)
 
     def __attrs_post_init__(self):
         for name in HOOKS:
@@ -65,12 +65,12 @@ class HarosPluginInterface:
         return teardown(**args)
 
 
-@attr.s(auto_attribs=True, slots=False, frozen=True)
+@frozen(slots=False)
 class PluginManager:
-    plugins: List[HarosPluginInterface] = attr.Factory(list)
+    plugins: List[HarosPluginInterface] = field(factory=list)
     # plugin name -> error
     # this serves to disable a plugin after it crashes
-    errors: Dict[str, Exception] = attr.Factory(dict)
+    errors: Dict[str, Exception] = field(factory=dict)
 
     def __attrs_post_init__(self):
         for name in HOOKS:
