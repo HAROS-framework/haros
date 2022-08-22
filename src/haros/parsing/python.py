@@ -587,6 +587,23 @@ class PythonStatement(PythonAst):
         return True
 
     @property
+    def is_simple_statement(self) -> bool:
+        return (
+            self.is_assignment
+            or self.is_delete
+            or self.is_pass
+            or self.is_flow
+            or self.is_import
+            or self.is_global
+            or self.is_nonlocal
+            or self.is_assert
+        )
+
+    @property
+    def is_compound_statement(self) -> bool:
+        return not self.is_simple_statement
+
+    @property
     def is_assignment(self) -> bool:
         return False
 
