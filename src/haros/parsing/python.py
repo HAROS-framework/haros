@@ -9,7 +9,7 @@ from typing import Any, Final, Callable, Iterable, Optional, Tuple, Union
 
 import re
 
-from attrs import frozen
+from attrs import field, frozen
 from lark import Lark, Token, Transformer, v_args
 from lark.indenter import PythonIndenter
 
@@ -105,6 +105,10 @@ class PythonHelperNode(PythonAst):
 
     @property
     def is_conditional_block(self) -> bool:
+        return False
+
+    @property
+    def is_decorator(self) -> bool:
         return False
 
 
@@ -583,7 +587,59 @@ class PythonStatement(PythonAst):
         return True
 
     @property
+    def is_assignment(self) -> bool:
+        return False
+
+    @property
+    def is_delete(self) -> bool:
+        return False
+
+    @property
+    def is_pass(self) -> bool:
+        return False
+
+    @property
+    def is_flow(self) -> bool:
+        return False
+
+    @property
     def is_import(self) -> bool:
+        return False
+
+    @property
+    def is_global(self) -> bool:
+        return False
+
+    @property
+    def is_nonlocal(self) -> bool:
+        return False
+
+    @property
+    def is_assert(self) -> bool:
+        return False
+
+    @property
+    def is_if(self) -> bool:
+        return False
+
+    @property
+    def is_while(self) -> bool:
+        return False
+
+    @property
+    def is_for(self) -> bool:
+        return False
+
+    @property
+    def is_try(self) -> bool:
+        return False
+
+    @property
+    def is_match(self) -> bool:
+        return False
+
+    @property
+    def is_with(self) -> bool:
         return False
 
     @property
@@ -591,7 +647,7 @@ class PythonStatement(PythonAst):
         return False
 
     @property
-    def is_if(self) -> bool:
+    def is_class_def(self) -> bool:
         return False
 
 
@@ -731,12 +787,30 @@ class PythonFunctionParameter(PythonHelperNode):
 
 
 @frozen
+class PythonDecorator(PythonHelperNode):
+    names: Tuple[str]
+    arguments: Tuple[PythonArgument]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_decorator(self) -> bool:
+        return True
+
+    @property
+    def dotted_name(self) -> str:
+        return ('.' * self.dots) + '.'.join(self.names)
+
+
+@frozen
 class PythonFunctionDefStatement(PythonStatement):
     name: str
     parameters: Tuple[PythonFunctionParameter]
     body: PythonStatement
     type_hint: Optional[str] = None
     is_async: bool = False
+    decorators: Tuple[PythonDecorator] = field(factory=tuple)
     # meta
     line: int = 0
     column: int = 0
@@ -818,9 +892,24 @@ class PythonExpressionStatement(PythonStatement):
         return True
 
 
+@frozen
+def PythonClassDefStatement(PythonStatement):
+    decorators: Tuple[PythonDecorator] = field(factory=tuple)
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_class_def(self) -> bool:
+        return True
+
+
 ###############################################################################
 # Transformer
 ###############################################################################
+
+
+PythonDefinition = Union[PythonFunctionDefStatement, PythonClassDefStatement]
 
 
 class _ToAst(Transformer):
@@ -868,6 +957,26 @@ class _ToAst(Transformer):
         variables = c if isinstance(c, tuple) else (c,)
         iterator = children[-1]
         return PythonIterator(variables, iterator, asynchronous=asynchronous)
+
+    @v_args(inline=True)
+    def decorated(
+        self,
+        decorators: Tuple[PythonDecorator],
+        definition: PythonDefinition,
+    ) -> PythonDefinition:
+        object.__setattr__(definition, 'decorators', decorators)
+        return definition
+
+    def decorators(self, children: Iterable[PythonDecorator]) -> Tuple[PythonDecorator]:
+        return tuple(children)
+
+    def decorator(self, children: Iterable[Any]) -> PythonDecorator:
+        assert len(children) >= 1 and len(children) <= 2, str(children)
+        names = children[0]
+        assert isinstance(names, tuple), f'expected dotted name: {children}'
+        arguments = () if len(children) < 2 else children[1]
+        assert isinstance(args, tuple), f'expected arg tuple: {children}'
+        return PythonDecorator(names, arguments)
 
     # Import Statements ####################################
 
@@ -1207,7 +1316,7 @@ class _ToAst(Transformer):
         arguments = () if len(children) == 1 else children[1]
         return PythonFunctionCall(function, arguments, line=function.line, column=function.column)
 
-    def arguments(self, children: Iterable[PythonAst]) -> Tuple[PythonExpression]:
+    def arguments(self, children: Iterable[PythonAst]) -> Tuple[PythonArgument]:
         args = []
         for arg in children:
             if arg is None:
