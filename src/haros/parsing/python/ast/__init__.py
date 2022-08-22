@@ -47,6 +47,7 @@ from haros.parsing.python.ast.helpers import (
 )
 from haros.parsing.python.ast.statements import (
     PythonClassDefStatement,
+    PythonDeleteStatement,
     PythonExpressionStatement,
     PythonFunctionDefStatement,
     PythonIfStatement,

@@ -20,6 +20,7 @@ from haros.parsing.python.ast import (
     PythonClassDefStatement,
     PythonConditionalBlock,
     PythonDecorator,
+    PythonDeleteStatement,
     PythonDictComprehension,
     PythonDictEntry,
     PythonDictLiteral,
@@ -123,6 +124,15 @@ class ToAst(Transformer):
         arguments = () if len(children) < 2 else children[1]
         assert isinstance(args, tuple), f'expected arg tuple: {children}'
         return PythonDecorator(names, arguments)
+
+    # Simple Statements ####################################
+
+    @v_args(inline=True)
+    def del_stmt(self, expressions: Tuple[PythonExpression]) -> PythonDeleteStatement:
+        assert len(expressions) > 0, str(children)
+        line = getattr(expressions[0], 'line', 0)
+        column = getattr(expressions[0], 'column', 0)
+        return PythonDeleteStatement(expressions, line=line, column=column)
 
     # Import Statements ####################################
 

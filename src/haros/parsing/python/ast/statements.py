@@ -46,6 +46,18 @@ class PythonImportStatement(PythonStatement):
         return True
 
 
+@frozen
+class PythonDeleteStatement(PythonStatement):
+    expressions: Tuple[PythonExpression]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_delete(self) -> bool:
+        return True
+
+
 ###############################################################################
 # Class and Function Definitions
 ###############################################################################
