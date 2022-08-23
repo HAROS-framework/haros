@@ -5,6 +5,8 @@
 # Imports
 ###############################################################################
 
+from pathlib import Path
+
 from attrs import field, frozen
 from lark import Lark, Transformer
 from lark.indenter import PythonIndenter
@@ -13,19 +15,27 @@ from haros.parsing.python._transformer import ToAst
 from haros.parsing.python.ast.common import PythonAst
 
 ###############################################################################
+# Constants
+###############################################################################
+
+GRAMMAR_FILE: Final[Path] = Path(__file__).resolve().parent / 'grammar.lark'
+
+###############################################################################
 # Helper Functions
 ###############################################################################
 
 
 def _lark_python_parser() -> Lark:
-    return Lark.open_from_package(
-        'lark',
-        'python.lark',
-        ['grammars'],
-        parser='lalr',
-        postlex=PythonIndenter(),
-        start='file_input',
-    )
+    grammar = GRAMMAR_FILE.read_text(encoding='utf-8')
+    # return Lark.open_from_package(
+    #     'lark',
+    #     'python.lark',
+    #     ['grammars'],
+    #     parser='lalr',
+    #     postlex=PythonIndenter(),
+    #     start='file_input',
+    # )
+    return Lark(grammar, parser='lalr', postlex=PythonIndenter(), start='file_input')
 
 
 ###############################################################################
