@@ -20,6 +20,7 @@ from haros.parsing.python.ast import (
     PythonBreakStatement,
     PythonClassDefStatement,
     PythonConditionalBlock,
+    PythonConditionalExpression,
     PythonContinueStatement,
     PythonDecorator,
     PythonDeleteStatement,
@@ -154,6 +155,26 @@ class ToAst(Transformer):
         line = getattr(expressions[0], 'line', 0)
         column = getattr(expressions[0], 'column', 0)
         return PythonDeleteStatement(expressions, line=line, column=column)
+
+    def return_stmt(self, children: Iterable[PythonExpression]) -> PythonReturnStatement:
+        # return_stmt: "return" [testlist]
+        # ?testlist: test | testlist_tuple
+        expressions = ()
+        line = 0
+        column = 0
+        if len(children) > 0:
+            assert len(children) == 1, str(children)
+            if isinstance(children[0], tuple):
+                # coming from `testlist_tuple`
+                expressions = children[0]
+                assert len(expressions) >= 1, str(children)
+            else:
+                # coming from `test`
+                assert isinstance(children[0], PythonExpression), str(children)
+                expressions = (children[0],)
+            line = expressions[0].line
+            column = expressions[0].column
+        return PythonReturnStatement(expressions, line=line, column=column)
 
     # Import Statements ####################################
 
@@ -394,6 +415,27 @@ class ToAst(Transformer):
         body: Tuple[PythonStatement]
     ) -> PythonConditionalBlock:
         return PythonConditionalBlock(condition, body)
+
+    # Other Expressions ####################################
+
+    def testlist_tuple(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
+        return tuple(children)
+
+    @v_args(inline=True)
+    def test(
+        self,
+        then_expression: PythonExpression,
+        condition: PythonExpression,
+        else_expression: PythonExpression,
+    ) -> PythonConditionalExpression:
+        # all other cases have only one child, so the rule is inlined
+        return PythonConditionalExpression(
+            condition,
+            then_expression,
+            else_expression,
+            line=then_expression.line,
+            column=then_expression.column,
+        )
 
     # Operators ############################################
 

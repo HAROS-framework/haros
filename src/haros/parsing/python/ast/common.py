@@ -163,6 +163,10 @@ class PythonExpression(PythonAst):
     def is_operator(self) -> bool:
         return False
 
+    @property
+    def is_conditional(self) -> bool:
+        return False
+
 
 class PythonHelperNode(PythonAst):
     @property

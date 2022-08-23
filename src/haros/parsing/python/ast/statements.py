@@ -69,7 +69,7 @@ class PythonDeleteStatement(PythonStatement):
 
 @frozen
 class PythonReturnStatement(PythonStatement):
-    # TODO
+    expressions: Tuple[PythonExpression]
     # meta
     line: int = 0
     column: int = 0

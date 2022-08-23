@@ -14,6 +14,7 @@ from haros.parsing.python.ast.common import (
 from haros.parsing.python.ast.expressions import (
     PythonBinaryOperator,
     PythonBooleanLiteral,
+    PythonConditionalExpression,
     PythonDictComprehension,
     PythonDictLiteral,
     PythonFunctionCall,

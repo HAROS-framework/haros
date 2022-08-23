@@ -377,6 +377,32 @@ class PythonBinaryOperator(PythonOperator):
         return self.operator in ('==', '!=', '<', '<=', '>', '>=')
 
 
+@frozen
+class PythonConditionalExpression(PythonExpression):
+    condition: PythonExpression
+    expression1: PythonExpression
+    expression2: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_conditional(self) -> bool:
+        return True
+
+    @property
+    def if_expression(self) -> PythonExpression:
+        return self.condition
+
+    @property
+    def then_expression(self) -> PythonExpression:
+        return self.expression1
+
+    @property
+    def else_expression(self) -> PythonExpression:
+        return self.expression2
+
+
 ###############################################################################
 # Complex Expressions
 ###############################################################################
