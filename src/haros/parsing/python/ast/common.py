@@ -32,7 +32,8 @@ class PythonStatement(PythonAst):
     @property
     def is_simple_statement(self) -> bool:
         return (
-            self.is_assignment
+            self.is_expression_statement
+            or self.is_assignment
             or self.is_delete
             or self.is_pass
             or self.is_break
@@ -48,6 +49,10 @@ class PythonStatement(PythonAst):
     @property
     def is_compound_statement(self) -> bool:
         return not self.is_simple_statement
+
+    @property
+    def is_expression_statement(self) -> bool:
+        return False
 
     @property
     def is_assignment(self) -> bool:
@@ -79,7 +84,7 @@ class PythonStatement(PythonAst):
 
     @property
     def is_yield(self) -> bool:
-        return False
+        return self.is_expression_statement and self.expression.is_yield
 
     @property
     def is_import(self) -> bool:
@@ -174,6 +179,10 @@ class PythonExpression(PythonAst):
     @property
     def is_assignment(self) -> bool:
         return False  # Python >= 3.8
+
+    @property
+    def is_yield(self) -> bool:
+        return False
 
 
 class PythonHelperNode(PythonAst):

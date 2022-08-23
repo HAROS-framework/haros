@@ -480,3 +480,16 @@ class PythonAssignmentExpression(PythonExpression):
     @property
     def is_assignment(self) -> bool:
         return True
+
+
+@frozen
+class PythonYieldExpression(PythonExpression):
+    expressions: Tuple[PythonExpression]
+    is_from: bool = False
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_yield(self) -> bool:
+        return True

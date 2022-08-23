@@ -33,6 +33,7 @@ from haros.parsing.python.ast.expressions import (
     PythonStringLiteral,
     PythonTupleComprehension,
     PythonTupleLiteral,
+    PythonYieldExpression,
 )
 from haros.parsing.python.ast.helpers import (
     PythonAliasName,
@@ -60,5 +61,4 @@ from haros.parsing.python.ast.statements import (
     PythonPassStatement,
     PythonRaiseStatement,
     PythonReturnStatement,
-    PythonYieldStatement,
 )

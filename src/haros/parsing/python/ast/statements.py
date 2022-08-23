@@ -92,18 +92,6 @@ class PythonRaiseStatement(PythonStatement):
 
 
 @frozen
-class PythonYieldStatement(PythonStatement):
-    # TOOD
-    # meta
-    line: int = 0
-    column: int = 0
-
-    @property
-    def is_yield(self) -> bool:
-        return True
-
-
-@frozen
 class PythonExpressionStatement(PythonStatement):
     expression: PythonExpression
     # meta
@@ -111,7 +99,7 @@ class PythonExpressionStatement(PythonStatement):
     column: int = 0
 
     @property
-    def is_expression(self) -> bool:
+    def is_expression_statement(self) -> bool:
         return True
 
 

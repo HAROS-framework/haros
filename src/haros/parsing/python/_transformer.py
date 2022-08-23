@@ -57,17 +57,18 @@ from haros.parsing.python.ast import (
     PythonStringLiteral,
     PythonTupleComprehension,
     PythonTupleLiteral,
-    PythonYieldStatement,
+    PythonYieldExpression,
 )
 
 ###############################################################################
 # Transformer
 ###############################################################################
 
-
 PythonDefinition = Union[PythonFunctionDefStatement, PythonClassDefStatement]
 
 MaybeParams = Optional[Union[PythonFunctionParameter, Tuple[PythonFunctionParameter]]]
+
+MaybeExpressions = Optional[Union[PythonExpression, Tuple[PythonExpression]]]
 
 
 class ToAst(Transformer):
@@ -176,6 +177,10 @@ class ToAst(Transformer):
             line = expressions[0].line
             column = expressions[0].column
         return PythonReturnStatement(expressions, line=line, column=column)
+
+    @v_args(inline=True)
+    def yield_stmt(self, expr: PythonYieldExpression) -> PythonExpressionStatement:
+        return PythonExpressionStatement(expr, line=expr.line, column=expr.column)
 
     # Import Statements ####################################
 
@@ -505,6 +510,31 @@ class ToAst(Transformer):
         )
 
     # Other Expressions ####################################
+
+    @v_args(inline=True)
+    def yield_expr(self, expressions: MaybeExpressions) -> PythonYieldExpression:
+        line = 0
+        column = 0
+        if expressions is None:
+            expressions = ()
+        else:
+            if isinstance(expressions, tuple):
+                assert len(expressions) >= 1, f'yield_expr: {expressions}'
+            else:
+                assert isinstance(expressions, PythonExpression), f'yield_expr: {expressions!r}'
+                expressions = (expressions,)
+            line = expressions[0].line
+            column = expressions[0].column
+        return PythonYieldExpression(expressions, is_from=False, line=line, column=column)
+
+    @v_args(inline=True)
+    def yield_from(self, expression: PythonExpression) -> PythonYieldExpression:
+        return PythonYieldExpression(
+            (expression,),
+            is_from=True,
+            line=expression.line,
+            column=expression.column,
+        )
 
     @v_args(inline=True)
     def assign_expr(self, name: Token, expression: PythonExpression) -> PythonAssignmentExpression:
