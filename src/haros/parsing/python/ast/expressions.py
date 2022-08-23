@@ -493,3 +493,15 @@ class PythonYieldExpression(PythonExpression):
     @property
     def is_yield(self) -> bool:
         return True
+
+
+@frozen
+class PythonStarExpression(PythonExpression):
+    expression: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_star_expression(self) -> bool:
+        return True

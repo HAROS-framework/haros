@@ -30,6 +30,7 @@ from haros.parsing.python.ast.expressions import (
     PythonReference,
     PythonSetComprehension,
     PythonSetLiteral,
+    PythonStarExpression,
     PythonStringLiteral,
     PythonTupleComprehension,
     PythonTupleLiteral,

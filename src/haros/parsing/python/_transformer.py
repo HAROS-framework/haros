@@ -53,6 +53,7 @@ from haros.parsing.python.ast import (
     PythonSetLiteral,
     PythonSimpleArgument,
     PythonSpecialArgument,
+    PythonStarExpression,
     PythonStatement,
     PythonStringLiteral,
     PythonTupleComprehension,
@@ -539,6 +540,10 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def assign_expr(self, name: Token, expression: PythonExpression) -> PythonAssignmentExpression:
         return PythonAssignmentExpression(name, expression, line=name.line, column=name.column)
+
+    @v_args(inline=True)
+    def star_expr(self, expression: PythonExpression) -> PythonStarExpression:
+        return PythonStarExpression(expression, line=expression.line, column=expression.column)
 
     def testlist_tuple(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
         return tuple(children)

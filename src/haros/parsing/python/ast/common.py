@@ -153,11 +153,7 @@ class PythonExpression(PythonAst):
         return False
 
     @property
-    def is_star_argument(self) -> bool:
-        return False
-
-    @property
-    def is_keyword_argument(self) -> bool:
+    def is_star_expression(self) -> bool:
         return False
 
     @property
