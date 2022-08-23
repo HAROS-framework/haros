@@ -12,6 +12,7 @@ from haros.parsing.python.ast.common import (
     PythonStatement,
 )
 from haros.parsing.python.ast.expressions import (
+    PythonAssignmentExpression,
     PythonBinaryOperator,
     PythonBooleanLiteral,
     PythonConditionalExpression,

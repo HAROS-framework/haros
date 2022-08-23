@@ -171,6 +171,10 @@ class PythonExpression(PythonAst):
     def is_lambda(self) -> bool:
         return False
 
+    @property
+    def is_assignment(self) -> bool:
+        return False  # Python >= 3.8
+
 
 class PythonHelperNode(PythonAst):
     @property

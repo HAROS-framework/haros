@@ -467,3 +467,16 @@ class PythonLambdaExpression(PythonExpression):
     @property
     def has_variadic_keywords(self) -> bool:
         return any(p.is_variadic_keywords for p in self.parameters)
+
+
+@frozen
+class PythonAssignmentExpression(PythonExpression):
+    name: str
+    expression: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_assignment(self) -> bool:
+        return True

@@ -14,6 +14,7 @@ from lark import Token, Transformer, v_args
 from haros.parsing.python.ast import (
     PythonAliasName,
     PythonArgument,
+    PythonAssignmentExpression,
     PythonAst,
     PythonBinaryOperator,
     PythonBooleanLiteral,
@@ -507,6 +508,10 @@ class ToAst(Transformer):
         )
 
     # Other Expressions ####################################
+
+    @v_args(inline=True)
+    def assign_expr(self, name: Token, expression: PythonExpression) -> PythonAssignmentExpression:
+        return PythonAssignmentExpression(name, expression, line=name.line, column=name.column)
 
     def testlist_tuple(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
         return tuple(children)
