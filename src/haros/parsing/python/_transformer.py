@@ -790,3 +790,9 @@ class ToAst(Transformer):
     def IMAG_NUMBER(self, n: Token) -> PythonNumberLiteral:
         v = complex(0, float(n[:-1]))
         return PythonNumberLiteral(v, line=n.line, column=n.column)
+
+    # Keywords and Utilities ###############################
+
+    @v_args(inline=True)
+    def name(self, token: Token) -> Token:
+        return token
