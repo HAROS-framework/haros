@@ -5,6 +5,8 @@
 # Imports
 ###############################################################################
 
+from typing import Final
+
 from pathlib import Path
 
 from attrs import field, frozen
