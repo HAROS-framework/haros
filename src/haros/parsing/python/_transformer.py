@@ -15,6 +15,7 @@ from haros.parsing.python.ast import (
     PythonAliasName,
     PythonArgument,
     PythonAssignmentExpression,
+    PythonAssignmentStatement,
     PythonAst,
     PythonBinaryOperator,
     PythonBooleanLiteral,
@@ -71,28 +72,28 @@ MaybeParams = Optional[Union[PythonFunctionParameter, Tuple[PythonFunctionParame
 
 MaybeExpressions = Optional[Union[PythonExpression, Tuple[PythonExpression]]]
 
+SomeStatements = Union[PythonStatement, Tuple[PythonStatement]]
+
 
 class ToAst(Transformer):
     # Top Level Rules ######################################
 
-    def file_input(self, items):
-        if len(items) == 0:
-            return items[0]
-        return items
+    def file_input(self, children: Iterable[SomeStatements]) -> Tuple[PythonStatement]:
+        return self._flatten_statements(children)
 
-    @v_args(inline=True)
-    def expr_stmt(self, expression):
-        return expression
+    def suite(self, children: Iterable[SomeStatements]) -> Tuple[PythonStatement]:
+        return self._flatten_statements(children)
 
-    def suite(self, children) -> Tuple[PythonStatement]:
-        if len(children) == 1:
-            stmt = children[0]
-            if not stmt.is_statement:
-                assert stmt.is_expression, f'suite: {children}'
-                stmt = PythonExpressionStatement(stmt, line=stmt.line, column=stmt.column)
-            return (stmt,)
-        # newline indent stmt+ dedent
-        return tuple(children)
+    def _flatten_statements(self, items: Iterable[SomeStatements]) -> Tuple[PythonStatement]:
+        assert len(items) >= 1, f'_flatten_statements: {items}'
+        statements = []
+        for statement in items:
+            if isinstance(statement, tuple):
+                statements.extend(statement)
+            else:
+                assert isinstance(statement, PythonStatement), f'_flatten_statements: {children}'
+                statements.append(statement)
+        return tuple(statements)
 
     # Helper Nodes #########################################
 
@@ -140,6 +141,16 @@ class ToAst(Transformer):
 
     # Simple Statements ####################################
 
+    def simple_stmt(
+        self,
+        children: Iterable[Union[PythonStatement, Tuple[PythonStatement]]],
+    ) -> Tuple[PythonStatement]:
+        return self._flatten_statements(children)
+
+    @v_args(inline=True)
+    def expr_stmt(self, expression: PythonExpression):
+        return PythonExpression(expression, line=expression.line, column=expression.column)
+
     @v_args(inline=True)
     def pass_stmt(self, token: Token) -> PythonPassStatement:
         return PythonPassStatement(line=token.line, column=token.column)
@@ -182,6 +193,63 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def yield_stmt(self, expr: PythonYieldExpression) -> PythonExpressionStatement:
         return PythonExpressionStatement(expr, line=expr.line, column=expr.column)
+
+    # Assignment Statements ################################
+
+    @v_args(inline=True)
+    def assign_stmt(
+        self,
+        assignments: Tuple[PythonAssignmentStatement],
+    ) -> Tuple[PythonAssignmentStatement]:
+        return assignments
+
+    @v_args(inline=True)
+    def annassign(
+        self,
+        variable: PythonExpression,
+        type_hint: PythonExpression,
+        value: Optional[PythonExpression],
+    ) -> Tuple[PythonAssignmentStatement]:
+        if value is None:
+            return ()
+        return (
+            PythonAssignmentStatement(
+                variable,
+                value,
+                type_hint=type_hint,
+                line=variable.line,
+                column=variable.column,
+            ),
+        )
+
+    def assign(self, children: Iterable[PythonExpression]) -> Tuple[PythonAssignmentStatement]:
+        assert len(children) >= 2, f'assign: {children}'
+        statements = []
+        for i in range(len(children) - 2, -1, -1):
+            variable = children[i]
+            value = children[i + 1]
+            line = variable.line
+            column = variable.column
+            statement = PythonAssignmentStatement(variable, value, line=line, column=column)
+            statements.append(statement)
+        return tuple(statements)
+
+    @v_args(inline=True)
+    def augassign(
+        self,
+        variable: PythonExpression,
+        operator: Token,
+        value: PythonExpression,
+    ) -> Tuple[PythonAssignmentStatement]:
+        return (
+            PythonAssignmentStatement(
+                variable,
+                value,
+                operator=operator,
+                line=variable.line,
+                column=variable.column,
+            ),
+        )
 
     # Import Statements ####################################
 
@@ -277,10 +345,10 @@ class ToAst(Transformer):
         name: Token,
         parameters: Optional[Tuple[PythonFunctionParameter]],
         type_hint: Optional[PythonExpression],
-        body: PythonStatement,
+        body: Tuple[PythonStatement],
     ) -> PythonFunctionDefStatement:
         parameters = parameters or ()
-        type_hint = None if type_hint is None else str(type_hint)  # FIXME
+        # type_hint = None if type_hint is None else str(type_hint)
         return PythonFunctionDefStatement(
             name,
             parameters or (),

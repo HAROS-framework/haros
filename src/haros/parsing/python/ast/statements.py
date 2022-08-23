@@ -115,6 +115,41 @@ class PythonImportStatement(PythonStatement):
         return True
 
 
+@frozen
+class PythonAssignmentStatement(PythonStatement):
+    variable: PythonExpression
+    value: PythonExpression
+    operator: str = '='
+    type_hint: Optional[PythonExpression] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_assignment(self) -> bool:
+        return True
+
+    @property
+    def is_standard(self) -> bool:
+        return self.operator == '='
+
+    @property
+    def is_augmented(self) -> bool:
+        return not self.is_standard
+
+    @property
+    def is_annotated(self) -> bool:
+        return self.type_hint is not None
+
+    @property
+    def is_unpacked(self) -> bool:
+        return self.variable.is_tuple
+
+    @property
+    def is_packed(self) -> bool:
+        return self.variable.is_star_expression
+
+
 ###############################################################################
 # Class and Function Definitions
 ###############################################################################
@@ -124,8 +159,8 @@ class PythonImportStatement(PythonStatement):
 class PythonFunctionDefStatement(PythonStatement):
     name: str
     parameters: Tuple[PythonFunctionParameter]
-    body: PythonStatement
-    type_hint: Optional[str] = None
+    body: Tuple[PythonStatement]
+    type_hint: Optional[PythonExpression] = None
     is_async: bool = False
     decorators: Tuple[PythonDecorator] = field(factory=tuple)
     # meta

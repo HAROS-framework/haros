@@ -51,6 +51,7 @@ from haros.parsing.python.ast.helpers import (
     PythonSpecialArgument,
 )
 from haros.parsing.python.ast.statements import (
+    PythonAssignmentStatement,
     PythonBreakStatement,
     PythonClassDefStatement,
     PythonContinueStatement,
