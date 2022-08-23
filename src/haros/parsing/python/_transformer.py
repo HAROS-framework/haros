@@ -138,20 +138,17 @@ class ToAst(Transformer):
 
     # Simple Statements ####################################
 
-    def pass_stmt(self, children: Iterable[Token]) -> PythonPassStatement:
-        assert len(children) == 0, str(children)
-        # FIXME line, column
-        return PythonPassStatement()
+    @v_args(inline=True)
+    def pass_stmt(self, token: Token) -> PythonPassStatement:
+        return PythonPassStatement(line=token.line, column=token.column)
 
-    def break_stmt(self, children: Iterable[Token]) -> PythonBreakStatement:
-        assert len(children) == 0, str(children)
-        # FIXME line, column
-        return PythonBreakStatement()
+    @v_args(inline=True)
+    def break_stmt(self, token: Token) -> PythonBreakStatement:
+        return PythonBreakStatement(line=token.line, column=token.column)
 
-    def continue_stmt(self, children: Iterable[Token]) -> PythonContinueStatement:
-        assert len(children) == 0, str(children)
-        # FIXME line, column
-        return PythonContinueStatement()
+    @v_args(inline=True)
+    def continue_stmt(self, token: Token) -> PythonContinueStatement:
+        return PythonContinueStatement(line=token.line, column=token.column)
 
     @v_args(inline=True)
     def del_stmt(self, expressions: Tuple[PythonExpression]) -> PythonDeleteStatement:
