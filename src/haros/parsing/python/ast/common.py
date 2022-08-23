@@ -167,6 +167,10 @@ class PythonExpression(PythonAst):
     def is_conditional(self) -> bool:
         return False
 
+    @property
+    def is_lambda(self) -> bool:
+        return False
+
 
 class PythonHelperNode(PythonAst):
     @property

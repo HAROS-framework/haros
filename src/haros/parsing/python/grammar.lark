@@ -42,8 +42,9 @@ lambdef_nocond: "lambda" [lambda_params] ":" test_nocond
 lambda_params: lambda_paramvalue ("," lambda_paramvalue)* ["," [lambda_starparams | lambda_kwparams]]
           | lambda_starparams
           | lambda_kwparams
-?lambda_paramvalue: name ("=" test)?
-lambda_starparams: "*" [name]  ("," lambda_paramvalue)* ["," [lambda_kwparams]]
+lambda_paramvalue: name ("=" test)?
+lambda_starparams: "*" [name] lambda_poststarparams
+lambda_poststarparams: ("," lambda_paramvalue)* ["," [lambda_kwparams]]
 lambda_kwparams: "**" name ","?
 
 

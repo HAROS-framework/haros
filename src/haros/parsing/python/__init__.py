@@ -35,7 +35,13 @@ def _lark_python_parser() -> Lark:
     #     postlex=PythonIndenter(),
     #     start='file_input',
     # )
-    return Lark(grammar, parser='lalr', postlex=PythonIndenter(), start='file_input')
+    return Lark(
+        grammar,
+        parser='lalr',
+        postlex=PythonIndenter(),
+        start='file_input',
+        maybe_placeholders=True,
+    )
 
 
 ###############################################################################

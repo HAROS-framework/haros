@@ -13,6 +13,7 @@ from haros.parsing.python.ast.common import PythonAst, PythonExpression, PythonH
 from haros.parsing.python.ast.helpers import (
     PythonArgument,
     PythonDictEntry,
+    PythonFunctionParameter,
     PythonIterator,
     PythonKeyValuePair,
 )
@@ -433,3 +434,36 @@ class PythonFunctionCall(PythonExpression):
     @property
     def is_function_call(self) -> bool:
         return True
+
+
+@frozen
+class PythonLambdaExpression(PythonExpression):
+    parameters: Tuple[PythonFunctionParameter]
+    expression: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_lambda(self) -> bool:
+        return True
+
+    @property
+    def positional_parameters(self) -> Tuple[PythonFunctionParameter]:
+        return tuple(p for p in self.parameters if p.is_positional)
+
+    @property
+    def standard_parameters(self) -> Tuple[PythonFunctionParameter]:
+        return tuple(p for p in self.parameters if p.is_standard)
+
+    @property
+    def keyword_parameters(self) -> Tuple[PythonFunctionParameter]:
+        return tuple(p for p in self.parameters if p.is_keyword)
+
+    @property
+    def has_variadic_list(self) -> bool:
+        return any(p.is_variadic_list for p in self.parameters)
+
+    @property
+    def has_variadic_keywords(self) -> bool:
+        return any(p.is_variadic_keywords for p in self.parameters)

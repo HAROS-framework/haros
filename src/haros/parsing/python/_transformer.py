@@ -39,6 +39,7 @@ from haros.parsing.python.ast import (
     PythonImportedName,
     PythonIterator,
     PythonKeyValuePair,
+    PythonLambdaExpression,
     PythonListComprehension,
     PythonListLiteral,
     PythonNoneLiteral,
@@ -64,6 +65,8 @@ from haros.parsing.python.ast import (
 
 
 PythonDefinition = Union[PythonFunctionDefStatement, PythonClassDefStatement]
+
+MaybeParams = Optional[Union[PythonFunctionParameter, Tuple[PythonFunctionParameter]]]
 
 
 class ToAst(Transformer):
@@ -332,19 +335,26 @@ class ToAst(Transformer):
 
     def poststarparams(
         self,
-        params: Iterable[Union[PythonFunctionParameter, Token]],
+        children: Iterable[Union[PythonFunctionParameter, Token]],
     ) -> Tuple[PythonFunctionParameter]:
-        return tuple(
-            PythonFunctionParameter(
-                param,
-                modifier='=',
-                line=name.line,
-                column=name.column,
-            )
-            if not isinstance(param, PythonFunctionParameter)
-            else param
-            for param in params
-        )
+        params = []
+        for param in children:
+            if param is None:
+                # kwargs could be None if not present
+                continue
+            if isinstance(param, PythonFunctionParameter):
+                # this should be keyword-only
+                assert not param.modifier, f'modifier: {param.modifier}'
+                object.__setattr__(param, 'modifier', '=')
+            else:
+                param = PythonFunctionParameter(
+                    param,
+                    modifier='=',
+                    line=param.line,
+                    column=param.column,
+                )
+            params.append(param)
+        return tuple(params)
 
     @v_args(inline=True)
     def kwparams(
@@ -415,6 +425,86 @@ class ToAst(Transformer):
         body: Tuple[PythonStatement]
     ) -> PythonConditionalBlock:
         return PythonConditionalBlock(condition, body)
+
+    # Lambdas ##############################################
+
+    @v_args(inline=True)
+    def lambdef(
+        self,
+        parameters: Optional[Tuple[PythonFunctionParameter]],
+        expression: PythonExpression,
+    ) -> PythonLambdaExpression:
+        return self._lambdef_common(parameters, expression)
+
+    @v_args(inline=True)
+    def lambdef_nocond(
+        self,
+        parameters: Optional[Tuple[PythonFunctionParameter]],
+        expression: PythonExpression,
+    ) -> PythonLambdaExpression:
+        return self._lambdef_common(parameters, expression)
+
+    def _lambdef_common(
+        self,
+        parameters: Optional[Tuple[PythonFunctionParameter]],
+        expression: PythonExpression,
+    ) -> PythonLambdaExpression:
+        parameters = parameters or ()  # handle None
+        line = expression.line
+        column = expression.column
+        if parameters:
+            line = parameters[0].line
+            column = parameters[0].column
+        return PythonLambdaExpression(parameters, expression, line=line, column=column)
+
+    def lambda_params(self, children: Iterable[MaybeParams]) -> Tuple[PythonFunctionParameter]:
+        return self.parameters(children)
+
+    @v_args(inline=True)
+    def lambda_paramvalue(
+        self,
+        name: Token,
+        default_value: Optional[PythonExpression] = None,
+    ) -> PythonFunctionParameter:
+        return PythonFunctionParameter(
+            name,
+            default_value=default_value,
+            line=name.line,
+            column=name.column,
+        )
+
+    @v_args(inline=True)
+    def lambda_starparams(
+        self,
+        name: Optional[Token],
+        params: Tuple[PythonFunctionParameter],
+    ) -> Tuple[PythonFunctionParameter]:
+        if name is not None:
+            # square brackets places a None if no matches occurred
+            assert isinstance(name, Token), f'lambda_starparams: {children}'
+            param = PythonFunctionParameter(
+                name,
+                modifier='*',
+                line=name.line,
+                column=name.column,
+            )
+            params = (param,) + params
+        return params
+
+    def lambda_poststarparams(
+        self,
+        params: Iterable[Optional[PythonFunctionParameter]],
+    ) -> Tuple[PythonFunctionParameter]:
+        return self.poststarparams(params)
+
+    @v_args(inline=True)
+    def lambda_kwparams(self, name: Token) -> PythonFunctionParameter:
+        return PythonFunctionParameter(
+            name,
+            modifier='**',
+            line=name.line,
+            column=name.column,
+        )
 
     # Other Expressions ####################################
 

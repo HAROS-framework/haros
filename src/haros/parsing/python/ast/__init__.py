@@ -19,6 +19,7 @@ from haros.parsing.python.ast.expressions import (
     PythonDictLiteral,
     PythonFunctionCall,
     PythonGenerator,
+    PythonLambdaExpression,
     PythonListComprehension,
     PythonListLiteral,
     PythonLiteral,
