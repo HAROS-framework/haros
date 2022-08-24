@@ -116,13 +116,15 @@ class ToAst(Transformer):
     def comp_fors(self, children: Iterable[PythonIterator]) -> Tuple[PythonIterator]:
         return tuple(children)
 
-    def comp_for(self, children: Iterable[Any]) -> PythonIterator:
-        assert len(children) >= 2 and len(children) <= 3, str(children)
-        asynchronous = children[0] == 'async'
-        c = children[-2]
-        variables = c if isinstance(c, tuple) else (c,)
-        iterator = children[-1]
-        return PythonIterator(variables, iterator, asynchronous=asynchronous)
+    @v_args(inline=True)
+    def comp_for(
+        self,
+        asynchronous: Optional[Token],
+        variables: Tuple[PythonExpression],
+        iterable: PythonExpression,
+    ) -> PythonIterator:
+        is_async = asynchronous is not None
+        return PythonIterator(variables, iterable, asynchronous=is_async)
 
     @v_args(inline=True)
     def decorated(

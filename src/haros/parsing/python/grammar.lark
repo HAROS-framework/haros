@@ -227,8 +227,8 @@ _tuple_inner: test_or_star_expr (("," test_or_star_expr)+ [","] | ",")
               | subscript (("," subscript)+ [","] | ",") -> subscript_tuple
 ?subscript: test | ([test] ":" [test] [sliceop]) -> slice
 sliceop: ":" [test]
-?exprlist: (expr|star_expr)
-         | (expr|star_expr) (("," (expr|star_expr))+ [","]|",")
+exprlist: (expr|star_expr)
+        | (expr|star_expr) (("," (expr|star_expr))+ [","]|",")
 ?testlist: test | testlist_tuple
 testlist_tuple: test (("," test)+ [","] | ",")
 _dict_exprlist: (key_value | "**" expr) ("," (key_value | "**" expr))* [","]
