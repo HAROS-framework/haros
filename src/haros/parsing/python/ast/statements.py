@@ -379,6 +379,7 @@ class PythonTryStatement(PythonStatement):
 class PythonWithStatement(PythonStatement):
     managers: Tuple[PythonContextManager]
     body: Tuple[PythonStatement]
+    asynchronous: bool = False
     # meta
     line: int = 0
     column: int = 0
