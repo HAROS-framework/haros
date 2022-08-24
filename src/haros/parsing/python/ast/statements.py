@@ -249,7 +249,7 @@ class PythonClassDefStatement(PythonStatement):
 class PythonIfStatement(PythonStatement):
     then_branch: PythonConditionalBlock
     elif_branches: Tuple[PythonConditionalBlock]
-    else_branch: Optional[PythonConditionalBlock]
+    else_branch: Tuple[PythonStatement]
 
     @property
     def is_if(self) -> bool:
