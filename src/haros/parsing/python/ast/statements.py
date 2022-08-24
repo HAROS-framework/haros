@@ -12,6 +12,7 @@ from attrs import field, frozen
 from haros.parsing.python.ast.common import PythonExpression, PythonStatement
 from haros.parsing.python.ast.helpers import (
     PythonConditionalBlock,
+    PythonContextManager,
     PythonDecorator,
     PythonExceptClause,
     PythonFunctionParameter,
@@ -349,6 +350,9 @@ class PythonTryStatement(PythonStatement):
     except_clauses: Tuple[PythonExceptClause] = field(factory=tuple)
     else_branch: Tuple[PythonStatement] = field(factory=tuple)
     finally_block: Tuple[PythonStatement] = field(factory=tuple)
+    # meta
+    line: int = 0
+    column: int = 0
 
     @property
     def is_try(self) -> bool:
@@ -369,3 +373,16 @@ class PythonTryStatement(PythonStatement):
     @property
     def has_finally_block(self) -> bool:
         return len(self.finally_block) > 0
+
+
+@frozen
+class PythonWithStatement(PythonStatement):
+    managers: Tuple[PythonContextManager]
+    body: Tuple[PythonStatement]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_with(self) -> bool:
+        return True

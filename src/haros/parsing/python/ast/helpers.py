@@ -303,3 +303,21 @@ class PythonExceptClause(PythonHelperNode):
     @property
     def is_except_clause(self) -> bool:
         return True
+
+
+@frozen
+class PythonContextManager(PythonHelperNode):
+    manager: PythonExpression
+    alias: Optional[str] = None
+
+    @property
+    def is_context_manager(self) -> bool:
+        return True
+
+    @property
+    def line(self) -> int:
+        return self.manager.line
+
+    @property
+    def column(self) -> int:
+        return self.manager.column

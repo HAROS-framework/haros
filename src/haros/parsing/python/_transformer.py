@@ -24,6 +24,7 @@ from haros.parsing.python.ast import (
     PythonClassDefStatement,
     PythonConditionalBlock,
     PythonConditionalExpression,
+    PythonContextManager,
     PythonContinueStatement,
     PythonDecorator,
     PythonDeleteStatement,
@@ -65,6 +66,7 @@ from haros.parsing.python.ast import (
     PythonTupleComprehension,
     PythonTupleLiteral,
     PythonWhileStatement,
+    PythonWithStatement,
     PythonYieldExpression,
 )
 
@@ -698,6 +700,28 @@ class ToAst(Transformer):
             line=name.line,
             column=name.column,
         )
+
+    # Other Compound Statements ############################
+
+    @v_args(inline=True)
+    def with_stmt(
+        self,
+        managers: Tuple[PythonContextManager],
+        body: Tuple[PythonStatement],
+    ) -> PythonWithStatement:
+        assert len(managers) >= 1, f'with_stmt: {managers}'
+        assert len(body) >= 1, f'with_stmt: {body}'
+        line = managers[0].line
+        column = managers[0].column
+        return PythonWithStatement(managers, body, line=line, column=column)
+
+    def with_items(self, managers: Iterable[PythonContextManager]) -> Tuple[PythonContextManager]:
+        assert len(managers) >= 1, f'with_items: {managers}'
+        return tuple(managers)
+
+    @v_args(inline=True)
+    def with_item(self, manager: PythonExpression, alias: Optional[Token]) -> PythonContextManager:
+        return PythonContextManager(manager, alias=alias)
 
     # Other Expressions ####################################
 

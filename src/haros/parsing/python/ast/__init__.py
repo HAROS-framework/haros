@@ -56,6 +56,7 @@ from haros.parsing.python.ast.statements import (
     PythonAssignmentStatement,
     PythonBreakStatement,
     PythonClassDefStatement,
+    PythonContextManager,
     PythonContinueStatement,
     PythonDeleteStatement,
     PythonExpressionStatement,
@@ -69,4 +70,5 @@ from haros.parsing.python.ast.statements import (
     PythonScopeStatement,
     PythonTryStatement,
     PythonWhileStatement,
+    PythonWithStatement,
 )

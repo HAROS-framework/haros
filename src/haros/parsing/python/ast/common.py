@@ -225,3 +225,7 @@ class PythonHelperNode(PythonAst):
     @property
     def is_decorator(self) -> bool:
         return False
+
+    @property
+    def is_context_manager(self) -> bool:
+        return False
