@@ -541,6 +541,13 @@ class ToAst(Transformer):
         else_branch = else_branch or ()  # avoid None
         return PythonWhileStatement(loop, else_branch)
 
+    def for_stmt(
+        self,
+        variables: Tuple[PythonExpression],
+        iterables: Tuple[PythonExpression],
+    ) -> PythonForStatement:
+        pass
+
     # Lambdas ##############################################
 
     @v_args(inline=True)
