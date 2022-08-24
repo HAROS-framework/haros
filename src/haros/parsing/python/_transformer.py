@@ -521,6 +521,24 @@ class ToAst(Transformer):
             column=name.column,
         )
 
+    # Class Definition #####################################
+
+    @v_args(inline=True)
+    def classdef(
+        self,
+        name: Token,
+        arguments: Optional[Tuple[PythonArgument]],
+        body: Tuple[PythonStatement],
+    ) -> PythonClassDefStatement:
+        arguments = arguments or ()
+        return PythonClassDefStatement(
+            name,
+            body,
+            arguments=arguments,
+            line=name.line,
+            column=name.column,
+        )
+
     # If Statements ########################################
 
     @v_args(inline=True)

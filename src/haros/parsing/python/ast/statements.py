@@ -233,6 +233,9 @@ class PythonFunctionDefStatement(PythonStatement):
 
 @frozen
 class PythonClassDefStatement(PythonStatement):
+    name: str
+    body: Tuple[PythonStatement]
+    arguments: Tuple[PythonArgument] = field(factory=tuple)
     decorators: Tuple[PythonDecorator] = field(factory=tuple)
     # meta
     line: int = 0
@@ -241,6 +244,14 @@ class PythonClassDefStatement(PythonStatement):
     @property
     def is_class_def(self) -> bool:
         return True
+
+    @property
+    def has_arguments(self) -> bool:
+        return len(self.arguments) > 0
+
+    @property
+    def is_decorated(self) -> bool:
+        return len(self.decorators) > 0
 
 
 ###############################################################################
