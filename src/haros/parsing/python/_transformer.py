@@ -207,7 +207,7 @@ class ToAst(Transformer):
 
     @v_args(inline=True)
     def yield_stmt(self, expr: PythonYieldExpression) -> PythonExpressionStatement:
-        return PythonExpressionStatement(expr, line=expr.line, column=expr.column)
+        return PythonExpressionStatement(expr)
 
     def global_stmt(self, names: Iterable[Token]) -> PythonScopeStatement:
         return PythonScopeStatement(tuple(names), global_scope=True)
@@ -506,7 +506,7 @@ class ToAst(Transformer):
         condition: PythonExpression,
         body: Tuple[PythonStatement],
         elif_branches: Tuple[PythonConditionalBlock],
-        else_branch: Optional[PythonConditionalBlock]
+        else_branch: Optional[Tuple[PythonStatement]]
     ) -> PythonIfStatement:
         then_branch = PythonConditionalBlock(
             condition,
@@ -514,6 +514,7 @@ class ToAst(Transformer):
             line=condition.line,
             column=condition.column,
         )
+        else_branch = else_branch or ()  # avoid None
         return PythonIfStatement(then_branch, elif_branches, else_branch)
 
     def elifs(self, children: Iterable[PythonConditionalBlock]) -> Tuple[PythonConditionalBlock]:

@@ -95,13 +95,18 @@ class PythonRaiseStatement(PythonStatement):
 @frozen
 class PythonExpressionStatement(PythonStatement):
     expression: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_expression_statement(self) -> bool:
         return True
+
+    @property
+    def line(self) -> int:
+        return self.expression.line
+
+    @property
+    def column(self) -> int:
+        return self.expression.column
 
 
 @frozen
@@ -245,6 +250,33 @@ class PythonIfStatement(PythonStatement):
     then_branch: PythonConditionalBlock
     elif_branches: Tuple[PythonConditionalBlock]
     else_branch: Optional[PythonConditionalBlock]
+
+    @property
+    def is_if(self) -> bool:
+        return True
+
+    @property
+    def condition(self) -> PythonExpression:
+        return self.then_branch.condition
+
+    @property
+    def body(self) -> Tuple[PythonStatement]:
+        return self.then_branch.body
+
+    @property
+    def line(self) -> int:
+        return self.then_branch.line
+
+    @property
+    def column(self) -> int:
+        return self.then_branch.column
+
+
+@frozen
+class PythonWhileStatement(PythonStatement):
+    then_branch: PythonConditionalBlock
+    elif_branches: Tuple[PythonConditionalBlock]
+    else_branch: Tuple[PythonStatement]
 
     @property
     def is_if(self) -> bool:
