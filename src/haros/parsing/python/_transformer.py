@@ -104,11 +104,13 @@ class ToAst(Transformer):
     def key_value(self, key: PythonExpression, value: PythonExpression) -> PythonKeyValuePair:
         return PythonKeyValuePair(key, value)
 
-    def comprehension(self, children: Iterable[Any]) -> PythonGenerator:
-        assert len(children) >= 2, f'comprehension: {children}'
-        result = children[0]
-        iterators = children[1]
-        test = None if len(children) == 2 else children[2]
+    @v_args(inline=True)
+    def comprehension(
+        self,
+        result: PythonAst,
+        iterators: Tuple[PythonIterator],
+        test: Optional[PythonExpression],
+    ) -> PythonGenerator:
         return PythonGenerator(result, iterators, test=test)
 
     def comp_fors(self, children: Iterable[PythonIterator]) -> Tuple[PythonIterator]:
