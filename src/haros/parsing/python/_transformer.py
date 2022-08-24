@@ -73,7 +73,8 @@ PythonDefinition = Union[PythonFunctionDefStatement, PythonClassDefStatement]
 
 MaybeParams = Optional[Union[PythonFunctionParameter, Tuple[PythonFunctionParameter]]]
 
-MaybeExpressions = Optional[Union[PythonExpression, Tuple[PythonExpression]]]
+SomeExpressions = Union[PythonExpression, Tuple[PythonExpression]]
+MaybeExpressions = Optional[Tuple[PythonExpression]]
 
 SomeStatements = Union[PythonStatement, Tuple[PythonStatement]]
 
@@ -97,6 +98,12 @@ class ToAst(Transformer):
                 assert isinstance(statement, PythonStatement), f'_flatten_statements: {children}'
                 statements.append(statement)
         return tuple(statements)
+
+    def _tuple_to_expr(self, value: SomeExpressions) -> PythonExpression:
+        if isinstance(value, tuple):
+            return PythonTupleLiteral(value, line=value[0].line, column=value[0].column)
+        assert isinstance(value, PythonExpression), f'_tuple_to_expr: {value!r}'
+        return value
 
     # Helper Nodes #########################################
 
@@ -177,24 +184,16 @@ class ToAst(Transformer):
         column = getattr(expressions[0], 'column', 0)
         return PythonDeleteStatement(expressions, line=line, column=column)
 
-    def return_stmt(self, children: Iterable[PythonExpression]) -> PythonReturnStatement:
+    @v_args(inline=True)
+    def return_stmt(self, maybe_value: MaybeExpressions) -> PythonReturnStatement:
         # return_stmt: "return" [testlist]
-        # ?testlist: test | testlist_tuple
-        expressions = ()
+        value = None
         line = 0
         column = 0
-        if len(children) > 0:
-            assert len(children) == 1, str(children)
-            if isinstance(children[0], tuple):
-                # coming from `testlist_tuple`
-                expressions = children[0]
-                assert len(expressions) >= 1, str(children)
-            else:
-                # coming from `test`
-                assert isinstance(children[0], PythonExpression), str(children)
-                expressions = (children[0],)
-            line = expressions[0].line
-            column = expressions[0].column
+        if maybe_value is not None:
+            value = self._tuple_to_expr(maybe_value)
+            line = value.line
+            column = value.column
         return PythonReturnStatement(expressions, line=line, column=column)
 
     @v_args(inline=True)
@@ -273,8 +272,9 @@ class ToAst(Transformer):
         self,
         variable: PythonExpression,
         operator: Token,
-        value: PythonExpression,
+        value: SomeExpressions,
     ) -> Tuple[PythonAssignmentStatement]:
+        value = self._tuple_to_expr(value)
         return (
             PythonAssignmentStatement(
                 variable,
@@ -637,11 +637,7 @@ class ToAst(Transformer):
         if expressions is None:
             expressions = ()
         else:
-            if isinstance(expressions, tuple):
-                assert len(expressions) >= 1, f'yield_expr: {expressions}'
-            else:
-                assert isinstance(expressions, PythonExpression), f'yield_expr: {expressions!r}'
-                expressions = (expressions,)
+            assert len(expressions) >= 1, f'yield_expr: {expressions}'
             line = expressions[0].line
             column = expressions[0].column
         return PythonYieldExpression(expressions, is_from=False, line=line, column=column)
@@ -662,6 +658,12 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def star_expr(self, expression: PythonExpression) -> PythonStarExpression:
         return PythonStarExpression(expression, line=expression.line, column=expression.column)
+
+    @v_args(inline=True)
+    def testlist(self, test_or_tuple: SomeExpressions) -> Tuple[PythonExpression]:
+        if isinstance(test_or_tuple, tuple):
+            return test_or_tuple
+        return (test_or_tuple,)
 
     def testlist_tuple(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
         return tuple(children)
