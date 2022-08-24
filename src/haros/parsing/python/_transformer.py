@@ -191,6 +191,19 @@ class ToAst(Transformer):
         return PythonReturnStatement(expressions, line=line, column=column)
 
     @v_args(inline=True)
+    def raise_stmt(
+        self,
+        exception: Optional[PythonExpression],
+        cause: Optional[PythonExpression],
+    ) -> PythonRaiseStatement:
+        line = 0
+        column = 0
+        if exception is not None:
+            line = exception.line
+            column = exception.column
+        return PythonRaiseStatement(exception, cause, line=line, column=column)
+
+    @v_args(inline=True)
     def yield_stmt(self, expr: PythonYieldExpression) -> PythonExpressionStatement:
         return PythonExpressionStatement(expr, line=expr.line, column=expr.column)
 

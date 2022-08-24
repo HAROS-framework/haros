@@ -81,7 +81,8 @@ class PythonReturnStatement(PythonStatement):
 
 @frozen
 class PythonRaiseStatement(PythonStatement):
-    # TODO
+    exception: Optional[PythonExpression]
+    cause: Optional[PythonExpression]
     # meta
     line: int = 0
     column: int = 0
