@@ -15,6 +15,7 @@ from haros.parsing.python.ast.helpers import (
     PythonDecorator,
     PythonFunctionParameter,
     PythonImportedName,
+    PythonIterator,
 )
 
 ###############################################################################
@@ -197,7 +198,7 @@ class PythonFunctionDefStatement(PythonStatement):
     parameters: Tuple[PythonFunctionParameter]
     body: Tuple[PythonStatement]
     type_hint: Optional[PythonExpression] = None
-    is_async: bool = False
+    asynchronous: bool = False
     decorators: Tuple[PythonDecorator] = field(factory=tuple)
     # meta
     line: int = 0
@@ -296,3 +297,34 @@ class PythonWhileStatement(PythonStatement):
     @property
     def column(self) -> int:
         return self.loop.column
+
+
+@frozen
+class PythonForStatement(PythonStatement):
+    iterator: PythonIterator
+    body: Tuple[PythonStatement]
+    else_branch: Tuple[PythonStatement]
+
+    @property
+    def is_for(self) -> bool:
+        return True
+
+    @property
+    def variables(self) -> Tuple[PythonExpression]:
+        return self.iterator.variables
+
+    @property
+    def iterable(self) -> PythonExpression:
+        return self.iterator.iterable
+
+    @property
+    def asynchronous(self) -> bool:
+        return self.iterator.asynchronous
+
+    @property
+    def line(self) -> int:
+        return self.iterator.variables[0].line
+
+    @property
+    def column(self) -> int:
+        return self.iterator.variables[0].column

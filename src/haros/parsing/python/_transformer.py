@@ -32,6 +32,7 @@ from haros.parsing.python.ast import (
     PythonDictLiteral,
     PythonExpression,
     PythonExpressionStatement,
+    PythonForStatement,
     PythonFunctionCall,
     PythonFunctionDefStatement,
     PythonFunctionParameter,
@@ -77,6 +78,7 @@ SomeExpressions = Union[PythonExpression, Tuple[PythonExpression]]
 MaybeExpressions = Optional[Tuple[PythonExpression]]
 
 SomeStatements = Union[PythonStatement, Tuple[PythonStatement]]
+MaybeStatements = Optional[Tuple[PythonStatement]]
 
 
 class ToAst(Transformer):
@@ -126,12 +128,12 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def comp_for(
         self,
-        asynchronous: Optional[Token],
+        maybe_async: Optional[Token],
         variables: Tuple[PythonExpression],
         iterable: PythonExpression,
     ) -> PythonIterator:
-        is_async = asynchronous is not None
-        return PythonIterator(variables, iterable, asynchronous=is_async)
+        asynchronous = maybe_async is not None
+        return PythonIterator(variables, iterable, asynchronous=asynchronous)
 
     @v_args(inline=True)
     def decorated(
@@ -152,6 +154,18 @@ class ToAst(Transformer):
         arguments = () if len(children) < 2 else children[1]
         assert isinstance(args, tuple), f'expected arg tuple: {children}'
         return PythonDecorator(names, arguments)
+
+    @v_args(inline=True)
+    def async_stmt(self, statement: PythonStatement) -> PythonStatement:
+        if statement.is_for:
+            object.__setattr__(statement.iterator, 'asynchronous', True)
+        elif statement.is_function_def:
+            object.__setattr__(statement, 'asynchronous', True)
+        elif statement.is_with:
+            object.__setattr__(statement, 'asynchronous', True)
+        else:
+            raise AssertionError(f'async_stmt: {statement!r}')
+        return statement
 
     # Simple Statements ####################################
 
@@ -388,14 +402,14 @@ class ToAst(Transformer):
             parameters or (),
             body,
             type_hint=type_hint,
-            is_async=False,
+            asynchronous=False,
             line=name.line,
             column=name.column,
         )
 
     @v_args(inline=True)
     def async_funcdef(self, funcdef: PythonFunctionDefStatement) -> PythonFunctionDefStatement:
-        object.__setattr__(funcdef, 'is_async', True)
+        object.__setattr__(funcdef, 'asynchronous', True)
         return funcdef
 
     def parameters(self, children: Iterable[Any]) -> Tuple[PythonFunctionParameter]:
@@ -511,7 +525,7 @@ class ToAst(Transformer):
         test: PythonExpression,
         body: Tuple[PythonStatement],
         elif_branches: Tuple[PythonConditionalBlock],
-        else_branch: Optional[Tuple[PythonStatement]]
+        else_branch: MaybeStatements,
     ) -> PythonIfStatement:
         then_branch = PythonConditionalBlock(test, body, line=test.line, column=test.column)
         else_branch = else_branch or ()  # avoid None
@@ -535,7 +549,7 @@ class ToAst(Transformer):
         self,
         test: PythonExpression,
         body: Tuple[PythonStatement],
-        else_branch: Optional[Tuple[PythonStatement]],
+        else_branch: MaybeStatements,
     ) -> PythonWhileStatement:
         loop = PythonConditionalBlock(test, body, line=test.line, column=test.column)
         else_branch = else_branch or ()  # avoid None
@@ -545,8 +559,13 @@ class ToAst(Transformer):
         self,
         variables: Tuple[PythonExpression],
         iterables: Tuple[PythonExpression],
+        body: Tuple[PythonStatement],
+        else_branch: MaybeStatements,
     ) -> PythonForStatement:
-        pass
+        iterable = self._tuple_to_expr(iterables)
+        iterator = PythonIterator(variables, iterable, asynchronous=False)
+        else_branch = else_branch or ()  # avoid None
+        return PythonForStatement(iterator, body, else_branch)
 
     # Lambdas ##############################################
 

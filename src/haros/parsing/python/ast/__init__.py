@@ -58,6 +58,7 @@ from haros.parsing.python.ast.statements import (
     PythonContinueStatement,
     PythonDeleteStatement,
     PythonExpressionStatement,
+    PythonForStatement,
     PythonFunctionDefStatement,
     PythonIfStatement,
     PythonImportStatement,
