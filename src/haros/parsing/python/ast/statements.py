@@ -151,6 +151,36 @@ class PythonAssignmentStatement(PythonStatement):
         return self.variable.is_star_expression
 
 
+@frozen
+class PythonScopeStatement(PythonStatement):
+    names: Tuple[str]
+    global_scope: bool = True
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_global(self) -> bool:
+        return self.global_scope
+
+    @property
+    def is_nonlocal(self) -> bool:
+        return not self.global_scope
+
+
+@frozen
+class PythonAssertStatement(PythonStatement):
+    condition: PythonExpression
+    message: Optional[PythonExpression]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_assert(self) -> bool:
+        return True
+
+
 ###############################################################################
 # Class and Function Definitions
 ###############################################################################

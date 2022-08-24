@@ -14,6 +14,7 @@ from lark import Token, Transformer, v_args
 from haros.parsing.python.ast import (
     PythonAliasName,
     PythonArgument,
+    PythonAssertStatement,
     PythonAssignmentExpression,
     PythonAssignmentStatement,
     PythonAst,
@@ -50,6 +51,7 @@ from haros.parsing.python.ast import (
     PythonRaiseStatement,
     PythonReference,
     PythonReturnStatement,
+    PythonScopeStatement,
     PythonSetComprehension,
     PythonSetLiteral,
     PythonSimpleArgument,
@@ -206,6 +208,20 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def yield_stmt(self, expr: PythonYieldExpression) -> PythonExpressionStatement:
         return PythonExpressionStatement(expr, line=expr.line, column=expr.column)
+
+    def global_stmt(self, names: Iterable[Token]) -> PythonScopeStatement:
+        return PythonScopeStatement(tuple(names), global_scope=True)
+
+    def nonlocal_stmt(self, names: Iterable[Token]) -> PythonScopeStatement:
+        return PythonScopeStatement(tuple(names), global_scope=False)
+
+    @v_args(inline=True)
+    def assert_stmt(
+        self,
+        test: PythonExpression,
+        msg: Optional[PythonExpression],
+    ) -> PythonAssertStatement:
+        return PythonAssertStatement(test, msg, line=test.line, column=test.column)
 
     # Assignment Statements ################################
 
