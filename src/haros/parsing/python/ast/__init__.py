@@ -65,4 +65,5 @@ from haros.parsing.python.ast.statements import (
     PythonRaiseStatement,
     PythonReturnStatement,
     PythonScopeStatement,
+    PythonWhileStatement,
 )

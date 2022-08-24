@@ -61,6 +61,7 @@ from haros.parsing.python.ast import (
     PythonStringLiteral,
     PythonTupleComprehension,
     PythonTupleLiteral,
+    PythonWhileStatement,
     PythonYieldExpression,
 )
 
@@ -503,17 +504,12 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def if_stmt(
         self,
-        condition: PythonExpression,
+        test: PythonExpression,
         body: Tuple[PythonStatement],
         elif_branches: Tuple[PythonConditionalBlock],
         else_branch: Optional[Tuple[PythonStatement]]
     ) -> PythonIfStatement:
-        then_branch = PythonConditionalBlock(
-            condition,
-            body,
-            line=condition.line,
-            column=condition.column,
-        )
+        then_branch = PythonConditionalBlock(test, body, line=test.line, column=test.column)
         else_branch = else_branch or ()  # avoid None
         return PythonIfStatement(then_branch, elif_branches, else_branch)
 
@@ -527,6 +523,19 @@ class ToAst(Transformer):
         body: Tuple[PythonStatement]
     ) -> PythonConditionalBlock:
         return PythonConditionalBlock(condition, body)
+
+    # Loop Statements ######################################
+
+    @v_args(inline=True)
+    def while_stmt(
+        self,
+        test: PythonExpression,
+        body: Tuple[PythonStatement],
+        else_branch: Optional[Tuple[PythonStatement]],
+    ) -> PythonWhileStatement:
+        loop = PythonConditionalBlock(test, body, line=test.line, column=test.column)
+        else_branch = else_branch or ()  # avoid None
+        return PythonWhileStatement(loop, else_branch)
 
     # Lambdas ##############################################
 

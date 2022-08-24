@@ -274,26 +274,25 @@ class PythonIfStatement(PythonStatement):
 
 @frozen
 class PythonWhileStatement(PythonStatement):
-    then_branch: PythonConditionalBlock
-    elif_branches: Tuple[PythonConditionalBlock]
+    loop: PythonConditionalBlock
     else_branch: Tuple[PythonStatement]
 
     @property
-    def is_if(self) -> bool:
+    def is_while(self) -> bool:
         return True
 
     @property
     def condition(self) -> PythonExpression:
-        return self.then_branch.condition
+        return self.loop.condition
 
     @property
     def body(self) -> Tuple[PythonStatement]:
-        return self.then_branch.body
+        return self.loop.body
 
     @property
     def line(self) -> int:
-        return self.then_branch.line
+        return self.loop.line
 
     @property
     def column(self) -> int:
-        return self.then_branch.column
+        return self.loop.column
