@@ -30,6 +30,7 @@ from haros.parsing.python.ast import (
     PythonDictComprehension,
     PythonDictEntry,
     PythonDictLiteral,
+    PythonExceptClause,
     PythonExpression,
     PythonExpressionStatement,
     PythonForStatement,
@@ -60,6 +61,7 @@ from haros.parsing.python.ast import (
     PythonStarExpression,
     PythonStatement,
     PythonStringLiteral,
+    PythonTryStatement,
     PythonTupleComprehension,
     PythonTupleLiteral,
     PythonWhileStatement,
@@ -566,6 +568,56 @@ class ToAst(Transformer):
         iterator = PythonIterator(variables, iterable, asynchronous=False)
         else_branch = else_branch or ()  # avoid None
         return PythonForStatement(iterator, body, else_branch)
+
+    # Try Statement ########################################
+
+    @v_args(inline=True)
+    def try_stmt(
+        self,
+        body: Tuple[PythonStatement],
+        except_clauses: Tuple[PythonExceptClause],
+        else_branch: MaybeStatements,
+        finally_block: MaybeStatements,
+    ) -> PythonTryStatement:
+        else_branch = else_branch or ()
+        finally_block = finally_block or ()
+        return PythonTryStatement(
+            body,
+            except_clauses=except_clauses,
+            else_branch=else_branch,
+            finally_block=finally_block,
+        )
+
+    @v_args(inline=True)
+    def try_finally(
+        self,
+        body: Tuple[PythonStatement],
+        finally_block: Tuple[PythonStatement],
+    ) -> PythonTryStatement:
+        return PythonTryStatement(body, finally_block=finally_block)
+
+    @v_args(inline=True)
+    def finally_block(self, body: Tuple[PythonStatement]) -> Tuple[PythonStatement]:
+        return body
+
+    def except_clauses(self, clauses: Iterable[PythonExceptClause]) -> Tuple[PythonExceptClause]:
+        assert len(clauses) >= 1, f'except_clauses: {clauses}'
+        return tuple(clauses)
+
+    @v_args(inline=True)
+    def except_clause(
+        self,
+        exception: Optional[PythonExpression],
+        alias: Optional[Token],
+        body: Tuple[PythonStatement],
+    ) -> PythonExceptClause:
+        assert len(body) > 0, f'except_clause: {exception}, {alias}, {body}'
+        line = body[0].line
+        column = body[0].column
+        if exception is not None:
+            line = exception.line
+            column = exception.column
+        return PythonExceptClause(body, exception=exception, alias=alias, line=line, column=column)
 
     # Lambdas ##############################################
 

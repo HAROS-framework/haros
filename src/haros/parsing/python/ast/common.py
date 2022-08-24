@@ -219,5 +219,9 @@ class PythonHelperNode(PythonAst):
         return False
 
     @property
+    def is_except_clause(self) -> bool:
+        return False
+
+    @property
     def is_decorator(self) -> bool:
         return False

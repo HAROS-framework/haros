@@ -93,9 +93,9 @@ elifs: elif_*
 elif_: "elif" test ":" suite
 while_stmt: "while" test ":" suite ["else" ":" suite]
 for_stmt: "for" exprlist "in" testlist ":" suite ["else" ":" suite]
-try_stmt: "try" ":" suite except_clauses ["else" ":" suite] [finally]
-        | "try" ":" suite finally   -> try_finally
-finally: "finally" ":" suite
+try_stmt: "try" ":" suite except_clauses ["else" ":" suite] [finally_block]
+        | "try" ":" suite finally_block   -> try_finally
+finally_block: "finally" ":" suite
 except_clauses: except_clause+
 except_clause: "except" [test ["as" name]] ":" suite
 // NB compile.c makes sure that the default except clause is last

@@ -13,6 +13,7 @@ from haros.parsing.python.ast.common import PythonExpression, PythonStatement
 from haros.parsing.python.ast.helpers import (
     PythonConditionalBlock,
     PythonDecorator,
+    PythonExceptClause,
     PythonFunctionParameter,
     PythonImportedName,
     PythonIterator,
@@ -272,6 +273,10 @@ class PythonIfStatement(PythonStatement):
     def column(self) -> int:
         return self.then_branch.column
 
+    @property
+    def has_else_branch(self) -> bool:
+        return len(self.else_branch) > 0
+
 
 @frozen
 class PythonWhileStatement(PythonStatement):
@@ -297,6 +302,10 @@ class PythonWhileStatement(PythonStatement):
     @property
     def column(self) -> int:
         return self.loop.column
+
+    @property
+    def has_else_branch(self) -> bool:
+        return len(self.else_branch) > 0
 
 
 @frozen
@@ -328,3 +337,35 @@ class PythonForStatement(PythonStatement):
     @property
     def column(self) -> int:
         return self.iterator.variables[0].column
+
+    @property
+    def has_else_branch(self) -> bool:
+        return len(self.else_branch) > 0
+
+
+@frozen
+class PythonTryStatement(PythonStatement):
+    body: Tuple[PythonStatement]
+    except_clauses: Tuple[PythonExceptClause] = field(factory=tuple)
+    else_branch: Tuple[PythonStatement] = field(factory=tuple)
+    finally_block: Tuple[PythonStatement] = field(factory=tuple)
+
+    @property
+    def is_try(self) -> bool:
+        return True
+
+    @property
+    def is_try_finally(self) -> bool:
+        return not self.has_except_clauses
+
+    @property
+    def has_except_clauses(self) -> bool:
+        return len(self.except_clauses) > 0
+
+    @property
+    def has_else_branch(self) -> bool:
+        return len(self.else_branch) > 0
+
+    @property
+    def has_finally_block(self) -> bool:
+        return len(self.finally_block) > 0

@@ -289,3 +289,17 @@ class PythonConditionalBlock(PythonHelperNode):
     @property
     def is_conditional_block(self) -> bool:
         return True
+
+
+@frozen
+class PythonExceptClause(PythonHelperNode):
+    body: Tuple[PythonStatement]
+    exception: Optional[PythonExpression] = None
+    alias: Optional[str] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_except_clause(self) -> bool:
+        return True

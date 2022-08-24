@@ -42,6 +42,7 @@ from haros.parsing.python.ast.helpers import (
     PythonConditionalBlock,
     PythonDecorator,
     PythonDictEntry,
+    PythonExceptClause,
     PythonFunctionParameter,
     PythonImportBase,
     PythonImportedName,
@@ -66,5 +67,6 @@ from haros.parsing.python.ast.statements import (
     PythonRaiseStatement,
     PythonReturnStatement,
     PythonScopeStatement,
+    PythonTryStatement,
     PythonWhileStatement,
 )
