@@ -18,6 +18,7 @@ from haros.parsing.python.ast import (
     PythonAssignmentExpression,
     PythonAssignmentStatement,
     PythonAst,
+    PythonAwaitExpression,
     PythonBinaryOperator,
     PythonBooleanLiteral,
     PythonBreakStatement,
@@ -742,6 +743,10 @@ class ToAst(Transformer):
         return PythonContextManager(manager, alias=alias)
 
     # Other Expressions ####################################
+
+    @v_args(inline=True)
+    def await_expr(self, kw: Token, expression: PythonExpression) -> PythonAwaitExpression:
+        return PythonAwaitExpression(expression, line=kw.line, column=kw.column)
 
     @v_args(inline=True)
     def yield_expr(self, expressions: MaybeExpressions) -> PythonYieldExpression:
