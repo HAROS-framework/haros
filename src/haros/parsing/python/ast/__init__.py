@@ -41,6 +41,9 @@ from haros.parsing.python.ast.expressions import (
 from haros.parsing.python.ast.helpers import (
     PythonAliasName,
     PythonArgument,
+    PythonCasePattern,
+    PythonCaseStatement,
+    PythonClassCasePattern,
     PythonConditionalBlock,
     PythonDecorator,
     PythonDictEntry,
@@ -49,9 +52,15 @@ from haros.parsing.python.ast.helpers import (
     PythonImportBase,
     PythonImportedName,
     PythonIterator,
+    PythonKeyCasePattern,
     PythonKeyValuePair,
+    PythonMappingCasePattern,
+    PythonOrCasePattern,
+    PythonSequenceCasePattern,
     PythonSimpleArgument,
+    PythonSimpleCasePattern,
     PythonSpecialArgument,
+    PythonWildcardCasePattern,
 )
 from haros.parsing.python.ast.statements import (
     PythonAssertStatement,
@@ -66,6 +75,7 @@ from haros.parsing.python.ast.statements import (
     PythonFunctionDefStatement,
     PythonIfStatement,
     PythonImportStatement,
+    PythonMatchStatement,
     PythonPassStatement,
     PythonRaiseStatement,
     PythonReturnStatement,

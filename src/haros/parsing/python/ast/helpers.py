@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Iterable, Optional, Tuple, Union
+from typing import Any, Iterable, Optional, Tuple, Union
 
 from attrs import frozen
 
@@ -321,3 +321,186 @@ class PythonContextManager(PythonHelperNode):
     @property
     def column(self) -> int:
         return self.manager.column
+
+
+class PythonCasePattern(PythonHelperNode):
+    @property
+    def is_case_pattern(self) -> bool:
+        return True
+
+    @property
+    def is_wildcard_pattern(self) -> bool:
+        return False
+
+    @property
+    def is_simple_pattern(self) -> bool:
+        return False
+
+    @property
+    def is_key_pattern(self) -> bool:
+        return False
+
+    @property
+    def is_class_pattern(self) -> bool:
+        return False
+
+    @property
+    def is_or_pattern(self) -> bool:
+        return False
+
+    @property
+    def is_sequence_pattern(self) -> bool:
+        return False
+
+    @property
+    def is_mapping_pattern(self) -> bool:
+        return False
+
+
+@frozen
+class PythonWildcardCasePattern(PythonHelperNode):
+    # captures `_`, `*_`, `*name`, `**name`
+    name: Optional[str] = None
+    is_star_pattern: bool = False
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_wildcard_pattern(self) -> bool:
+        return True
+
+
+@frozen
+class PythonSimpleCasePattern(PythonHelperNode):
+    expression: PythonExpression
+    alias: Optional[str] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_simple_pattern(self) -> bool:
+        return True
+
+    @property
+    def is_variable_binding(self) -> bool:
+        return self.expression.is_reference
+
+
+@frozen
+class PythonKeyCasePattern(PythonHelperNode):
+    key: str
+    pattern: PythonCasePattern
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_key_pattern(self) -> bool:
+        return True
+
+
+@frozen
+class PythonClassCasePattern(PythonHelperNode):
+    type_reference: PythonExpression
+    arguments: Tuple[Union[PythonSimpleCasePattern, PythonKeyCasePattern]]
+    alias: Optional[str] = None
+
+    @property
+    def line(self) -> int:
+        return self.type_reference.line
+
+    @property
+    def column(self) -> int:
+        return self.type_reference.column
+
+    @property
+    def is_class_pattern(self) -> bool:
+        return True
+
+    @property
+    def positional_arguments(self) -> Tuple[PythonSimpleCasePattern]:
+        return tuple(p for p in self.arguments if p.is_simple_pattern)
+
+    @property
+    def keyword_arguments(self) -> Tuple[PythonKeyCasePattern]:
+        return tuple(p for p in self.arguments if p.is_key_pattern)
+
+
+@frozen
+class PythonOrCasePattern(PythonHelperNode):
+    patterns: Tuple[PythonCasePattern]
+    alias: Optional[str] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_or_pattern(self) -> bool:
+        return True
+
+    def __len__(self) -> int:
+        return len(self.patterns)
+
+    def __getitem__(self, key: Any) -> PythonCasePattern:
+        return self.patterns[key]
+
+
+@frozen
+class PythonSequenceCasePattern(PythonHelperNode):
+    patterns: Tuple[PythonCasePattern]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_sequence_pattern(self) -> bool:
+        return True
+
+    def __len__(self) -> int:
+        return len(self.patterns)
+
+    def __getitem__(self, key: Any) -> PythonCasePattern:
+        return self.patterns[key]
+
+
+@frozen
+class PythonMappingCasePattern(PythonHelperNode):
+    patterns: Tuple[PythonKeyCasePattern]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_mapping_pattern(self) -> bool:
+        return True
+
+    def get(self, key: str, default: Any = None) -> Optional[PythonKeyCasePattern]:
+        for pattern in self.patterns:
+            if pattern.key == key:
+                return pattern
+        return default
+
+    def __len__(self) -> int:
+        return len(self.patterns)
+
+    def __getitem__(self, key: Any) -> PythonKeyCasePattern:
+        pattern = self.get(key)
+        if pattern is None:
+            raise KeyError(key)
+        return pattern
+
+
+@frozen
+class PythonCaseStatement(PythonHelperNode):
+    pattern: PythonCasePattern
+    body: Tuple[PythonStatement]
+    condition: Optional[PythonExpression] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_case_statement(self) -> bool:
+        return True

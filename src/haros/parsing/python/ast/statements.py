@@ -11,6 +11,7 @@ from attrs import field, frozen
 
 from haros.parsing.python.ast.common import PythonExpression, PythonStatement
 from haros.parsing.python.ast.helpers import (
+    PythonCaseStatement,
     PythonConditionalBlock,
     PythonContextManager,
     PythonDecorator,
@@ -397,4 +398,17 @@ class PythonWithStatement(PythonStatement):
 
     @property
     def is_with(self) -> bool:
+        return True
+
+
+@frozen
+class PythonMatchStatement(PythonStatement):
+    value: PythonExpression
+    cases: Tuple[PythonCaseStatement]
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_match(self) -> bool:
         return True

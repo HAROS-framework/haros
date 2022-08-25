@@ -233,3 +233,11 @@ class PythonHelperNode(PythonAst):
     @property
     def is_context_manager(self) -> bool:
         return False
+
+    @property
+    def is_case_statement(self) -> bool:
+        return False
+
+    @property
+    def is_case_pattern(self) -> bool:
+        return False

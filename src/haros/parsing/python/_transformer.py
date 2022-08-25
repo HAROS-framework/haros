@@ -22,6 +22,9 @@ from haros.parsing.python.ast import (
     PythonBinaryOperator,
     PythonBooleanLiteral,
     PythonBreakStatement,
+    PythonCasePattern,
+    PythonCaseStatement,
+    PythonClassCasePattern,
     PythonClassDefStatement,
     PythonConditionalBlock,
     PythonConditionalExpression,
@@ -45,20 +48,26 @@ from haros.parsing.python.ast import (
     PythonImportStatement,
     PythonImportedName,
     PythonIterator,
+    PythonKeyCasePattern,
     PythonKeyValuePair,
     PythonLambdaExpression,
     PythonListComprehension,
     PythonListLiteral,
+    PythonMappingCasePattern,
+    PythonMatchStatement,
     PythonNoneLiteral,
     PythonNumberLiteral,
+    PythonOrCasePattern,
     PythonPassStatement,
     PythonRaiseStatement,
     PythonReference,
     PythonReturnStatement,
     PythonScopeStatement,
+    PythonSequenceCasePattern,
     PythonSetComprehension,
     PythonSetLiteral,
     PythonSimpleArgument,
+    PythonSimpleCasePattern,
     PythonSpecialArgument,
     PythonStarExpression,
     PythonStatement,
@@ -68,6 +77,7 @@ from haros.parsing.python.ast import (
     PythonTupleLiteral,
     PythonUnaryOperator,
     PythonWhileStatement,
+    PythonWildcardCasePattern,
     PythonWithStatement,
     PythonYieldExpression,
 )
@@ -723,6 +733,49 @@ class ToAst(Transformer):
             column=name.column,
         )
 
+    # Match Statement ######################################
+
+    @v_args(inline=True)
+    def class_pattern(
+        self,
+        pattern: PythonSimpleCasePattern,
+        arguments: Optional[Tuple[PythonCasePattern]],
+    ) -> PythonClassCasePattern:
+        arguments = arguments or ()
+        assert pattern.expression.is_reference, f'class_pattern: {pattern}'
+        type_reference = pattern.expression
+        return PythonClassCasePattern(type_reference, arguments)
+
+    def value(self, children: Iterable[Token]) -> PythonSimpleCasePattern:
+        assert len(children) >= 1, f'value: {children}'
+        ref = self._token_to_ref(children[0])
+        for i in range(1, len(children)):
+            ref = self._token_to_ref(children[i], base=ref)
+        return PythonSimpleCasePattern(ref, line=ref.line, column=ref.column)
+
+    @v_args(inline=True)
+    def arguments_pattern(
+        self,
+        positional: Tuple[PythonCasePattern],
+        keyword: Optional[Tuple[PythonKeyCasePattern]],
+    ) -> Tuple[PythonCasePattern]:
+        keyword = keyword or ()
+        return positional + keyword
+
+    @v_args(inline=True)
+    def no_pos_arguments(self, kwargs: Tuple[PythonKeyCasePattern]) -> Tuple[PythonKeyCasePattern]:
+        return kwargs
+
+    def pos_arg_pattern(self, ps: Iterable[PythonCasePattern]) -> Tuple[PythonCasePattern]:
+        return tuple(ps)
+
+    def keyws_arg_pattern(self, ps: Iterable[PythonKeyCasePattern]) -> Tuple[PythonKeyCasePattern]:
+        return tuple(ps)
+
+    @v_args(inline=True)
+    def keyw_arg_pattern(self, key: Token, pattern: PythonCasePattern) -> PythonKeyCasePattern:
+        return PythonKeyCasePattern(key, pattern, line=key.line, column=key.column)
+
     # Other Compound Statements ############################
 
     @v_args(inline=True)
@@ -925,22 +978,27 @@ class ToAst(Transformer):
 
     @v_args(inline=True)
     def var(self, name: Token) -> PythonReference:
-        return PythonReference(
-            str(name),
-            object=None,
-            line=name.line,
-            column=name.column,
-        )
+        return self._token_to_ref(name)
 
     @v_args(inline=True)
     def getattr(self, expr: PythonExpression, name: Token) -> PythonReference:
-        try:
-            line = expr.line
-            column = expr.column
-        except AttributeError:
-            line = name.line
-            column = name.column
-        return PythonReference(name, object=expr, line=line, column=column)
+        self._token_to_ref(name, base=expr)
+
+    def _token_to_ref(
+        self,
+        name: Token,
+        base: Optional[PythonExpression] = None,
+    ) -> PythonReference:
+        line = name.line
+        column = name.column
+        if base is not None:
+            try:
+                line = base.line
+                column = base.column
+            except AttributeError:
+                line = name.line
+                column = name.column
+        return PythonReference(name, object=base, line=line, column=column)
 
     # @v_args(inline=True)
     # def getitem(
