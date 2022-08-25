@@ -120,8 +120,11 @@ class ToAst(Transformer):
                 statements.append(statement)
         return tuple(statements)
 
-    def _tuple_to_expr(self, value: SomeExpressions) -> PythonExpression:
+    def _tuple_to_expr(self, value: SomeExpressions, singles: bool = True) -> PythonExpression:
         if isinstance(value, tuple):
+            if not singles and len(value) == 1:
+                assert isinstance(value[0], PythonExpression), f'_tuple_to_expr: {value!r}'
+                return value[0]
             return PythonTupleLiteral(value, line=value[0].line, column=value[0].column)
         assert isinstance(value, PythonExpression), f'_tuple_to_expr: {value!r}'
         return value
@@ -224,7 +227,7 @@ class ToAst(Transformer):
         line = 0
         column = 0
         if maybe_value is not None:
-            value = self._tuple_to_expr(maybe_value)
+            value = self._tuple_to_expr(maybe_value, singles=False)
             line = value.line
             column = value.column
         return PythonReturnStatement(value, line=line, column=column)
