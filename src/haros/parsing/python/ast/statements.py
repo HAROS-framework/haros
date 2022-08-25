@@ -11,6 +11,7 @@ from attrs import field, frozen
 
 from haros.parsing.python.ast.common import PythonExpression, PythonStatement
 from haros.parsing.python.ast.helpers import (
+    PythonArgument,
     PythonCaseStatement,
     PythonConditionalBlock,
     PythonContextManager,

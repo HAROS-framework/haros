@@ -227,7 +227,7 @@ class ToAst(Transformer):
             value = self._tuple_to_expr(maybe_value)
             line = value.line
             column = value.column
-        return PythonReturnStatement(expressions, line=line, column=column)
+        return PythonReturnStatement(value, line=line, column=column)
 
     @v_args(inline=True)
     def raise_stmt(
@@ -1086,7 +1086,7 @@ class ToAst(Transformer):
 
     @v_args(inline=True)
     def getattr(self, expr: PythonExpression, name: Token) -> PythonReference:
-        self._token_to_ref(name, base=expr)
+        return self._token_to_ref(name, base=expr)
 
     def _token_to_ref(
         self,
