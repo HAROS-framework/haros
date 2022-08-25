@@ -66,6 +66,7 @@ from haros.parsing.python.ast import (
     PythonTryStatement,
     PythonTupleComprehension,
     PythonTupleLiteral,
+    PythonUnaryOperator,
     PythonWhileStatement,
     PythonWithStatement,
     PythonYieldExpression,
@@ -84,6 +85,8 @@ MaybeExpressions = Optional[Tuple[PythonExpression]]
 
 SomeStatements = Union[PythonStatement, Tuple[PythonStatement]]
 MaybeStatements = Optional[Tuple[PythonStatement]]
+
+OperatorSequence = Iterable[Union[str, PythonExpression]]
 
 
 class ToAst(Transformer):
@@ -804,20 +807,72 @@ class ToAst(Transformer):
 
     # Operators ############################################
 
-    def comparison(self, children) -> PythonBinaryOperator:
-        assert len(children) % 2 == 1, f'comparison: {children}'
-        op = children[0]
+    def or_test(self, children: OperatorSequence) -> PythonBinaryOperator:
+        return self._op_sequence(children)
+
+    def and_test(self, children: OperatorSequence) -> PythonBinaryOperator:
+        return self._op_sequence(children)
+
+    @v_args(inline=True)
+    def not_test(self, operator: Token, operand: PythonExpression) -> PythonUnaryOperator:
+        # this rule is inlined if the unary operator is not present
+        line = operator.line
+        column= operator.column
+        return PythonUnaryOperator(operator, operand, line=line, column=column)
+
+    def comparison(self, children: OperatorSequence) -> PythonBinaryOperator:
+        return self._op_sequence(children)
+
+    def or_expr(self, children: OperatorSequence) -> PythonBinaryOperator:
+        return self._op_sequence(children)
+
+    def xor_expr(self, children: OperatorSequence) -> PythonBinaryOperator:
+        return self._op_sequence(children)
+
+    def and_expr(self, children: OperatorSequence) -> PythonBinaryOperator:
+        return self._op_sequence(children)
+
+    def shift_expr(self, children: OperatorSequence) -> PythonBinaryOperator:
+        return self._op_sequence(children)
+
+    def arith_expr(self, children: OperatorSequence) -> PythonBinaryOperator:
+        return self._op_sequence(children)
+
+    def term(self, children: OperatorSequence) -> PythonBinaryOperator:
+        return self._op_sequence(children)
+
+    def _op_sequence(self, children: OperatorSequence) -> PythonBinaryOperator:
+        # this rule is inlined if the operator and second operand are not present
+        assert len(children) >= 3 and len(children) % 2 == 1, f'_op_sequence: {children!r}'
+        operand1 = children[0]
         for i in range(1, len(children), 2):
-            assert isinstance(children[i], Token), f'comparison: {children}'
-            assert isinstance(children[i+1], PythonExpression), f'comparison: {children}'
-            op = PythonBinaryOperator(
-                children[i],
-                op,
-                children[i+1],
-                line=children[1].line,
-                column=children[1].column,
-            )
-        return op
+            operator = children[i]
+            assert isinstance(operator, Token), f'_op_sequence: {children!r}'
+            operand2 = children[i + 1]
+            assert isinstance(operand2, PythonExpression), f'_op_sequence: {children!r}'
+            line = operand1.line
+            column= operand1.column
+            operand1 = PythonBinaryOperator(operator, operand1, operand2, line=line, column=column)
+        return operand1
+
+    @v_args(inline=True)
+    def factor(self, operator: Token, operand: PythonExpression) -> PythonUnaryOperator:
+        # this rule is inlined if the unary operator is not present
+        line = operator.line
+        column= operator.column
+        return PythonUnaryOperator(operator, operand, line=line, column=column)
+
+    @v_args(inline=True)
+    def power(
+        self,
+        operand1: PythonExpression,
+        operand2: PythonExpression,
+    ) -> PythonBinaryOperator:
+        # this rule is inlined if the operator and second operand are not present
+        operator = '**'
+        line = operand1.line
+        column= operand1.column
+        return PythonBinaryOperator(operator, operand1, operand2, line=line, column=column)
 
     @v_args(inline=True)
     def comp_op(self, operator: Token) -> Token:

@@ -357,6 +357,23 @@ class PythonOperator(PythonExpression):
 
 
 @frozen
+class PythonUnaryOperator(PythonOperator):
+    operator: str
+    operand: PythonExpression
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def arity(self) -> int:
+        return 1
+
+    @property
+    def is_bitwise(self) -> bool:
+        return self.operator == '~'
+
+
+@frozen
 class PythonBinaryOperator(PythonOperator):
     operator: str
     operand1: PythonExpression

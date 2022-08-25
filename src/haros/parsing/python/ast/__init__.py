@@ -35,6 +35,7 @@ from haros.parsing.python.ast.expressions import (
     PythonStringLiteral,
     PythonTupleComprehension,
     PythonTupleLiteral,
+    PythonUnaryOperator,
     PythonYieldExpression,
 )
 from haros.parsing.python.ast.helpers import (

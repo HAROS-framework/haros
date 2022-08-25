@@ -162,22 +162,29 @@ assign_expr: name ":=" test
 
 ?test_nocond: or_test | lambdef_nocond
 
-?or_test: and_test ("or" and_test)*
-?and_test: not_test_ ("and" not_test_)*
-?not_test_: "not" not_test_ -> not_test
+?or_test: and_test (LOGIC_OR and_test)*
+?and_test: not_test_ (LOGIC_AND not_test_)*
+?not_test_: LOGIC_NOT not_test_ -> not_test
          | comparison
 ?comparison: expr (comp_op expr)*
 star_expr: "*" expr
 
+LOGIC_OR: "or"
+LOGIC_AND: "and"
+LOGIC_NOT: "not"
+
 ?expr: or_expr
-?or_expr: xor_expr ("|" xor_expr)*
-?xor_expr: and_expr ("^" and_expr)*
-?and_expr: shift_expr ("&" shift_expr)*
+?or_expr: xor_expr (BIT_OR_OP xor_expr)*
+?xor_expr: and_expr (BIT_XOR_OP and_expr)*
+?and_expr: shift_expr (BIT_AND_OP shift_expr)*
 ?shift_expr: arith_expr (_shift_op arith_expr)*
 ?arith_expr: term (_add_op term)*
 ?term: factor (_mul_op factor)*
 ?factor: _unary_op factor | power
 
+BIT_OR_OP: "|"
+BIT_XOR_OP: "^"
+BIT_AND_OP: "&"
 !_unary_op: "+"|"-"|"~"
 !_add_op: "+"|"-"
 !_shift_op: "<<"|">>"
