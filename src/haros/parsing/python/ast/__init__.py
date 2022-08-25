@@ -55,6 +55,7 @@ from haros.parsing.python.ast.helpers import (
     PythonKeyCasePattern,
     PythonKeyValuePair,
     PythonMappingCasePattern,
+    PythonNamedCasePattern,
     PythonOrCasePattern,
     PythonSequenceCasePattern,
     PythonSimpleArgument,

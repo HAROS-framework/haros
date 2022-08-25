@@ -55,6 +55,7 @@ from haros.parsing.python.ast import (
     PythonListLiteral,
     PythonMappingCasePattern,
     PythonMatchStatement,
+    PythonNamedCasePattern,
     PythonNoneLiteral,
     PythonNumberLiteral,
     PythonOrCasePattern,
@@ -735,6 +736,103 @@ class ToAst(Transformer):
 
     # Match Statement ######################################
 
+    def match_stmt(
+        self,
+        children: Iterable[Union[PythonExpression, PythonCaseStatement]],
+    ) -> PythonMatchStatement:
+        assert len(children) >= 2, f'match_stmt: {children!r}'
+        value = children[0]
+        assert value.is_expression, f'match_stmt: {children!r}'
+        cases = tuple(children[1:])
+        line = value.line  # FIXME
+        column = value.column  # FIXME
+        return PythonMatchStatement(value, cases, line=line, column=column)
+
+    @v_args(inline=True)
+    def case_stmt(
+        self,
+        pattern: PythonCasePattern,
+        guard: Optional[PythonExpression],
+        body: Tuple[PythonStatement],
+    ) -> PythonCaseStatement:
+        line = pattern.line  # FIXME
+        column = pattern.column  # FIXME
+        return PythonCaseStatement(pattern, body, condition=guard, line=line, column=column)
+
+    @v_args(inline=True)
+    def as_pattern(self, pattern: PythonCasePattern, name: Token) -> PythonCasePattern:
+        assert hasattr(pattern, 'alias'), f'as_pattern: {pattern!r}'
+        object.__setattr__(pattern, 'alias', name)
+        return pattern
+
+    def or_pattern(self, patterns: Iterable[PythonCasePattern]) -> PythonOrCasePattern:
+        # inlined if there is only one
+        return PythonOrCasePattern(tuple(patterns))
+
+    @v_args(inline=True)
+    def capture_pattern(self, name: Token) -> PythonSimpleCasePattern:
+        ref = self._token_to_ref(name)
+        return PythonSimpleCasePattern(ref)
+
+    @v_args(inline=True)
+    def any_pattern(self, token: Token) -> PythonWildcardCasePattern:
+        return PythonWildcardCasePattern(line=token.line, column=token.column)
+
+    def sequence_pattern(self, items: Iterable[PythonCasePattern]) -> PythonSequenceCasePattern:
+        line = 0
+        column = 0
+        if len(items) >= 1:
+            line = items[0].line
+            column = items[0].column
+        return PythonSequenceCasePattern(tuple(items), line=line, column=column)
+
+    def mapping_pattern(self, items: Iterable[PythonKeyCasePattern]) -> PythonMappingCasePattern:
+        line = 0
+        column = 0
+        if len(items) >= 1:
+            line = items[0].line
+            column = items[0].column
+        return PythonMappingCasePattern(tuple(items), line=line, column=column)
+
+    def mapping_star_pattern(
+        self,
+        children: Iterable[Union[PythonKeyCasePattern, Token]],
+    ) -> PythonMappingCasePattern:
+        assert len(children) >= 2, f'mapping_star_pattern: {children!r}'
+        patterns = list(children)
+        name = patterns[-1]
+        assert isinstance(name, Token), f'mapping_star_pattern: {children!r}'
+        patterns[-1] = PythonWildcardCasePattern(
+            name=name,
+            is_star_pattern=True,
+            line=name.line,
+            column=name.column,
+        )
+        line = patterns[0].line
+        column = patterns[0].column
+        return PythonMappingCasePattern(tuple(patterns), line=line, column=column)
+
+    @v_args(inline=True)
+    def literal_pattern(self, expr: PythonExpression) -> PythonSimpleCasePattern:
+        return PythonSimpleCasePattern(expr)
+
+    @v_args(inline=True)
+    def mapping_item_pattern(
+        self,
+        key: PythonSimpleCasePattern,
+        pattern: PythonCasePattern,
+    ) -> PythonKeyCasePattern:
+        return PythonKeyCasePattern(key.expression, pattern)
+
+    @v_args(inline=True)
+    def star_pattern(self, name: Token) -> PythonWildcardCasePattern:
+        return PythonWildcardCasePattern(
+            name=(name if name != '_' else None),
+            is_star_pattern=True,
+            line=name.line,
+            column=name.column,
+        )
+
     @v_args(inline=True)
     def class_pattern(
         self,
@@ -751,30 +849,36 @@ class ToAst(Transformer):
         ref = self._token_to_ref(children[0])
         for i in range(1, len(children)):
             ref = self._token_to_ref(children[i], base=ref)
-        return PythonSimpleCasePattern(ref, line=ref.line, column=ref.column)
+        return PythonSimpleCasePattern(ref)
 
     @v_args(inline=True)
     def arguments_pattern(
         self,
         positional: Tuple[PythonCasePattern],
-        keyword: Optional[Tuple[PythonKeyCasePattern]],
+        keyword: Optional[Tuple[PythonNamedCasePattern]],
     ) -> Tuple[PythonCasePattern]:
         keyword = keyword or ()
         return positional + keyword
 
     @v_args(inline=True)
-    def no_pos_arguments(self, kwargs: Tuple[PythonKeyCasePattern]) -> Tuple[PythonKeyCasePattern]:
+    def no_pos_arguments(
+        self,
+        kwargs: Tuple[PythonNamedCasePattern],
+    ) -> Tuple[PythonNamedCasePattern]:
         return kwargs
 
     def pos_arg_pattern(self, ps: Iterable[PythonCasePattern]) -> Tuple[PythonCasePattern]:
         return tuple(ps)
 
-    def keyws_arg_pattern(self, ps: Iterable[PythonKeyCasePattern]) -> Tuple[PythonKeyCasePattern]:
-        return tuple(ps)
+    def keyws_arg_pattern(
+        self,
+        patterns: Iterable[PythonNamedCasePattern],
+    ) -> Tuple[PythonNamedCasePattern]:
+        return tuple(patterns)
 
     @v_args(inline=True)
-    def keyw_arg_pattern(self, key: Token, pattern: PythonCasePattern) -> PythonKeyCasePattern:
-        return PythonKeyCasePattern(key, pattern, line=key.line, column=key.column)
+    def keyw_arg_pattern(self, key: Token, pattern: PythonCasePattern) -> PythonNamedCasePattern:
+        return PythonNamedCasePattern(key, pattern, line=key.line, column=key.column)
 
     # Other Compound Statements ############################
 

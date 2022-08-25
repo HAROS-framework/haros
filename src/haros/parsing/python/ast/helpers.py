@@ -91,7 +91,7 @@ class PythonArgument(PythonHelperNode):
 
 @frozen
 class PythonSimpleArgument(PythonArgument):
-    argument: PythonExpression
+    value: PythonExpression
     name: Optional[str] = None
     # meta
     line: int = 0
@@ -108,7 +108,7 @@ class PythonSimpleArgument(PythonArgument):
 
 @frozen
 class PythonSpecialArgument(PythonArgument):
-    argument: PythonExpression
+    value: PythonExpression
     is_double_star: bool = False
     # meta
     line: int = 0
@@ -329,6 +329,10 @@ class PythonCasePattern(PythonHelperNode):
         return True
 
     @property
+    def is_named_pattern(self) -> bool:
+        return False
+
+    @property
     def is_wildcard_pattern(self) -> bool:
         return False
 
@@ -358,6 +362,19 @@ class PythonCasePattern(PythonHelperNode):
 
 
 @frozen
+class PythonNamedCasePattern(PythonHelperNode):
+    name: str
+    pattern: PythonCasePattern
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_named_pattern(self) -> bool:
+        return True
+
+
+@frozen
 class PythonWildcardCasePattern(PythonHelperNode):
     # captures `_`, `*_`, `*name`, `**name`
     name: Optional[str] = None
@@ -375,9 +392,14 @@ class PythonWildcardCasePattern(PythonHelperNode):
 class PythonSimpleCasePattern(PythonHelperNode):
     expression: PythonExpression
     alias: Optional[str] = None
-    # meta
-    line: int = 0
-    column: int = 0
+
+    @property
+    def line(self) -> int:
+        return self.expression.line
+
+    @property
+    def column(self) -> int:
+        return self.expression.column
 
     @property
     def is_simple_pattern(self) -> bool:
@@ -390,11 +412,16 @@ class PythonSimpleCasePattern(PythonHelperNode):
 
 @frozen
 class PythonKeyCasePattern(PythonHelperNode):
-    key: str
+    key: PythonExpression
     pattern: PythonCasePattern
-    # meta
-    line: int = 0
-    column: int = 0
+
+    @property
+    def line(self) -> int:
+        return self.key.line
+
+    @property
+    def column(self) -> int:
+        return self.key.column
 
     @property
     def is_key_pattern(self) -> bool:
@@ -404,7 +431,7 @@ class PythonKeyCasePattern(PythonHelperNode):
 @frozen
 class PythonClassCasePattern(PythonHelperNode):
     type_reference: PythonExpression
-    arguments: Tuple[Union[PythonSimpleCasePattern, PythonKeyCasePattern]]
+    arguments: Tuple[PythonCasePattern]
     alias: Optional[str] = None
 
     @property
@@ -421,20 +448,25 @@ class PythonClassCasePattern(PythonHelperNode):
 
     @property
     def positional_arguments(self) -> Tuple[PythonSimpleCasePattern]:
-        return tuple(p for p in self.arguments if p.is_simple_pattern)
+        return tuple(p for p in self.arguments if not p.is_named_pattern)
 
     @property
     def keyword_arguments(self) -> Tuple[PythonKeyCasePattern]:
-        return tuple(p for p in self.arguments if p.is_key_pattern)
+        return tuple(p for p in self.arguments if p.is_named_pattern)
 
 
 @frozen
 class PythonOrCasePattern(PythonHelperNode):
     patterns: Tuple[PythonCasePattern]
     alias: Optional[str] = None
-    # meta
-    line: int = 0
-    column: int = 0
+
+    @property
+    def line(self) -> int:
+        return self.patterns[0].line
+
+    @property
+    def column(self) -> int:
+        return self.patterns[0].column
 
     @property
     def is_or_pattern(self) -> bool:
@@ -504,3 +536,7 @@ class PythonCaseStatement(PythonHelperNode):
     @property
     def is_case_statement(self) -> bool:
         return True
+
+    @property
+    def guard(self) -> Optional[PythonExpression]:
+        return self.condition

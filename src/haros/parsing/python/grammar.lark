@@ -105,9 +105,9 @@ with_stmt: "with" with_items ":" suite
 with_items: with_item ("," with_item)*
 with_item: test ["as" name]
 
-match_stmt: "match" test ":" _NEWLINE _INDENT case+ _DEDENT
+match_stmt: "match" test ":" _NEWLINE _INDENT case_stmt+ _DEDENT
 
-case: "case" pattern ["if" test] ":" suite
+case_stmt: "case" pattern ["if" test] ":" suite
 
 ?pattern: sequence_item_pattern "," _sequence_pattern -> sequence_pattern
         | as_pattern
@@ -115,7 +115,7 @@ case: "case" pattern ["if" test] ":" suite
 ?or_pattern: closed_pattern ("|" closed_pattern)*
 ?closed_pattern: literal_pattern
                | NAME -> capture_pattern
-               | "_" -> any_pattern
+               | CASE_PATTERN_ANY -> any_pattern
                | attr_pattern
                | "(" as_pattern ")"
                | "[" _sequence_pattern "]" -> sequence_pattern
@@ -123,6 +123,8 @@ case: "case" pattern ["if" test] ":" suite
                | "{" (mapping_item_pattern ("," mapping_item_pattern)* ","?)?"}" -> mapping_pattern
                | "{" (mapping_item_pattern ("," mapping_item_pattern)* ",")? "**" NAME ","? "}" -> mapping_star_pattern
                | class_pattern
+
+CASE_PATTERN_ANY: "_"
 
 literal_pattern: inner_literal_pattern
 
