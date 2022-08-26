@@ -20,7 +20,7 @@ from haros.parsing.python.ast import (
 # Constants
 ###############################################################################
 
-T = TypeVar('T', PythonAst)
+T = TypeVar('T')
 
 ###############################################################################
 # Interface
@@ -40,6 +40,9 @@ class Query(Generic[T]):
 
     def __len__(self) -> int:
         return len(self.matches)
+
+    def __iter__(self):
+        yield from self.matches
 
 
 @define

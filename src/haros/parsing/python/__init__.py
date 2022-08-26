@@ -71,5 +71,5 @@ def parser() -> PythonParser:
     return _parser
 
 
-def parse(text) -> PythonModule:
+def parse(text: str) -> PythonModule:
     return parser().parse(text)

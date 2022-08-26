@@ -9,6 +9,10 @@ from typing import Any, Callable, Final, Tuple
 
 from pathlib import Path
 
+from haros.analysis.launch.python import get_python_launch_model
+from haros.analysis.launch.xml import get_xml_launch_model
+from haros.analysis.launch.yaml import get_yaml_launch_model
+
 LaunchModel = Any
 
 ###############################################################################

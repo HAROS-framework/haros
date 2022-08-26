@@ -159,7 +159,7 @@ class PythonStatement(PythonAst):
     def is_class_def(self) -> bool:
         return False
 
-    def substatements(self) -> List[PythonStatement]:
+    def substatements(self) -> List['PythonStatement']:
         return []
 
 

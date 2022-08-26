@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from attrs import field, frozen
 

@@ -15,7 +15,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from haros.parsing.python import parse as parse_python
+from haros.analysis.launch import get_launch_model
 from haros.internal.settings import Settings
 
 ###############################################################################
@@ -48,14 +48,11 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     if not path.is_file():
         logger.error(f'debug: not a file: "{path}"')
         return 1
-    text = path.read_text()
-    # text = '(a for a in seq)\n'
-    tree = parse_python(text)
-    # print(tree.pretty())
-    for child in tree:
-        #print('')
-        #print('>>', child)
-        print(child.pretty())
+
+    q = get_launch_model(path)
+    for match in q:
+        print('')
+        print(match.pretty())
     return 0
 
 
