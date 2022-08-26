@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Tuple
+from typing import List, Tuple
 
 from enum import Enum, auto
 
@@ -158,6 +158,9 @@ class PythonStatement(PythonAst):
     @property
     def is_class_def(self) -> bool:
         return False
+
+    def substatements(self) -> List[PythonStatement]:
+        return []
 
 
 class PythonExpression(PythonAst):

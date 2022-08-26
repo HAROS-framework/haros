@@ -232,6 +232,9 @@ class PythonFunctionDefStatement(PythonStatement):
     def has_variadic_keywords(self) -> bool:
         return any(p.is_variadic_keywords for p in self.parameters)
 
+    def substatements(self) -> List[PythonStatement]:
+        return list(self.body)
+
 
 @frozen
 class PythonClassDefStatement(PythonStatement):
@@ -254,6 +257,9 @@ class PythonClassDefStatement(PythonStatement):
     @property
     def is_decorated(self) -> bool:
         return len(self.decorators) > 0
+
+    def substatements(self) -> List[PythonStatement]:
+        return list(self.body)
 
 
 ###############################################################################
@@ -291,6 +297,13 @@ class PythonIfStatement(PythonStatement):
     def has_else_branch(self) -> bool:
         return len(self.else_branch) > 0
 
+    def substatements(self) -> List[PythonStatement]:
+        statements = list(self.then_branch.body)
+        for branch in self.elif_branches:
+            statements.extend(branch.body)
+        statements.extend(self.else_branch)
+        return statements
+
 
 @frozen
 class PythonWhileStatement(PythonStatement):
@@ -320,6 +333,11 @@ class PythonWhileStatement(PythonStatement):
     @property
     def has_else_branch(self) -> bool:
         return len(self.else_branch) > 0
+
+    def substatements(self) -> List[PythonStatement]:
+        statements = list(self.loop.body)
+        statements.extend(self.else_branch)
+        return statements
 
 
 @frozen
@@ -356,6 +374,11 @@ class PythonForStatement(PythonStatement):
     def has_else_branch(self) -> bool:
         return len(self.else_branch) > 0
 
+    def substatements(self) -> List[PythonStatement]:
+        statements = list(self.body)
+        statements.extend(self.else_branch)
+        return statements
+
 
 @frozen
 class PythonTryStatement(PythonStatement):
@@ -387,6 +410,14 @@ class PythonTryStatement(PythonStatement):
     def has_finally_block(self) -> bool:
         return len(self.finally_block) > 0
 
+    def substatements(self) -> List[PythonStatement]:
+        statements = list(self.body)
+        for clause in self.except_clauses:
+            statements.extend(clause.body)
+        statements.extend(self.else_branch)
+        statements.extend(self.finally_block)
+        return statements
+
 
 @frozen
 class PythonWithStatement(PythonStatement):
@@ -401,6 +432,9 @@ class PythonWithStatement(PythonStatement):
     def is_with(self) -> bool:
         return True
 
+    def substatements(self) -> List[PythonStatement]:
+        return list(self.body)
+
 
 @frozen
 class PythonMatchStatement(PythonStatement):
@@ -413,3 +447,9 @@ class PythonMatchStatement(PythonStatement):
     @property
     def is_match(self) -> bool:
         return True
+
+    def substatements(self) -> List[PythonStatement]:
+        statements = []
+        for case_stmt in self.cases:
+            statements.extend(case_stmt.body)
+        return statements
