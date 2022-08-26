@@ -55,6 +55,7 @@ from haros.parsing.python.ast import (
     PythonListLiteral,
     PythonMappingCasePattern,
     PythonMatchStatement,
+    PythonModule,
     PythonNamedCasePattern,
     PythonNoneLiteral,
     PythonNumberLiteral,
@@ -103,8 +104,9 @@ OperatorSequence = Iterable[Union[str, PythonExpression]]
 class ToAst(Transformer):
     # Top Level Rules ######################################
 
-    def file_input(self, children: Iterable[SomeStatements]) -> Tuple[PythonStatement]:
-        return self._flatten_statements(children)
+    def file_input(self, children: Iterable[SomeStatements]) -> PythonModule:
+        statements = self._flatten_statements(children)
+        return PythonModule(statements)
 
     def suite(self, children: Iterable[SomeStatements]) -> Tuple[PythonStatement]:
         return self._flatten_statements(children)

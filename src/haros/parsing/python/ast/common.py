@@ -2,22 +2,47 @@
 # Copyright © 2022 André Santos
 
 ###############################################################################
+# Imports
+###############################################################################
+
+from typing import Tuple
+
+from enum import Enum, auto
+
+from attrs import frozen
+
+###############################################################################
 # AST
 ###############################################################################
 
 
+class PythonAstNodeType(Enum):
+    MODULE = auto()
+    STATEMENT = auto()
+    EXPRESSION = auto()
+    HELPER = auto()
+
+
 class PythonAst:
     @property
+    def ast_node_type(self) -> PythonAstNodeType:
+        raise NotImplementedError()
+
+    @property
+    def is_module(self) -> bool:
+        return self.ast_node_type is PythonAstNodeType.MODULE
+
+    @property
     def is_statement(self) -> bool:
-        return False
+        return self.ast_node_type is PythonAstNodeType.STATEMENT
 
     @property
     def is_expression(self) -> bool:
-        return False
+        return self.ast_node_type is PythonAstNodeType.EXPRESSION
 
     @property
     def is_helper(self) -> bool:
-        return False
+        return self.ast_node_type is PythonAstNodeType.HELPER
 
     def pretty(self, indent: int = 0, step: int = 2) -> str:
         ws = ' ' * indent
@@ -26,8 +51,8 @@ class PythonAst:
 
 class PythonStatement(PythonAst):
     @property
-    def is_statement(self) -> bool:
-        return True
+    def ast_node_type(self) -> PythonAstNodeType:
+        return PythonAstNodeType.STATEMENT
 
     @property
     def is_simple_statement(self) -> bool:
@@ -137,8 +162,8 @@ class PythonStatement(PythonAst):
 
 class PythonExpression(PythonAst):
     @property
-    def is_expression(self) -> bool:
-        return True
+    def ast_node_type(self) -> PythonAstNodeType:
+        return PythonAstNodeType.EXPRESSION
 
     @property
     def is_literal(self) -> bool:
@@ -187,8 +212,8 @@ class PythonExpression(PythonAst):
 
 class PythonHelperNode(PythonAst):
     @property
-    def is_helper(self) -> bool:
-        return True
+    def ast_node_type(self) -> PythonAstNodeType:
+        return PythonAstNodeType.HELPER
 
     @property
     def is_key_value(self) -> bool:
@@ -241,3 +266,13 @@ class PythonHelperNode(PythonAst):
     @property
     def is_case_pattern(self) -> bool:
         return False
+
+
+@frozen
+class PythonModule(PythonAst):
+    statements: Tuple[PythonStatement]
+    name: str = '__main__'
+
+    @property
+    def ast_node_type(self) -> PythonAstNodeType:
+        return PythonAstNodeType.MODULE
