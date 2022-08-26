@@ -10,12 +10,9 @@ from typing import Any, Final, Tuple
 from pathlib import Path
 
 from haros.errors import ParseError
+from haros.parsing.python import parse
 
 LaunchModel = Any
-
-###############################################################################
-# Constants
-###############################################################################
 
 ###############################################################################
 # Interface
@@ -28,8 +25,4 @@ def get_python_launch_model(path: Path) -> LaunchModel:
     ext = path.suffix.lower()
     if ext != '.py':
         raise ValueError(f'not a valid launch file: {path}')
-    return parse_file(path)
-
-
-def parse_file(path: Path):
-    return
+    ast = parse(path)
