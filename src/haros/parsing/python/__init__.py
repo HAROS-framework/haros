@@ -14,7 +14,7 @@ from lark import Lark, Transformer
 from lark.indenter import PythonIndenter
 
 from haros.parsing.python._transformer import ToAst
-from haros.parsing.python.ast.common import PythonAst
+from haros.parsing.python.ast.common import PythonModule
 
 ###############################################################################
 # Constants
@@ -56,7 +56,7 @@ class PythonParser:
     _parser: Lark = field(init=False, factory=_lark_python_parser, eq=False, repr=False)
     _transformer: Transformer = field(init=False, factory=ToAst, eq=False, repr=False)
 
-    def parse(self, text: str) -> PythonAst:
+    def parse(self, text: str) -> PythonModule:
         tree = self._parser.parse(text)
         return self._transformer.transform(tree)
 
@@ -71,5 +71,5 @@ def parser() -> PythonParser:
     return _parser
 
 
-def parse(text) -> PythonAst:
+def parse(text) -> PythonModule:
     return parser().parse(text)
