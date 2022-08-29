@@ -235,10 +235,6 @@ class PythonHelperNode(PythonAst):
         return False
 
     @property
-    def is_alias_name(self) -> bool:
-        return False
-
-    @property
     def is_imported_name(self) -> bool:
         return False
 

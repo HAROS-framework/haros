@@ -9,10 +9,10 @@ from typing import Any, Iterable, Optional, Tuple, Union
 
 import re
 
+from attrs import frozen
 from lark import Token, Transformer, v_args
 
 from haros.parsing.python.ast import (
-    PythonAliasName,
     PythonArgument,
     PythonAssertStatement,
     PythonAssignmentExpression,
@@ -99,6 +99,15 @@ SomeStatements = Union[PythonStatement, Tuple[PythonStatement]]
 MaybeStatements = Optional[Tuple[PythonStatement]]
 
 OperatorSequence = Iterable[Union[str, PythonExpression]]
+
+
+@frozen
+class PythonAliasName:
+    name: str
+    alias: Optional[str]
+    # meta
+    line: int = 0
+    column: int = 0
 
 
 class ToAst(Transformer):
@@ -335,14 +344,12 @@ class ToAst(Transformer):
         alias: Optional[Token] = None,
     ) -> PythonImportedName:
         name = dotted_name[-1]
-        alias = alias or name
-        name = PythonAliasName(name, alias, line=name.line, column=name.column)
         base = PythonImportBase(
             dotted_name[:-1],
             line=dotted_name[0].line,
             column=dotted_name[0].column,
         )
-        return PythonImportedName(base, name)
+        return PythonImportedName(base, name, alias=alias)
 
     def dotted_as_names(self, names: Iterable[PythonImportedName]) -> Tuple[PythonImportedName]:
         return tuple(names)
@@ -358,7 +365,7 @@ class ToAst(Transformer):
 
     @v_args(inline=True)
     def import_as_name(self, name: Token, alias: Optional[Token] = None) -> PythonAliasName:
-        return PythonAliasName(name, alias or name, line=name.line, column=name.column)
+        return PythonAliasName(name, alias, line=name.line, column=name.column)
 
     def import_as_names(self, names: Iterable[PythonAliasName]) -> Tuple[PythonAliasName]:
         return tuple(names)
@@ -393,8 +400,7 @@ class ToAst(Transformer):
             # e.g.: from .. import *
             # e.g.: from .dotted_name import *
             # FIXME: line and column are wrong, there's no Token for *
-            wildcard = PythonAliasName.wildcard(line=line, column=column)
-            names = (PythonImportedName(base, wildcard),)
+            names = (PythonImportedName(base, '*', alias=None),)
             return PythonImportStatement(names, line=line, column=column)
 
         # e.g.: from . import name as alias
@@ -402,7 +408,7 @@ class ToAst(Transformer):
         items = children[i]
         assert isinstance(items, tuple), f'import_from: {children}'
         assert isinstance(items[0], PythonAliasName), f'import_from: {children}'
-        names = tuple(PythonImportedName(base, name) for name in items)
+        names = tuple(PythonImportedName(base, name.name, alias=name.alias) for name in items)
         return PythonImportStatement(names, line=line, column=column)
 
     @v_args(inline=True)

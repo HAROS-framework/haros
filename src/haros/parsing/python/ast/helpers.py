@@ -174,30 +174,10 @@ class PythonImportBase(PythonHelperNode):
 
 
 @frozen
-class PythonAliasName(PythonHelperNode):
-    name: str
-    alias: str
-    # meta
-    line: int = 0
-    column: int = 0
-
-    @property
-    def is_alias_name(self) -> bool:
-        return True
-
-    @property
-    def is_wildcard(self) -> bool:
-        return self.name == '*'
-
-    @classmethod
-    def wildcard(cls, line: int = 0, column: int = 0) -> 'PythonAliasName':
-        return cls('*', '*', line=line, column=column)
-
-
-@frozen
 class PythonImportedName(PythonHelperNode):
     base: PythonImportBase
-    name: PythonAliasName
+    name: str
+    alias: Optional[str] = None
 
     @property
     def is_imported_name(self) -> bool:
@@ -213,7 +193,7 @@ class PythonImportedName(PythonHelperNode):
 
     @property
     def is_wildcard(self) -> bool:
-        return self.name.is_wildcard
+        return self.name == '*'
 
 
 ###############################################################################

@@ -41,7 +41,6 @@ from haros.parsing.python.ast.expressions import (
     PythonYieldExpression,
 )
 from haros.parsing.python.ast.helpers import (
-    PythonAliasName,
     PythonArgument,
     PythonCasePattern,
     PythonCaseStatement,
