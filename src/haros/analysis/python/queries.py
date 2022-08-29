@@ -13,7 +13,9 @@ from haros.parsing.python.ast import (
     PythonAst,
     PythonExpression,
     PythonFunctionDefStatement,
+    PythonImportStatement,
     PythonModule,
+    PythonStatement,
 )
 
 ###############################################################################
@@ -46,6 +48,18 @@ class Query(Generic[T]):
 
 
 @define
+class ImportQuery(Query[PythonImportStatement]):
+    def relatives(self) -> 'ImportQuery':
+        return self.q(i for i in self.matches if i.base.is_relative)
+
+    def globals(self) -> 'ImportQuery':
+        return self.q(i for i in self.matches if i.base.is_global)
+
+    def from_package(self, name: str) -> 'ImportQuery':
+        return self.q(i for i in self.matches if i.base.dotted_name == name)
+
+
+@define
 class FunctionQuery(Query[PythonFunctionDefStatement]):
     def named(self, name: str) -> 'FunctionQuery':
         return self.q(f for f in self.matches if f.name == name)
@@ -74,17 +88,27 @@ class FunctionQuery(Query[PythonFunctionDefStatement]):
 @define
 class ModuleQuery(Query[PythonModule]):
     def functions(self) -> FunctionQuery:
-        functions = set()
+        functions = self._find_statements('is_function_def')
+        return FunctionQuery(functions)
+
+    def imports(self) -> ImportQuery:
+        imports = self._find_statements('is_import')
+        return ImportQuery(imports)
+
+    def _find_statements(self, is_what: str) -> Set[PythonStatement]:
+        found = set()
         for module in self.matches:
             stack = list(reversed(module.statements))
             while stack:
                 stmt = stack.pop()
-                if stmt.is_function_def:
-                    functions.add(stmt)
+                if getattr(stmt, is_what):
+                    found.add(stmt)
                 elif stmt.is_simple_statement:
                     continue
                 elif stmt.is_class_def:
                     continue
+                elif stmt.is_function_def:
+                    continue
                 else:
                     stack.extend(reversed(stmt.substatements()))
-        return FunctionQuery(functions)
+        return found
