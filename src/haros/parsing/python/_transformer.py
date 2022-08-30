@@ -1130,10 +1130,10 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def slice(
         self,
-        start = Optional[PythonExpression],
+        start: Optional[PythonExpression],
         colon: Token,
-        end = Optional[PythonExpression],
-        step = Optional[PythonExpression],
+        end: Optional[PythonExpression],
+        step: Optional[PythonExpression],
     ) -> PythonSlice:
         line = colon.line if start is None else start.line
         column = colon.column if start is None else start.column
