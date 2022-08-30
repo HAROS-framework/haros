@@ -92,6 +92,14 @@ class PythonBooleanLiteral(PythonLiteral):
     def is_bool(self) -> bool:
         return True
 
+    @classmethod
+    def const_true(cls) -> 'PythonBooleanLiteral':
+        return cls(True)
+
+    @classmethod
+    def const_false(cls) -> 'PythonBooleanLiteral':
+        return cls(False)
+
     def pretty(self, indent: int = 0, step: int = 2) -> str:
         ws1 = ' ' * indent
         ws2 = ' ' * (indent + step)
