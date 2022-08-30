@@ -177,6 +177,10 @@ class PythonExpression(PythonAst):
         return False
 
     @property
+    def is_item_access(self) -> bool:
+        return False
+
+    @property
     def is_function_call(self) -> bool:
         return False
 
@@ -220,6 +224,10 @@ class PythonHelperNode(PythonAst):
 
     @property
     def is_key_value(self) -> bool:
+        return False
+
+    @property
+    def is_subscript(self) -> bool:
         return False
 
     @property

@@ -47,7 +47,9 @@ from haros.parsing.python.ast import (
     PythonImportBase,
     PythonImportStatement,
     PythonImportedName,
+    PythonItemAccess,
     PythonIterator,
+    PythonKeyAccess,
     PythonKeyCasePattern,
     PythonKeyValuePair,
     PythonLambdaExpression,
@@ -70,10 +72,12 @@ from haros.parsing.python.ast import (
     PythonSetLiteral,
     PythonSimpleArgument,
     PythonSimpleCasePattern,
+    PythonSlice,
     PythonSpecialArgument,
     PythonStarExpression,
     PythonStatement,
     PythonStringLiteral,
+    PythonSubscript,
     PythonTryStatement,
     PythonTupleComprehension,
     PythonTupleLiteral,
@@ -1115,13 +1119,25 @@ class ToAst(Transformer):
                 column = name.column
         return PythonReference(name, object=base, line=line, column=column)
 
-    # @v_args(inline=True)
-    # def getitem(
-    #     self,
-    #     expr: PythonExpression,
-    #     subscripts: Union[PythonExpression, Tuple[PythonExpression]],
-    # ) -> PythonSubscript:
-    #     pass
+    @v_args(inline=True)
+    def getitem(self, expr: PythonExpression, subscript: PythonSubscript) -> PythonItemAccess:
+        return PythonItemAccess(expr, subscript)
+
+    def subscript_tuple(self, items: Iterable[PythonExpression]) -> PythonTupleLiteral:
+        assert len(items) > 1, f'subscript_tuple: {items!r}'
+        return PythonTupleLiteral(tuple(items), line=items[0].line, column=items[0].column)
+
+    @v_args(inline=True)
+    def slice(
+        self,
+        start = Optional[PythonExpression],
+        colon: Token,
+        end = Optional[PythonExpression],
+        step = Optional[PythonExpression],
+    ) -> PythonSlice:
+        line = colon.line if start is None else start.line
+        column = colon.column if start is None else start.column
+        return PythonSlice(start=start, end=end, step=step, line=line, column=column)
 
     def funccall(self, children: Iterable[Any]) -> PythonFunctionCall:
         function = children[0]

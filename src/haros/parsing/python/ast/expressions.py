@@ -325,8 +325,33 @@ class PythonReference(PythonExpression):
         ws2 = ' ' * (indent + step)
         if self.object is None:
             return f'{ws1}Reference\n{ws2}{name}'
-        object = self.object.pretty(indent=(indent+step))
+        object = self.object.pretty(indent=(indent+step), step=step)
         return f'{ws1}Reference\n{ws2}{name}\n{object}'
+
+
+@frozen
+class PythonItemAccess(PythonExpression):
+    object: PythonExpression
+    key: PythonSubscript
+
+    @property
+    def line(self) -> int:
+        return self.object.line
+
+    @property
+    def column(self) -> int:
+        return self.object.column
+
+    @property
+    def is_item_access(self) -> bool:
+        return True
+
+    def pretty(self, indent: int = 0, step: int = 2) -> str:
+        ws = ' ' * indent
+        subindent = indent + step
+        object = self.object.pretty(indent=subindent, step=step)
+        key = self.key.pretty(indent=subindent, step=step)
+        return f'{ws}Subscript\n{object}\n{key}'
 
 
 ###############################################################################

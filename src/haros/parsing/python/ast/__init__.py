@@ -23,6 +23,7 @@ from haros.parsing.python.ast.expressions import (
     PythonDictLiteral,
     PythonFunctionCall,
     PythonGenerator,
+    PythonItemAccess,
     PythonLambdaExpression,
     PythonListComprehension,
     PythonListLiteral,
@@ -53,6 +54,7 @@ from haros.parsing.python.ast.helpers import (
     PythonImportBase,
     PythonImportedName,
     PythonIterator,
+    PythonKeyAccess,
     PythonKeyCasePattern,
     PythonKeyValuePair,
     PythonMappingCasePattern,
@@ -61,7 +63,9 @@ from haros.parsing.python.ast.helpers import (
     PythonSequenceCasePattern,
     PythonSimpleArgument,
     PythonSimpleCasePattern,
+    PythonSlice,
     PythonSpecialArgument,
+    PythonSubscript,
     PythonWildcardCasePattern,
 )
 from haros.parsing.python.ast.statements import (

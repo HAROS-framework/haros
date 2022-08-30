@@ -37,6 +37,59 @@ class PythonKeyValuePair(PythonHelperNode):
 
 PythonDictEntry = Union[PythonKeyValuePair, PythonExpression]
 
+###############################################################################
+# Subscript Helpers
+###############################################################################
+
+
+class PythonSubscript(PythonHelperNode):
+    @property
+    def is_subscript(self) -> bool:
+        return True
+
+    @property
+    def is_key(self) -> bool:
+        return False
+
+    @property
+    def is_slice(self) -> bool:
+        return False
+
+
+@frozen
+class PythonKeyAccess(PythonSubscript):
+    expression: PythonExpression
+
+    @property
+    def line(self) -> int:
+        return self.expression.line
+
+    @property
+    def column(self) -> int:
+        return self.expression.column
+
+    @property
+    def is_key(self) -> bool:
+        return True
+
+
+@frozen
+class PythonSlice(PythonSubscript):
+    start: Optional[PythonExpression] = None
+    end: Optional[PythonExpression] = None
+    step: Optional[PythonExpression] = None
+    # meta
+    line: int = 0
+    column: int = 0
+
+    @property
+    def is_slice(self) -> bool:
+        return True
+
+    @property
+    def is_full_slice(self) -> bool:
+        return self.start is None and self.end is None and self.step is None
+
 
 ###############################################################################
 # Generator Helpers
@@ -48,9 +101,12 @@ class PythonIterator(PythonHelperNode):
     variables: Tuple[PythonExpression]
     iterable: PythonExpression
     asynchronous: bool = False
+    # meta
+    line: int = 0
+    column: int = 0
 
     @property
-    def is_iterator(self):
+    def is_iterator(self) -> bool:
         return True
 
     def pretty(self, indent: int = 0, step: int = 2) -> str:
