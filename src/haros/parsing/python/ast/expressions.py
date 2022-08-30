@@ -16,6 +16,7 @@ from haros.parsing.python.ast.helpers import (
     PythonFunctionParameter,
     PythonIterator,
     PythonKeyValuePair,
+    PythonSubscript,
 )
 
 ###############################################################################
