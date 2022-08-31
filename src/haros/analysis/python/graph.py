@@ -5,15 +5,19 @@
 # Imports
 ###############################################################################
 
-from typing import Iterable, List, NewType, Optional, Tuple, Union
+from typing import Iterable, List, NewType, Optional, Set, Tuple, Union
 
 from attrs import define, field, frozen
 
 from haros.parsing.python.ast import (
     PythonAst,
     PythonBooleanLiteral,
+    PythonForStatement,
     PythonModule,
     PythonStatement,
+    PythonWhileStatement,
+    PythonTryStatement,
+    negate,
 )
 
 ###############################################################################
@@ -26,7 +30,7 @@ class Scope:
     pass
 
 
-ControlNodeId = NewType('ControlNodeId', Union[int, str])
+ControlNodeId = NewType('ControlNodeId', int)
 
 
 @define
@@ -34,31 +38,41 @@ class ControlNode:
     id: ControlNodeId
     body: List[PythonStatement] = field(factory=list)
     condition: PythonExpression = field(factory=PythonBooleanLiteral.const_true)
-    jumps: List[ControlNodeId] = field(factory=list)
+    incoming: Set[ControlNodeId] = field(factory=set)
+    outgoing: Set[ControlNodeId] = field(factory=set)
 
     @property
     def is_empty(self) -> bool:
         return not self.body
 
     @property
-    def is_leaf(self) -> bool:
-        return not self.jumps
+    def is_terminal(self) -> bool:
+        return not self.outgoing
+
+    @property
+    def is_unreachable(self) -> bool:
+        return not self.incoming
+
+    def append(self, statement: PythonStatement):
+        self.body.append(statement)
+
+    def jump_to(self, other: 'ControlNode'):
+        self.outgoing.add(other.id)
+        other.incoming.add(self.id)
 
 
 @define
 class ControlFlowGraph:
-    nodes: Dict[ControlNodeId, ControlNode]
-    start: ControlNodeId
+    nodes: List[ControlNode] = field(factory=list)
+    is_asynchronous: bool = False
 
     @property
     def first_node(self) -> ControlNode:
-        return self.nodes[self.start]
+        return self.nodes[0]
 
-    @classmethod
-    def new_graph(cls) -> 'ControlFlowGraph':
-        start = ControlNodeId(0)
-        node = ControlNode(start)
-        return cls({start: node}, start)
+    @property
+    def last_node(self) -> ControlNode:
+        return self.nodes[-1]
 
 
 ###############################################################################
@@ -66,53 +80,56 @@ class ControlFlowGraph:
 ###############################################################################
 
 
+def _cfg_factory() -> ControlFlowGraph:
+    uid = ControlNodeId(0)
+    node = ControlNode(uid)
+    return ControlFlowGraph(nodes=[node])
+
+
 @define
 class ControlFlowGraphBuilder:
-    cfg: ControlFlowGraph = field(factory=ControlFlowGraph.new_graph)
+    cfg: ControlFlowGraph = field(factory=_cfg_factory)
 
-    def build(self, statements: Iterable[PythonStatement]) -> ControlFlowGraph:
-        for statement in statements:
-            self.cfg.add_statement(statement)
-        return self.cfg
+    def add_statement(
+        self,
+        statement: PythonStatement,
+        loop_node: Optional[ControlNode] = None,
+        post_loop_node: Optional[ControlNode] = None,
+    ):
+        this_node = self.current_node
+        this_node.append(statement)
 
-    def _add_node(self, condition: Optional[PythonExpression]):
-        if condition is None:
-            condition = PythonBooleanLiteral.const_true()
-        node = ControlNodeBuilder(id=len(self.nodes), condition=condition)
-        self.nodes.append(node)
+        if statement.is_break:
+            assert loop_node is not None, 'break outside of loop'
+            assert post_loop_node is not None, 'break outside of loop'
+            this_node.jump_to(post_loop_node)
+            self._new_node()  # dead code
 
-    def _add_statement(self, statement: PythonStatement):
-        if statement.is_expression_statement:
-            self.current_node.body.append(statement)
-        elif statement.is_assignment:
-            self.current_node.body.append(statement)
-        elif statement.is_delete:
-            self.current_node.body.append(statement)
-        elif statement.is_pass:
-            self.current_node.body.append(statement)
-        elif statement.is_break:
-            return False
         elif statement.is_continue:
-            return False
-        elif statement.is_return:
-            self.current_node.body.append(statement)
-            self.
-        elif statement.is_raise:
-            return False
+            assert loop_node is not None, 'continue outside of loop'
+            assert post_loop_node is not None, 'continue outside of loop'
+            this_node.jump_to(loop_node)
+            self._new_node()  # dead code
+
+        elif statement.is_return or statement.is_raise:
+            self._new_node()  # dead code
+
         elif statement.is_yield:
-            return
-        elif statement.is_import:
-            return False
-        elif statement.is_global:
-            return False
-        elif statement.is_nonlocal:
-            return False
+            self.cfg.is_asynchronous = True
+            self._new_node(origin=this_node)
+
         elif statement.is_assert:
-            return False
+            # terminal node
+            self._new_node(negate(statement.condition), origin=this_node)
+            # node that continues the flow
+            self._new_node(statement.condition, origin=this_node)
+
         elif statement.is_if:
             return False
+
         elif statement.is_while:
-            return False
+            builder = WhileFlowBuilder(statement)
+
         elif statement.is_for:
             return False
         elif statement.is_try:
@@ -125,8 +142,38 @@ class ControlFlowGraphBuilder:
             return False
         elif statement.is_class_def:
             return
-        else:
-            raise TypeError(f'unknown statement type: {statement!r}')
+        return True
+
+    def build(self) -> ControlFlowGraph:
+        cfg = self.cfg
+        self.cfg = _cfg_factory()
+        return cfg
+
+    @property
+    def current_node(self) -> ControlNode:
+        return self.cfg.nodes[-1]
+
+    def _new_node(
+        self,
+        condition: Optional[PythonExpression] = None,
+        *,
+        origin: Optional[ControlNode] = None,
+    ) -> ControlNode:
+        uid = ControlNodeId(len(self.cfg.nodes))
+        if condition is None:
+            condition = PythonBooleanLiteral.const_true()
+        node = ControlNode(uid, condition=condition)
+        self.cfg.nodes.append(node)
+        if origin is not None:
+            origin.jump_to(node)
+        return node
+
+    def _build_while(self, statement: PythonWhileStatement):
+        loop_node = self.current_node
+        self._new_node(statement.loop.condition)
+        for stmt in statement.loop.body:
+            self.add_statement(stmt)
+        pass
 
 
 ###############################################################################
