@@ -410,6 +410,10 @@ class PythonUnaryOperator(PythonOperator):
     def is_bitwise(self) -> bool:
         return self.operator == '~'
 
+    @property
+    def is_logic(self) -> bool:
+        return self.operator == 'not'
+
 
 @frozen
 class PythonBinaryOperator(PythonOperator):
@@ -431,6 +435,10 @@ class PythonBinaryOperator(PythonOperator):
     @property
     def is_comparison(self) -> bool:
         return self.operator in ('==', '!=', '<', '<=', '>', '>=')
+
+    @property
+    def is_logic(self) -> bool:
+        return self.operator in ('and', 'or')
 
     def invert(self) -> 'PythonBinaryOperator':
         op = self.operator
