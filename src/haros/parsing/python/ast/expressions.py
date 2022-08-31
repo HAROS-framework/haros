@@ -403,6 +403,10 @@ class PythonUnaryOperator(PythonOperator):
         return 1
 
     @property
+    def is_arithmetic(self) -> bool:
+        return self.operator in ('+', '-', '~')
+
+    @property
     def is_bitwise(self) -> bool:
         return self.operator == '~'
 
@@ -427,6 +431,35 @@ class PythonBinaryOperator(PythonOperator):
     @property
     def is_comparison(self) -> bool:
         return self.operator in ('==', '!=', '<', '<=', '>', '>=')
+
+    def invert(self) -> 'PythonBinaryOperator':
+        op = self.operator
+        if op == '+':
+            return PythonBinaryOperator('-', self.operand1, self.operand2)
+        if op == '-':
+            return PythonBinaryOperator('+', self.operand1, self.operand2)
+
+        if op == '*':
+            return PythonBinaryOperator('/', self.operand1, self.operand2)
+        if op == '/':
+            return PythonBinaryOperator('*', self.operand1, self.operand2)
+
+        if op == '==':
+            return PythonBinaryOperator('!=', self.operand1, self.operand2)
+        if op == '!=':
+            return PythonBinaryOperator('==', self.operand1, self.operand2)
+
+        if op == '<':
+            return PythonBinaryOperator('>=', self.operand1, self.operand2)
+        if op == '>':
+            return PythonBinaryOperator('<=', self.operand1, self.operand2)
+
+        if op == '<=':
+            return PythonBinaryOperator('>', self.operand1, self.operand2)
+        if op == '>=':
+            return PythonBinaryOperator('<', self.operand1, self.operand2)
+
+        raise ValueError(f'unable to invert operator {op!r}')
 
 
 @frozen
