@@ -168,7 +168,6 @@ __id_counter: int = 0
 
 @frozen
 class LogicVariable(LogicValue):
-    text: str
     data: Any
     name: str = ''
 
@@ -202,7 +201,6 @@ class LogicVariable(LogicValue):
             data = str(self.data)
         return {
             'name': self.name,
-            'text': self.text,
             'data': data,
         }
 
