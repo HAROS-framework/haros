@@ -131,7 +131,7 @@ class LogicTrue(LogicValue):
         return 'True'
 
 
-LOGIC_TRUE: Final[LogicValue] = LogicTrue()
+TRUE: Final[LogicValue] = LogicTrue()
 LogicValue.T = LOGIC_TRUE
 
 
@@ -160,7 +160,7 @@ class LogicFalse(LogicValue):
         return 'False'
 
 
-LOGIC_FALSE: Final[LogicValue] = LogicFalse()
+FALSE: Final[LogicValue] = LogicFalse()
 LogicValue.F = LOGIC_FALSE
 
 __id_counter: int = 0
