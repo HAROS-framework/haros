@@ -430,7 +430,7 @@ class PythonBinaryOperator(PythonOperator):
 
     @property
     def is_arithmetic(self) -> bool:
-        return self.operator in ('+', '-', '*', '/', '**')
+        return self.operator in ('+', '-', '*', '/', '//', '**')
 
     @property
     def is_comparison(self) -> bool:
