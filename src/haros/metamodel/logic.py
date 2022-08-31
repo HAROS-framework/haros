@@ -105,6 +105,14 @@ class LogicValue(object):
                 return LogicOr(args)
         raise TypeError(f'unexpected data type: {data!r}')
 
+    @classmethod
+    def tautology(cls) -> 'LogicValue':
+        return TRUE
+
+    @classmethod
+    def contradiction(cls) -> 'LogicValue':
+        return FALSE
+
 
 @frozen
 class LogicTrue(LogicValue):
