@@ -90,3 +90,44 @@ from haros.parsing.python.ast.statements import (
     PythonWhileStatement,
     PythonWithStatement,
 )
+
+###############################################################################
+# Utility Functions
+###############################################################################
+
+
+def negate(expr: PythonExpression) -> PythonExpression:
+    if not isinstance(expr, PythonAst) or not expr.is_expression:
+        raise TypeError(f'expected expression, got: {expr!r}')
+    if expr.is_literal:
+        if expr.is_none:
+            return PythonBooleanLiteral.const_true()
+        if expr.is_bool or expr.is_number or expr.is_string:
+            if not expr.value:
+                return PythonBooleanLiteral.const_true()
+            else:
+                return PythonBooleanLiteral.const_false()
+        if expr.is_tuple or expr.is_list or expr.is_set:
+            if not expr.is_comprehension:
+                if not expr.values:
+                    return PythonBooleanLiteral.const_true()
+                else:
+                    return PythonBooleanLiteral.const_false()
+        if expr.is_dict:
+            if not expr.is_comprehension:
+                if not expr.entries:
+                    return PythonBooleanLiteral.const_true()
+                else:
+                    return PythonBooleanLiteral.const_false()
+    elif expr.is_operator:
+        if expr.is_unary and not expr.is_arithmetic:
+            assert expr.operator == 'not', f'unknown operator: {expr!r}'
+            return expr.operand
+        if expr.is_binary and expr.is_comparison:
+            return expr.invert()
+    elif expr.is_conditional:
+        a = negate(expr.expression1)
+        b = negate(expr.expression2)
+        return PythonConditionalExpression(expr.condition, a, b)
+    else:
+        return PythonUnaryOperator('not', expr)
