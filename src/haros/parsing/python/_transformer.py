@@ -1047,7 +1047,9 @@ class ToAst(Transformer):
         return PythonBinaryOperator(operator, operand1, operand2, line=line, column=column)
 
     @v_args(inline=True)
-    def comp_op(self, operator: Token) -> Token:
+    def comp_op(self, operator: Token, other_token: Optional[Token] = None) -> Token:
+        if other_token is not None:
+            return operator.update(f'{operator.value} {other_token.value}')
         return operator
 
     # Complex Literals #####################################
