@@ -434,7 +434,7 @@ class PythonBinaryOperator(PythonOperator):
 
     @property
     def is_comparison(self) -> bool:
-        return self.operator in ('==', '!=', '<', '<=', '>', '>=')
+        return self.operator in ('==', '!=', '<', '<=', '>', '>=', 'in', 'not in', 'is', 'is not')
 
     @property
     def is_logic(self) -> bool:
