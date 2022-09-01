@@ -5,16 +5,16 @@
 # Imports
 ###############################################################################
 
-from typing import Iterable, List, NewType, Optional, Set, Tuple, Union
+from typing import Dict, Iterable, List, NewType, Optional, Set, Tuple, Union
 
 from attrs import define, field, frozen
 
 from haros.analysis.python.logic import to_condition
-from haros.metamodel.logic import TRUE, LogicValue
+from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
     PythonAst,
     PythonBooleanLiteral,
-    PythonConditionalBlock,
+    PythonExpression,
     PythonForStatement,
     PythonModule,
     PythonStatement,
@@ -25,12 +25,6 @@ from haros.parsing.python.ast import (
 ###############################################################################
 # Data Structures
 ###############################################################################
-
-
-@define
-class Scope:
-    pass
-
 
 ControlNodeId = NewType('ControlNodeId', int)
 
@@ -86,36 +80,90 @@ class ControlFlowGraph:
 ###############################################################################
 
 
+class MalformedProgramError(Exception):
+    @classmethod
+    def break_without_loop(cls) -> 'MalformedProgramError':
+        return cls('found a break statement outside of a loop')
+
+    @classmethod
+    def continue_without_loop(cls) -> 'MalformedProgramError':
+        return cls('found a continue statement outside of a loop')
+
+
+@define
+class ProgramContext:
+    current_node: ControlNode
+
+    def must_break(self):
+        raise MalformedProgramError.break_without_loop()
+
+    def must_continue(self):
+        raise MalformedProgramError.continue_without_loop()
+
+
+@define
+class LoopContext(ProgramContext):
+    begin_loop_node: ControlNode
+    post_loop_node: ControlNode
+
+    def must_break(self):
+        self.current_node.jump_to(self.post_loop_node)
+
+    def must_continue(self):
+        self.current_node.jump_to(self.begin_loop_node)
+
+
+@define
+class BranchingContext(ProgramContext):
+    post_branch_node: ControlNode
+    branch_nodes: List[ControlNode] = field(factory=list)
+
+    def add_branch(self, node: ControlNode) -> int:
+        n = len(self.branches)
+        self.branches.append(node)
+        self.current_node.jump_to(node)
+        return n
+
+
+# ControlFlowGraphBuilder is ready to `add_statement` after initialisation.
+# It keeps a stack of `ProgramContext` upon which it builds new nodes.
+
+
 @define
 class ControlFlowGraphBuilder:
-    cfg: ControlFlowGraph = field(factory=ControlFlowGraph)
+    _nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
+    _context_stack: List[ProgramContext] = field(init=False, factory=list)
+    _start: ControlNodeId = ControlNodeId(0)
 
-    def start(self):
-        return
+    def __attrs_post_init__(self):
+        node = self._new_node(condition=TRUE)
+        self._start = node.id
+        context = ProgramContext(node)
+        self._context_stack.append(context)
 
-    def add_statement(
-        self,
-        statement: PythonStatement,
-        loop_node: Optional[ControlNode] = None,
-        post_loop_node: Optional[ControlNode] = None,
-    ):
-        this_node = self.current_node
+    @property
+    def context(self) -> ProgramContext:
+        return self._context_stack[-1]
+
+    @property
+    def current_node(self) -> ControlNode:
+        self._context_stack[-1].current_node
+
+    def add_statement(self, statement: PythonStatement):
+        context = self.context
+        this_node = context.current_node
         this_node.append(statement)
 
         if statement.is_break:
-            assert loop_node is not None, 'break outside of loop'
-            assert post_loop_node is not None, 'break outside of loop'
-            this_node.jump_to(post_loop_node)
-            self._new_node()  # dead code
+            context.must_break()
+            self._start_dead_code()
 
         elif statement.is_continue:
-            assert loop_node is not None, 'continue outside of loop'
-            assert post_loop_node is not None, 'continue outside of loop'
-            this_node.jump_to(loop_node)
-            self._new_node()  # dead code
+            context.must_continue()
+            self._start_dead_code()
 
         elif statement.is_return or statement.is_raise:
-            self._new_node()  # dead code
+            self._start_dead_code()
 
         elif statement.is_yield:
             self.cfg.is_asynchronous = True
@@ -126,10 +174,10 @@ class ControlFlowGraphBuilder:
             # terminal node
             self._new_node(condition=phi.negate(), origin=this_node)
             # node that continues the flow
-            self._new_node(condition=phi, origin=this_node)
+            context.current_node = self._new_node(condition=phi, origin=this_node)
 
         elif statement.is_if:
-            self._build_if(statement, loop_node, post_loop_node)
+            self._build_if(statement)
 
         elif statement.is_while:
             builder = WhileFlowBuilder(statement)
@@ -153,89 +201,87 @@ class ControlFlowGraphBuilder:
         self.cfg = _cfg_factory()
         return cfg
 
-    @property
-    def current_node(self) -> ControlNode:
-        return self.cfg.nodes[-1]
-
     def _new_node(
         self,
-        condition: LogicValue = TRUE,
+        condition: Optional[LogicValue] = None,
         origin: Optional[ControlNode] = None,
     ) -> ControlNode:
-        uid = ControlNodeId(len(self.cfg.nodes))
-        condition = self.current_node.condition.join(condition)
+        uid = ControlNodeId(len(self._nodes))
+        if condition is None:
+            condition = self.current_node.condition
         node = ControlNode(uid, condition=condition)
-        self.cfg.nodes.append(node)
-        if origin:
+        self._nodes[uid] = node
+        if origin is not None:
             origin.jump_to(node)
         return node
 
-    def _build_if(
-        self,
-        statement: PythonStatement,
-        loop_node: Optional[ControlNode],
-        post_loop_node: Optional[ControlNode],
-    ):
-        ns = []
-        self._build_branch(this_node, ns, statement.then_branch, loop_node, post_loop_node)
+    def _start_dead_code(self):
+        # push a new node that propagates the current condition,
+        # but has no incoming links from other nodes
+        self.context.current_node = self._new_node()
+
+    def _push_context(self, node: ControlNode) -> ProgramContext:
+        new_context = ProgramContext(node)
+        self._context_stack.append(new_context)
+        return new_context
+
+    def _go_back_to(self, context: ProgramContext):
+        while self._context_stack:
+            other = self._context_stack.pop()
+            if other is context:
+                return
+        else:
+            raise AssertionError(f'missing context: {context!r}')
+
+    def _build_if(self, statement: PythonStatement):
+        context = self.context
+        this_node = context.current_node
+
+        phi = to_condition(statement.then_branch.condition)
+        psi = this_node.condition.join(phi)
+        branch_node = self._new_node(condition=psi, origin=this_node)
+        self._push_context(branch_node)
+        for stmt in statement.then_branch.body:
+            self.add_statement(stmt)
+        self._go_back_to(context)
+
+        rho = statement.then_branch.condition.negate()  # accumulator
         for branch in statement.elif_branches:
-            self._build_branch(this_node, ns, branch, loop_node, post_loop_node)
+            phi = rho.join(branch.condition)
+            psi = this_node.condition.join(phi)
+            branch_node = self._new_node(condition=psi, origin=this_node)
+            self._push_context(branch_node)
+            for stmt in branch.body:
+                self.add_statement(stmt)
+            self._go_back_to(context)
+            rho = rho.join(branch.condition.negate())
+
         if statement.has_else_branch:
             self._build_branch(this_node, ns, statement.else_branch, loop_node, post_loop_node)
         self._new_node(condition=this_node.condition)
-        for node in ns:
 
+    def _build_branch(self, condition: LogicValue, statements: Iterable[PythonStatement]):
+        context = self.context
+        this_node = context.current_node
 
-        # Create a block for the code after the if-else.
-        afterif_block = self.new_block()
-
-        # New block for the body of the else if there is an else clause.
-        if len(node.orelse) != 0:
-            else_block = self.new_block()
-            self.add_exit(self.current_block, else_block, invert(node.test))
-            self.current_block = else_block
-            # Visit the children in the body of the else to populate the block.
-            for child in node.orelse:
-                self.visit(child)
-            # If encountered a break, exit will have already been added
-            if not self.current_block.exits:
-                self.add_exit(self.current_block, afterif_block)
-        else:
-            self.add_exit(self.current_block, afterif_block, invert(node.test))
-
-        # Visit children to populate the if block.
-        self.current_block = if_block
-        for child in node.body:
-            self.visit(child)
-        if not self.current_block.exits:
-            self.add_exit(self.current_block, afterif_block)
-
-        # Continue building the CFG in the after-if block.
-        self.current_block = afterif_block
-
-    def _build_branch(
-        self,
-        node_buffer: List[ControlNode],
-        branch: PythonConditionalBlock,
-        loop_node: Optional[ControlNode],
-        post_loop_node: Optional[ControlNode],
-    ):
-        origin = self.current_node
-        i = len(self.cfg.nodes) - 1
-        phi = to_condition(branch.condition)
-        node = self._new_node(condition=phi, origin=origin)
-        node_buffer.append(node)
-        for statement in branch.body:
-            self.add_statement(statement, loop_node, post_loop_node)
-        del self.cfg.nodes[i]
-        self.cfg.nodes.append(origin)
-
-    def _build_while(self, statement: PythonWhileStatement):
-        loop_node = self.current_node
-        self._new_node(statement.loop.condition)
-        for stmt in statement.loop.body:
+        phi = to_condition(test)
+        psi = this_node.condition.join(phi)
+        branch_node = self._new_node(condition=psi, origin=this_node)
+        self._push_context(branch_node)
+        for stmt in statement.then_branch.body:
             self.add_statement(stmt)
-        pass
+        self._go_back_to(context)
+
+        rho = statement.then_branch.condition.negate()  # accumulator
+        for branch in statement.elif_branches:
+            phi = rho.join(branch.condition)
+            psi = this_node.condition.join(phi)
+            branch_node = self._new_node(condition=psi, origin=this_node)
+            self._push_context(branch_node)
+            for stmt in branch.body:
+                self.add_statement(stmt)
+            self._go_back_to(context)
+            rho = rho.join(branch.condition.negate())
 
 
 ###############################################################################
