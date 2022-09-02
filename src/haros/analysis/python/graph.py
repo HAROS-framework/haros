@@ -111,7 +111,7 @@ class LoopingContext:
 
     def break_from(self, node: ControlNode):
         node.jump_to(self.future_node)
-        phi = node.condition.trim(self.guard_node.condition)
+        phi = node.condition.assume(self.guard_node.condition)
         self.break_condition = self.break_condition.disjoin(phi)
 
     def continue_from(self, node: ControlNode):
