@@ -13,6 +13,7 @@ from haros.analysis.python.logic import to_condition
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
     PythonAst,
+    PythonBinaryOperator,
     PythonBooleanLiteral,
     PythonExpression,
     PythonForStatement,
@@ -20,6 +21,7 @@ from haros.parsing.python.ast import (
     PythonStatement,
     PythonWhileStatement,
     PythonTryStatement,
+    PythonTupleLiteral,
 )
 
 ###############################################################################
@@ -184,15 +186,18 @@ class ProgramGraphBuilder:
     def add_statement(self, statement: PythonStatement):
         this_node = self.current_node
 
-        if statement.is_while:
+        if statement.is_while or statement.is_for:
+            if statement.is_while:
+                phi = statement.condition
+            else:
+                it = statement.iterator
+                variables = PythonTupleLiteral(it.variables)
+                phi = PythonBinaryOperator('in', variables, it.iterable)
             guard_node = self._follow_up_node(switch=True)
             self._start_looping(guard_node)
-            self._build_loop(statement.condition, statement.body)
+            self._build_loop(phi, statement.body)
             self._build_loop_else(statement.else_branch)
             self._stop_looping()
-
-        elif statement.is_for:
-            return False
 
         else:
             this_node.append(statement)
