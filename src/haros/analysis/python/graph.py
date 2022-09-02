@@ -25,12 +25,18 @@ from haros.parsing.python.ast import (
 )
 
 ###############################################################################
-# Data Structures
+# Constants
 ###############################################################################
 
 ControlNodeId = NewType('ControlNodeId', int)
 
 ROOT_ID: Final[ControlNodeId] = ControlNodeId(0)
+
+MAIN: Final[str] = '__main__'
+
+###############################################################################
+# Data Structures
+###############################################################################
 
 
 @define
@@ -67,9 +73,10 @@ class ControlNode:
 
 @define
 class ControlFlowGraph:
+    name: str = MAIN
     nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
     root_id: ControlNodeId = field()
-    is_asynchronous: bool = False
+    asynchronous: bool = False
 
     @root_id.validator
     def _check_root_id(self, attribute, value: ControlNodeId):
@@ -81,9 +88,9 @@ class ControlFlowGraph:
         return self.nodes[self.root_id]
 
     @classmethod
-    def singleton(cls, is_asynchronous: bool = False) -> 'ControlFlowGraph':
+    def singleton(cls, name: str = MAIN, asynchronous: bool = False) -> 'ControlFlowGraph':
         nodes = {ROOT_ID: ControlNode(ROOT_ID)}
-        return cls(nodes=nodes, root_id=ROOT_ID, is_asynchronous=is_asynchronous)
+        return cls(name=name, nodes=nodes, root_id=ROOT_ID, asynchronous=asynchronous)
 
 
 ###############################################################################
@@ -153,19 +160,20 @@ class BranchingContext:
 
 @define
 class ProgramGraphBuilder:
-    cfg: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
+    graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
     current_id: ControlNodeId = ROOT_ID
+    nested_graphs: Dict[str, ControlFlowGraph] = field(factory=dict)
     _loop_stack: List[LoopingContext] = field(factory=list)
     _branch_stack: List[BranchingContext] = field(factory=list)
 
     @classmethod
-    def from_scratch(cls):
-        cfg = ControlFlowGraph.singleton()
-        return cls(cfg=cfg, current_id=cfg.root_id)
+    def from_scratch(cls, name: str = MAIN):
+        graph = ControlFlowGraph.singleton(name=name)
+        return cls(graph=graph, current_id=graph.root_id)
 
     @property
     def current_node(self) -> ControlNode:
-        return self.cfg.nodes[self.current_id]
+        return self.graph.nodes[self.current_id]
 
     @current_node.setter
     def current_node(self, node: ControlNode):
@@ -214,7 +222,7 @@ class ProgramGraphBuilder:
                 self.start_dead_code()
 
             elif statement.is_yield:
-                self.cfg.is_asynchronous = True
+                self.graph.asynchronous = True
                 self._follow_up_node(switch=True)
 
             elif statement.is_assert:
@@ -236,8 +244,16 @@ class ProgramGraphBuilder:
                 return False
             elif statement.is_with:
                 return False
+
             elif statement.is_function_def:
-                return False
+                name = f'{self.graph.name}/{statement.name}'
+                builder = ProgramGraphBuilder.from_scratch(name=name)
+                builder.graph.asynchronous = statement.asynchronous
+                for stmt in statement.body:
+                    builder.add_statement(stmt)
+                self.nested_graphs.update(builder.nested_graphs)
+                self.nested_graphs[name] = builder.graph
+
             elif statement.is_class_def:
                 return
         return True
@@ -254,9 +270,9 @@ class ProgramGraphBuilder:
         origin: Optional[ControlNode] = None,
         switch: bool = False,
     ) -> ControlNode:
-        uid = ControlNodeId(len(self.cfg.nodes))
+        uid = ControlNodeId(len(self.graph.nodes))
         node = ControlNode(uid, condition=phi)
-        self.cfg.nodes[uid] = node
+        self.graph.nodes[uid] = node
         if origin is not None:
             origin.jump_to(node)
         if switch:
