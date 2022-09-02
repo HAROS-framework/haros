@@ -238,12 +238,24 @@ class ProgramGraphBuilder:
                 self._build_branch(None, statement.else_branch)
                 self._stop_branching()
 
-            elif statement.is_try:
-                return False
             elif statement.is_match:
-                return False
-            elif statement.is_with:
-                return False
+                pass  # TODO
+
+            elif statement.is_with or statement.is_try:
+                # create and move to a new node
+                future_node = self._new_node(this_node.condition)
+                self._follow_up_node(switch=True)
+                # recursively process the statements
+                for stmt in statement.body:
+                    self.add_statement(stmt)
+                # link to the node that comes after
+                self.current_node.jump_to(future_node)
+                self.current_id = future_node.id
+
+                if statement.is_try:
+                    # need a new TryingContext stack for this
+                    # otherwise, error handlers will be unreachable
+                    pass  # TODO except, else, finally
 
             elif statement.is_function_def or statement.is_class_def:
                 name = f'{self.graph.name}/{statement.name}'
@@ -310,7 +322,7 @@ class ProgramGraphBuilder:
             phi = conditional.add_else_branch()
         else:
             phi = conditional.add_branch(test)
-        branch_node = self._follow_up_node(phi, switch=True)
+        self._follow_up_node(phi, switch=True)
 
         # recursively process the statements
         for statement in statements:
