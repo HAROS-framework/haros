@@ -14,6 +14,16 @@ from attrs import field, frozen
 ###############################################################################
 
 
+class LogicError(Exception):
+    @classmethod
+    def tautology(cls, phi: 'LogicValue') -> 'LogicError':
+        return cls(f'the formula is a tautology: {phi!r}')
+
+    @classmethod
+    def contradiction(cls, phi: 'LogicValue') -> 'LogicError':
+        return cls(f'the formula is a contradiction: {phi!r}')
+
+
 @frozen
 class LogicValue(object):
     @property
@@ -74,6 +84,14 @@ class LogicValue(object):
             return neg
         return value.disjoin(neg)
 
+    def assume(self, value: 'LogicValue') -> 'LogicValue':
+        valuation = value.make_true(full=True)
+        return self.replace(valuation)
+
+    def reject(self, value: 'LogicValue') -> 'LogicValue':
+        valuation = value.make_false(full=True)
+        return self.replace(valuation)
+
     def simplify(self) -> 'LogicValue':
         return self
 
@@ -83,6 +101,16 @@ class LogicValue(object):
     def replace(self, valuation: Mapping[str, bool]) -> 'LogicValue':
         # valuation: variable name -> bool
         return self
+
+    def make_true(self, full: bool = False) -> Mapping[str, bool]:
+        # returns a valuation that makes the formula true
+        # optionally, make it a full valuation (all variables are assigned)
+        raise NotImplementedError()
+
+    def make_false(self, full: bool = False) -> Mapping[str, bool]:
+        # returns a valuation that makes the formula false
+        # optionally, make it a full valuation (all variables are assigned)
+        raise NotImplementedError()
 
     def serialize(self) -> Any:
         raise NotImplementedError()
@@ -132,6 +160,12 @@ class LogicTrue(LogicValue):
     def implies(self, value: LogicValue) -> LogicValue:
         return value
 
+    def make_true(self, full: bool = False) -> Mapping[str, bool]:
+        return {}
+
+    def make_false(self, full: bool = False) -> Mapping[str, bool]:
+        raise LogicError.tautology(self)
+
     def serialize(self) -> Any:
         return True
 
@@ -161,6 +195,12 @@ class LogicFalse(LogicValue):
     def implies(self, value: LogicValue) -> LogicValue:
         return LOGIC_TRUE
 
+    def make_true(self, full: bool = False) -> Mapping[str, bool]:
+        raise LogicError.contradiction(self)
+
+    def make_false(self, full: bool = False) -> Mapping[str, bool]:
+        return {}
+
     def serialize(self) -> Any:
         return False
 
@@ -174,17 +214,17 @@ LogicValue.F = LOGIC_FALSE
 __id_counter: int = 0
 
 
+def __new_var_id() -> str:
+    global __id_counter
+    n = __id_counter
+    __id_counter += 1
+    return f'@{n}'
+
+
 @frozen
 class LogicVariable(LogicValue):
-    data: Any
-    name: str = ''
-
-    def __attrs_post_init__(self):
-        if not self.name:
-            global __id_counter
-            n = __id_counter
-            __id_counter += 1
-            object.__setattr__(self, 'name', f'@{n}')
+    data: Any = field(eq=False)
+    name: str = field(factory=__new_var_id)
 
     @property
     def is_variable(self) -> bool:
@@ -201,6 +241,13 @@ class LogicVariable(LogicValue):
         if value is False:
             return LogicValue.F
         return self
+
+    def make_true(self, full: bool = False) -> Mapping[str, bool]:
+        # returns a valuation that makes the formula true
+        return {self.name: True}
+
+    def make_false(self, full: bool = False) -> Mapping[str, bool]:
+        return {self.name: False}
 
     def serialize(self) -> Any:
         try:
@@ -251,6 +298,12 @@ class LogicNot(LogicValue):
         operand = self.operand.replace(valuation)
         result = LogicNot(operand)
         return result.simplify()
+
+    def make_true(self, full: bool = False) -> Mapping[str, bool]:
+        return self.operand.make_false(full=full)
+
+    def make_false(self, full: bool = False) -> Mapping[str, bool]:
+        return self.operand.make_true(full=full)
 
     def serialize(self) -> Any:
         return ['not', self.operand.serialize()]
@@ -309,6 +362,26 @@ class LogicAnd(LogicValue):
         operands = [op.replace(valuation) for op in self.operands]
         result = LogicAnd(operands)
         return result.simplify()
+
+    def make_true(self, full: bool = False) -> Mapping[str, bool]:
+        valuation = {}
+        for op in self.operands:
+            for name, value in op.make_true(full=full).items():
+                prev = valuation.get(name)
+                if prev is not None and value is not prev:
+                    raise LogicError.contradiction(self)
+                valuation[name] = value
+        return valuation
+
+    def make_false(self, full: bool = False) -> Mapping[str, bool]:
+        # try the smallest valuation first
+        for op in self.operands:
+            if op.is_variable:
+                return op.make_false()
+        if not full:
+            # go for the first thing
+            return self.operands[0].make_false(full=False)
+        return {name: value for op in self.operands for op.make_false(full=True).items()}
 
     def serialize(self) -> Any:
         return ['and'] + [arg.serialize() for arg in self.operands]
@@ -398,6 +471,26 @@ class LogicOr(LogicValue):
         operands = [op.replace(valuation) for op in self.operands]
         result = LogicOr(operands)
         return result.simplify()
+
+    def make_true(self, full: bool = False) -> Mapping[str, bool]:
+        # try the smallest valuation first
+        for op in self.operands:
+            if op.is_variable:
+                return op.make_true()
+        if not full:
+            # go for the first thing
+            return self.operands[0].make_true(full=False)
+        return {name: value for op in self.operands for op.make_true(full=True).items()}
+
+    def make_false(self, full: bool = False) -> Mapping[str, bool]:
+        valuation = {}
+        for op in self.operands:
+            for name, value in op.make_false(full=full).items():
+                prev = valuation.get(name)
+                if prev is not None and value is not prev:
+                    raise LogicError.tautology(self)
+                valuation[name] = value
+        return valuation
 
     def serialize(self) -> Any:
         return ['or'] + [arg.serialize() for arg in self.operands]
