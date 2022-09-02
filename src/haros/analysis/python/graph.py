@@ -245,18 +245,15 @@ class ProgramGraphBuilder:
             elif statement.is_with:
                 return False
 
-            elif statement.is_function_def:
+            elif statement.is_function_def or statement.is_class_def:
                 name = f'{self.graph.name}/{statement.name}'
                 builder = ProgramGraphBuilder.from_scratch(name=name)
-                builder.graph.asynchronous = statement.asynchronous
+                if statement.is_function_def:
+                    builder.graph.asynchronous = statement.asynchronous
                 for stmt in statement.body:
                     builder.add_statement(stmt)
                 self.nested_graphs.update(builder.nested_graphs)
                 self.nested_graphs[name] = builder.graph
-
-            elif statement.is_class_def:
-                return
-        return True
 
     def start_dead_code(self):
         # push a new node that propagates the current condition,
