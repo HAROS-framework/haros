@@ -241,7 +241,7 @@ class ProgramGraphBuilder:
             elif statement.is_match:
                 pass  # TODO
 
-            elif statement.is_with or statement.is_try:
+            elif statement.is_with:
                 # create and move to a new node
                 future_node = self._new_node(this_node.condition)
                 self._follow_up_node(switch=True)
@@ -252,10 +252,33 @@ class ProgramGraphBuilder:
                 self.current_node.jump_to(future_node)
                 self.current_id = future_node.id
 
-                if statement.is_try:
-                    # need a new TryingContext stack for this
-                    # otherwise, error handlers will be unreachable
-                    pass  # TODO except, else, finally
+            elif statement.is_try:
+                # create and move to a new node
+                future_node = self._new_node(this_node.condition)
+                self._follow_up_node(switch=True)
+                # recursively process the statements
+                for stmt in statement.body:
+                    self.add_statement(stmt)
+                # FIXME add links to the except clauses
+                for clause in statement.except_clauses:
+                    node = self._new_node(this_node.condition)
+                    self.current_id = node.id
+                    for stmt in clause.body:
+                        self.add_statement(stmt)
+                self.current_id = this_node.id
+                # move on to the else branch
+                if statement.has_else_branch:
+                    self._follow_up_node(switch=True)
+                    for stmt in statement.else_branch:
+                        self.add_statement(stmt)
+                # move on to the finally block
+                if statement.has_finally_block:
+                    self._follow_up_node(switch=True)
+                    for stmt in statement.finally_block:
+                        self.add_statement(stmt)
+                # link to the node that comes after
+                self.current_node.jump_to(future_node)
+                self.current_id = future_node.id
 
             elif statement.is_function_def or statement.is_class_def:
                 name = f'{self.graph.name}/{statement.name}'
