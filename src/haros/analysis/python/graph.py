@@ -400,13 +400,16 @@ class ProgramGraphBuilder:
 ###############################################################################
 
 
-def from_ast(ast: PythonAst) -> Scope:
-    if not ast.is_statement:
-        raise TypeError(f'expected a statement, got {ast!r}')
+def from_ast(ast: PythonAst) -> ControlFlowGraph:
     if ast.is_module:
         return from_module(ast)
+    if not ast.is_statement:
+        raise TypeError(f'expected a statement, got {ast!r}')
     raise TypeError(f'unexpected tree node: {ast!r}')
 
 
-def from_module(module: PythonModule) -> Scope:
-    return
+def from_module(module: PythonModule) -> ControlFlowGraph:
+    builder = ProgramGraphBuilder.from_scratch(name=module.name)
+    for statement in module.statements:
+        builder.add_statement(statement)
+    return builder.graph
