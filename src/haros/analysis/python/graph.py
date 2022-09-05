@@ -70,6 +70,19 @@ class ControlNode:
         self.outgoing.add(other.id)
         other.incoming.add(self.id)
 
+    def pretty(self) -> str:
+        lines = [
+            f'# Node {self.id}',
+            f'condition:\n  {self.condition}',
+            f'incoming:\n  {list(self.incoming)}',
+            f'outgoing:\n  {list(self.outgoing)}',
+        ]
+        if self.body:
+            lines.append('body:')
+            for statement in self.body:
+                lines.append(statement.pretty(indent=1, step=2))
+        return '\n'.join(lines)
+
 
 @define
 class ControlFlowGraph:
@@ -77,6 +90,7 @@ class ControlFlowGraph:
     root_id: ControlNodeId = field()
     nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
     asynchronous: bool = False
+    nested_graphs: Dict[str, 'ControlFlowGraph'] = field(factory=dict)
 
     @root_id.validator
     def _check_root_id(self, attribute, value: ControlNodeId):
@@ -93,7 +107,7 @@ class ControlFlowGraph:
         return cls(name, ROOT_ID, nodes=nodes, asynchronous=asynchronous)
 
     def pretty(self) -> str:
-        header = f'async {self.name}' if self.asynchronous else self.name
+        header = f'# async {self.name}' if self.asynchronous else f'# {self.name}'
         root = f'root: {self.root_id}'
         lines = [header, root, 'graph:']
         lines.append(f'  {self.root_id} -> {list(self.root_node.outgoing)}')
@@ -180,7 +194,6 @@ class BranchingContext:
 class ProgramGraphBuilder:
     graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
     current_id: ControlNodeId = ROOT_ID
-    nested_graphs: Dict[str, ControlFlowGraph] = field(factory=dict)
     _loop_stack: List[LoopingContext] = field(factory=list)
     _branch_stack: List[BranchingContext] = field(factory=list)
 
@@ -299,19 +312,26 @@ class ProgramGraphBuilder:
                 self.current_id = future_node.id
 
             elif statement.is_function_def or statement.is_class_def:
-                name = f'{self.graph.name}/{statement.name}'
-                builder = ProgramGraphBuilder.from_scratch(name=name)
+                builder = ProgramGraphBuilder.from_scratch(name=statement.name)
                 if statement.is_function_def:
                     builder.graph.asynchronous = statement.asynchronous
                 for stmt in statement.body:
                     builder.add_statement(stmt)
-                self.nested_graphs.update(builder.nested_graphs)
-                self.nested_graphs[name] = builder.graph
+                builder.clean_up()
+                self.graph.nested_graphs[statement.name] = builder.graph
 
     def start_dead_code(self):
         # push a new node that propagates the current condition,
         # but has no incoming links from other nodes
         self._new_node(phi=self.current_node.condition, switch=True)
+
+    def clean_up(self):
+        # removes useless nodes from the graph
+        for node in list(self.graph.nodes.values()):
+            if node.id == self.graph.root_id or len(node.body) > 0:
+                continue
+            if node.is_unreachable:
+                del self.graph.nodes[node.id]
 
     def _new_node(
         self,
@@ -413,7 +433,7 @@ class ProgramGraphBuilder:
 ###############################################################################
 
 
-def from_ast(ast: PythonAst):
+def from_ast(ast: PythonAst) -> ControlFlowGraph:
     if ast.is_module:
         return from_module(ast)
     if not ast.is_statement:
@@ -421,8 +441,9 @@ def from_ast(ast: PythonAst):
     raise TypeError(f'unexpected tree node: {ast!r}')
 
 
-def from_module(module: PythonModule):
+def from_module(module: PythonModule) -> ControlFlowGraph:
     builder = ProgramGraphBuilder.from_scratch(name=module.name)
     for statement in module.statements:
         builder.add_statement(statement)
-    return (builder.graph, builder.nested_graphs)
+    builder.clean_up()
+    return builder.graph

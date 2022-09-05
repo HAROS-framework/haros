@@ -49,17 +49,30 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
 
-    graph, nested_graphs = get_launch_model(path)
+    graph = get_launch_model(path)
     print(graph.pretty())
-    for graph in nested_graphs.values():
-        print('')
-        print(graph.pretty())
+    print_subgraphs(graph.name, graph)
     return 0
 
 
 ###############################################################################
 # Helper Functions
 ###############################################################################
+
+
+def print_subgraphs(name, graph):
+    for subgraph in graph.nested_graphs.values():
+        full_name = f'{name}/{subgraph.name}'
+        print('')
+        print(f'>> {name}')
+        print(subgraph.pretty())
+
+        for node in subgraph.nodes.values():
+            if node.id != subgraph.root_id and node.is_unreachable:
+                print('')
+                print(node.pretty())
+
+        print_subgraphs(full_name, subgraph)
 
 
 ###############################################################################
