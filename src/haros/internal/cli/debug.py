@@ -49,10 +49,11 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
 
-    q = get_launch_model(path)
-    for match in q:
+    graph, nested_graphs = get_launch_model(path)
+    print(graph.pretty())
+    for graph in nested_graphs.values():
         print('')
-        print(match.pretty())
+        print(graph.pretty())
     return 0
 
 

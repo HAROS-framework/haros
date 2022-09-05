@@ -59,7 +59,7 @@ def to_condition(expr: PythonExpression) -> LogicValue:
 
             elif expr.is_comparison:
                 result = _compare(expr)
-                if value is not None:
+                if result is not None:
                     return TRUE if result else FALSE
 
             else:
@@ -81,8 +81,7 @@ def to_condition(expr: PythonExpression) -> LogicValue:
             psi = rho.negate().implies(psi)
             return phi.join(psi)
 
-    else:
-        return LogicVariable(expr)
+    return LogicVariable(expr)
 
 
 def _compare(expr: PythonExpression) -> Optional[bool]:

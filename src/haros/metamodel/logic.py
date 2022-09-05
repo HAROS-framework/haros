@@ -149,7 +149,7 @@ class LogicTrue(LogicValue):
         return True
 
     def negate(self) -> LogicValue:
-        return LOGIC_FALSE
+        return FALSE
 
     def join(self, value: LogicValue) -> LogicValue:
         return value
@@ -174,7 +174,7 @@ class LogicTrue(LogicValue):
 
 
 TRUE: Final[LogicValue] = LogicTrue()
-LogicValue.T = LOGIC_TRUE
+LogicValue.T = TRUE
 
 
 @frozen
@@ -184,7 +184,7 @@ class LogicFalse(LogicValue):
         return True
 
     def negate(self) -> LogicValue:
-        return LOGIC_TRUE
+        return TRUE
 
     def join(self, value: LogicValue) -> LogicValue:
         return self
@@ -193,7 +193,7 @@ class LogicFalse(LogicValue):
         return value
 
     def implies(self, value: LogicValue) -> LogicValue:
-        return LOGIC_TRUE
+        return TRUE
 
     def make_true(self, full: bool = False) -> Mapping[str, bool]:
         raise LogicError.contradiction(self)
@@ -209,12 +209,12 @@ class LogicFalse(LogicValue):
 
 
 FALSE: Final[LogicValue] = LogicFalse()
-LogicValue.F = LOGIC_FALSE
+LogicValue.F = FALSE
 
 __id_counter: int = 0
 
 
-def __new_var_id() -> str:
+def _new_var_id() -> str:
     global __id_counter
     n = __id_counter
     __id_counter += 1
@@ -224,7 +224,7 @@ def __new_var_id() -> str:
 @frozen
 class LogicVariable(LogicValue):
     data: Any = field(eq=False)
-    name: str = field(factory=__new_var_id)
+    name: str = field(factory=_new_var_id)
 
     @property
     def is_variable(self) -> bool:
@@ -381,7 +381,11 @@ class LogicAnd(LogicValue):
         if not full:
             # go for the first thing
             return self.operands[0].make_false(full=False)
-        return {name: value for op in self.operands for op.make_false(full=True).items()}
+        return {
+            name: value
+            for op in self.operands
+            for name, value in op.make_false(full=True).items()
+        }
 
     def serialize(self) -> Any:
         return ['and'] + [arg.serialize() for arg in self.operands]
@@ -480,7 +484,11 @@ class LogicOr(LogicValue):
         if not full:
             # go for the first thing
             return self.operands[0].make_true(full=False)
-        return {name: value for op in self.operands for op.make_true(full=True).items()}
+        return {
+            name: value
+            for op in self.operands
+            for name, value in op.make_true(full=True).items()
+        }
 
     def make_false(self, full: bool = False) -> Mapping[str, bool]:
         valuation = {}

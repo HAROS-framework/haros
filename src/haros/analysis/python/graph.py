@@ -73,9 +73,9 @@ class ControlNode:
 
 @define
 class ControlFlowGraph:
-    name: str = MAIN
-    nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
+    name: str
     root_id: ControlNodeId = field()
+    nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
     asynchronous: bool = False
 
     @root_id.validator
@@ -90,7 +90,25 @@ class ControlFlowGraph:
     @classmethod
     def singleton(cls, name: str = MAIN, asynchronous: bool = False) -> 'ControlFlowGraph':
         nodes = {ROOT_ID: ControlNode(ROOT_ID)}
-        return cls(name=name, nodes=nodes, root_id=ROOT_ID, asynchronous=asynchronous)
+        return cls(name, ROOT_ID, nodes=nodes, asynchronous=asynchronous)
+
+    def pretty(self) -> str:
+        header = f'async {self.name}' if self.asynchronous else self.name
+        root = f'root: {self.root_id}'
+        lines = [header, root, 'graph:']
+        lines.append(f'  {self.root_id} -> {list(self.root_node.outgoing)}')
+        unreachable = []
+        for uid, node in self.nodes.items():
+            if uid == self.root_id:
+                continue
+            if node.incoming:
+                lines.append(f'  {uid} -> {list(node.outgoing)}')
+            else:
+                unreachable.append(f'  {uid} -> {list(node.outgoing)}')
+        if unreachable:
+            lines.append('dead code:')
+            lines.extend(unreachable)
+        return '\n'.join(lines)
 
 
 ###############################################################################
@@ -316,11 +334,6 @@ class ProgramGraphBuilder:
         phi = this_node.condition.join(phi)
         return self._new_node(phi, origin=this_node, switch=switch)
 
-    def _push_context(self, node: ControlNode) -> ProgramContext:
-        new_context = self.context.new_context(node)
-        self._context_stack.append(new_context)
-        return new_context
-
     def _start_branching(self, guard_node: ControlNode) -> BranchingContext:
         future_node = self._new_node(guard_node.condition)
         context = BranchingContext(guard_node, future_node)
@@ -400,7 +413,7 @@ class ProgramGraphBuilder:
 ###############################################################################
 
 
-def from_ast(ast: PythonAst) -> ControlFlowGraph:
+def from_ast(ast: PythonAst):
     if ast.is_module:
         return from_module(ast)
     if not ast.is_statement:
@@ -408,8 +421,8 @@ def from_ast(ast: PythonAst) -> ControlFlowGraph:
     raise TypeError(f'unexpected tree node: {ast!r}')
 
 
-def from_module(module: PythonModule) -> ControlFlowGraph:
+def from_module(module: PythonModule):
     builder = ProgramGraphBuilder.from_scratch(name=module.name)
     for statement in module.statements:
         builder.add_statement(statement)
-    return builder.graph
+    return (builder.graph, builder.nested_graphs)

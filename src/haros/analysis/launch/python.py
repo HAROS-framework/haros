@@ -9,7 +9,8 @@ from typing import Any, Final, Tuple
 
 from pathlib import Path
 
-from haros.analysis.python import query
+#from haros.analysis.python import query
+from haros.analysis.python.graph import from_ast
 from haros.errors import ParseError
 from haros.parsing.python import parse
 
@@ -34,5 +35,7 @@ def get_python_launch_model(path: Path) -> LaunchModel:
         raise ValueError(f'not a valid launch file: {path}')
     code = path.read_text(encoding='utf-8')
     ast = parse(code)
-    q = query(ast)
-    return q.functions().named(LAUNCH_ENTRY_POINT)
+    #q = query(ast)
+    #return q.functions().named(LAUNCH_ENTRY_POINT)
+    graph = from_ast(ast)
+    return graph
