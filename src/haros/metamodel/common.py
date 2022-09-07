@@ -5,11 +5,12 @@
 # Imports
 ###############################################################################
 
-from typing import Any, List, Mapping, Optional, Set, Tuple
+from typing import Any, Generic, List, Mapping, Optional, Set, Tuple, TypeVar
 
 from collections import defaultdict
+from enum import Enum
 
-from attrs import define, field, frozen
+from attrs import asdict, define, field, frozen
 
 from haros.metamodel.logic import TRUE, LogicValue
 
@@ -53,6 +54,69 @@ class DevelopmentMetadata:
 class SourceCodeDependencies:
     build: Set[str] = field(factory=set)
     runtime: Set[str] = field(factory=set)
+
+
+###############################################################################
+# Data Analysis
+###############################################################################
+
+T = TypeVar('T')
+
+
+class VariableType(Enum):
+    BOOL = 'bool'
+    INT = 'int'
+    DOUBLE = 'double'
+    STRING = 'string'
+    YAML = 'yaml'
+    AUTO = 'auto'
+
+
+@frozen
+class UnknownValue:
+    operator: str
+    arguments: Tuple[Any]
+
+    def serialize(self) -> Mapping[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def deserialize(cls, data: Mapping[str, Any]) -> 'UnknownValue':
+        if not isinstance(data, dict):
+            raise TypeError(f'expected a Mapping, got {data!r}')
+        return cls(data['operator'], tuple(data['arguments']))
+
+    def __str__(self) -> str:
+        if not self.arguments:
+            return f'$({self.operator})'
+        return f'$({self.operator} {" ".join(map(str, self.arguments))})'
+
+
+@frozen
+class SolverResult(Generic[T]):
+    type: VariableType
+    value: Union[T, UnknownValue]
+
+    @property
+    def is_resolved(self) -> bool:
+        return not isinstance(self.value, UnknownValue)
+
+    def serialize(self) -> Mapping[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def deserialize(cls, data: Mapping[str, Any]) -> 'SolverResult':
+        if not isinstance(data, dict):
+            raise TypeError(f'expected a Mapping, got {data!r}')
+        value = data['value']
+        try:
+            value = UnknownValue.deserialize(value)
+        except (TypeError, KeyError):
+            pass
+        return cls(data['type'], value)
+
+    def __str__(self) -> str:
+        return str(self.value)
 
 
 ###############################################################################
