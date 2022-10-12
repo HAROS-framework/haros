@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Generic, List, Mapping, Optional, Set, Tuple, TypeVar
+from typing import Any, Generic, List, Mapping, Optional, Set, Tuple, TypeVar, Union
 
 from collections import defaultdict
 from enum import Enum
