@@ -125,8 +125,8 @@ class SolverResult(Generic[T]):
 
 
 @frozen
-class VariantValue:
-    value: Any
+class VariantValue(Generic[T]):
+    value: T
     condition: LogicValue
 
     def __str__(self) -> str:
@@ -134,15 +134,15 @@ class VariantValue:
 
 
 @define
-class VariantData:
-    _base_value: Optional[Any] = None
-    _variants: List[VariantValue] = field(factory=list)
+class VariantData(Generic[T]):
+    _base_value: Optional[T] = None
+    _variants: List[VariantValue[T]] = field(factory=list)
 
     @property
     def is_deterministic(self) -> bool:
         return not self._variants
 
-    def possible_values(self) -> List[VariantValue]:
+    def possible_values(self) -> List[VariantValue[T]]:
         values = list(reversed(self._variants))
         if self._base_value is not None:
             values.append(VariantValue(self._base_value, TRUE))
@@ -180,7 +180,9 @@ class VariantData:
         return ' or '.join(values)
 
 
-def VariantDict(other: Mapping[Any, Any] = None) -> Mapping[Any, VariantData]:
-    if other is None:
-        return defaultdict(VariantData)
-    return defaultdict(VariantData, other)
+def VariantDict(other: Mapping[Any, T] = None) -> Mapping[Any, VariantData[T]]:
+    d = defaultdict(VariantData)
+    if other:
+        for key, value in other.items():
+            d[key] = VariantData(_base_value=value)
+    return d
