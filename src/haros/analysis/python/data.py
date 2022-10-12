@@ -5,11 +5,16 @@
 # Imports
 ###############################################################################
 
-from typing import Final, List
+from typing import Final, List, Optional
 
 from enum import Enum
 
 from attrs import define, field, frozen
+
+# from haros.metamodel.common import UnknownValue
+from haros.parsing.python.ast import (
+    PythonImportStatement,
+)
 
 ###############################################################################
 # Constants
@@ -160,6 +165,8 @@ BUILTIN_EXCEPTIONS: Final[List[str]] = [
     'ResourceWarning',
 ]
 
+UNKNOWN: Final[object] = object()
+
 ###############################################################################
 # Data Structures
 ###############################################################################
@@ -182,6 +189,8 @@ class Definition:
     value: Any
     import_base: str = ''
     data_type: PythonType = PythonType.OBJECT
+    line: int = 0
+    column: int = 0
 
     @property
     def is_import(self) -> bool:
@@ -228,3 +237,23 @@ class DataScope:
 
     def duplicate(self) -> 'DataScope':
         return self.__class__(defs=dict(self.defs))
+
+    def get(self, name: str) -> Optional[Definition]:
+        return self.defs.get(name)
+
+    def set(self, value: Definition):
+        self.defs[value.name] = value
+
+    def add_import(self, statement: PythonImportStatement):
+        for imported_name in statement.names:
+            if imported_name.is_wildcard:
+                continue  # FIXME
+            name = imported_name.alias if imported_name.alias else imported_name.name
+            value = Definition(
+                name,
+                UNKNOWN,
+                import_base=imported_name.base.dotted_name,
+                line=imported_name.line,
+                column=imported_name.column,
+            )
+            self.set(value)
