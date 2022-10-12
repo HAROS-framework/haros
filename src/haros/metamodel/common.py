@@ -70,6 +70,7 @@ class VariableType(Enum):
     STRING = 'string'
     YAML = 'yaml'
     AUTO = 'auto'
+    OBJECT = 'object'
 
 
 @frozen
