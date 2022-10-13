@@ -196,7 +196,7 @@ class VariantData(Generic[T]):
         return ' or '.join(values)
 
 
-def VariantDict(other: Mapping[Any, T] = None) -> Mapping[Any, VariantData[T]]:
+def variant_dict(other: Mapping[Any, T] = None) -> Mapping[Any, VariantData[T]]:
     d = defaultdict(VariantData)
     if other:
         for key, value in other.items():
