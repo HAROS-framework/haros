@@ -175,6 +175,9 @@ class VariantData(Generic[T]):
         elif not condition.is_false:
             self._variants.append(VariantValue(value, condition))
 
+    def duplicate(self) -> 'VariantData':
+        return VariantData(_base_value=self._base_value, _variants=list(self._variants))
+
     def serialize(self) -> Mapping[str, Any]:
         return {
             'base': self._base_value,
