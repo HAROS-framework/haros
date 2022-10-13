@@ -5,14 +5,17 @@
 # Imports
 ###############################################################################
 
-from typing import Final, List, Optional
+from typing import Any, Final, List, Optional
 
 from enum import Enum
 
 from attrs import define, field, frozen
 
-# from haros.metamodel.common import UnknownValue
+from haros.metamodel.common import VariantData
+from haros.metamodel.logic import TRUE, LogicValue
 from haros.parsing.python.ast import (
+    PythonClassDefStatement,
+    PythonFunctionDefStatement,
     PythonImportStatement,
 )
 
@@ -165,8 +168,6 @@ BUILTIN_EXCEPTIONS: Final[List[str]] = [
     'ResourceWarning',
 ]
 
-UNKNOWN: Final[object] = object()
-
 ###############################################################################
 # Data Structures
 ###############################################################################
@@ -186,7 +187,7 @@ class PythonType(Enum):
 @frozen
 class Definition:
     name: str
-    value: Any
+    data: VariantData[Any]
     import_base: str = ''
     data_type: PythonType = PythonType.OBJECT
     line: int = 0
@@ -200,19 +201,22 @@ class Definition:
     def of_builtin_function(cls, name: str) -> 'Definition':
         value = getattr(__builtins__, name)
         assert callable(value),  f'expected function, got: {value!r}'
-        return cls(name, value, import_base='__builtins__', data_type=PythonType.FUNCTION)
+        data = VariantData.with_base_value(value)
+        return cls(name, data, import_base='__builtins__', data_type=PythonType.FUNCTION)
 
     @classmethod
     def of_builtin_class(cls, name: str) -> 'Definition':
         value = getattr(__builtins__, name)
         assert isinstance(value, type), f'expected class, got: {value!r}'
-        return cls(name, value, import_base='__builtins__', data_type=PythonType.CLASS)
+        data = VariantData.with_base_value(value)
+        return cls(name, data, import_base='__builtins__', data_type=PythonType.CLASS)
 
     @classmethod
     def of_builtin_exception(cls, name: str) -> 'Definition':
         value = getattr(__builtins__, name)
         assert isinstance(value, BaseException), f'expected exception, got: {value!r}'
-        return cls(name, value, import_base='__builtins__', data_type=PythonType.EXCEPTION)
+        data = VariantData.with_base_value(value)
+        return cls(name, data, import_base='__builtins__', data_type=PythonType.EXCEPTION)
 
 
 ###############################################################################
@@ -223,6 +227,7 @@ class Definition:
 @define
 class DataScope:
     defs: Dict[str, Definition] = field(factory=dict)
+    condition: LogicValue = TRUE
 
     @classmethod
     def with_builtins(cls) -> 'DataScope':
@@ -236,24 +241,61 @@ class DataScope:
         return cls(defs=defs)
 
     def duplicate(self) -> 'DataScope':
-        return self.__class__(defs=dict(self.defs))
+        defs = {k, v.duplicate() for k, v in self.defs.items()}
+        return self.__class__(defs=defs)
 
     def get(self, name: str) -> Optional[Definition]:
         return self.defs.get(name)
 
-    def set(self, value: Definition):
-        self.defs[value.name] = value
+    def set(
+        self,
+        name: str,
+        value: Any,
+        import_base: str = '',
+        data_type: PythonType = PythonType.OBJECT,
+        line: int = 0,
+        column: int = 0,
+    ):
+        definition = self.defs.get(name)
+        if definition is None:
+            definition = Definition(
+                name,
+                VariantData(),
+                import_base=import_base,
+                data_type=data_type,
+                line=line,
+                column=column,
+            )
+            self.defs[name] = definition
+        definition.data.set(value, self.condition)
 
     def add_import(self, statement: PythonImportStatement):
+        assert statement.is_statement and statement.is_import
         for imported_name in statement.names:
             if imported_name.is_wildcard:
                 continue  # FIXME
             name = imported_name.alias if imported_name.alias else imported_name.name
             value = Definition(
                 name,
-                UNKNOWN,
+                VariantData(),
                 import_base=imported_name.base.dotted_name,
                 line=imported_name.line,
                 column=imported_name.column,
             )
             self.set(value)
+
+    def add_function_def(self, statement: PythonFunctionDefStatement):
+        assert statement.is_statement and statement.is_function_def
+        name = statement.name
+        data_type = PythonType.FUNCTION
+        line = statement.line
+        column = statement.column
+        self.set(name, statement, data_type=data_type, line=line, column=column)
+
+    def add_class_def(self, statement: PythonClassDefStatement):
+        assert statement.is_statement and statement.is_class_def
+        name = statement.name
+        data_type = PythonType.CLASS
+        line = statement.line
+        column = statement.column
+        self.set(name, statement, data_type=data_type, line=line, column=column)
