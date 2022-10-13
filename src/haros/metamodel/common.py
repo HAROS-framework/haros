@@ -140,6 +140,14 @@ class VariantData(Generic[T]):
     _variants: List[VariantValue[T]] = field(factory=list)
 
     @property
+    def has_base_value(self) -> bool:
+        return self._base_value is not None
+
+    @property
+    def has_values(self) -> bool:
+        return self.has_base_value or len(self._variants) > 0
+
+    @property
     def is_deterministic(self) -> bool:
         return not self._variants
 
@@ -149,14 +157,14 @@ class VariantData(Generic[T]):
             values.append(VariantValue(self._base_value, TRUE))
         return values
 
-    def get(self, strict: bool = True) -> Any:
+    def get(self, strict: bool = True) -> T:
         if self._variants:
             if strict:
                 raise ValueError('multiple possible values')
             return None
         return self._base_value
 
-    def set(self, value: Any, condition: LogicValue):
+    def set(self, value: T, condition: LogicValue):
         if condition.is_true:
             self._base_value = value
             self._variants = []
