@@ -151,6 +151,10 @@ class VariantData(Generic[T]):
     def is_deterministic(self) -> bool:
         return not self._variants
 
+    @classmethod
+    def with_base_value(cls, value: T) -> 'VariantData':
+        return cls(_base_value=value)
+
     def possible_values(self) -> List[VariantValue[T]]:
         values = list(reversed(self._variants))
         if self._base_value is not None:
@@ -193,5 +197,5 @@ def VariantDict(other: Mapping[Any, T] = None) -> Mapping[Any, VariantData[T]]:
     d = defaultdict(VariantData)
     if other:
         for key, value in other.items():
-            d[key] = VariantData(_base_value=value)
+            d[key] = VariantData.with_base_value(value)
     return d
