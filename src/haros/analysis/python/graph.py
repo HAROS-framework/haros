@@ -513,6 +513,10 @@ def find_name_in_expression(
             if compare_qualified_names(full_name, definition.import_base, name):
                 references.append(expression)
                 break  # one is enough, unless we attach a condition
+    elif expression.is_function_call:
+        references.extend(find_name_in_expression(expression.function, full_name, data))
+        for arg in expression.arguments:
+            references.extend(find_name_in_expression(arg.value, full_name, data))
     return references
 
 
