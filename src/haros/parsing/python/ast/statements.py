@@ -154,7 +154,7 @@ class PythonAssignmentStatement(PythonStatement):
 
     @property
     def is_unpacked(self) -> bool:
-        return self.variable.is_tuple
+        return self.variable.is_literal and self.variable.is_tuple
 
     @property
     def is_packed(self) -> bool:
