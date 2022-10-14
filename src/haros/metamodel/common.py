@@ -153,7 +153,7 @@ class VariantData(Generic[T]):
 
     @classmethod
     def with_base_value(cls, value: T) -> 'VariantData':
-        return cls(_base_value=value)
+        return cls(base_value=value)
 
     def possible_values(self) -> List[VariantValue[T]]:
         values = list(reversed(self._variants))
@@ -176,7 +176,7 @@ class VariantData(Generic[T]):
             self._variants.append(VariantValue(value, condition))
 
     def duplicate(self) -> 'VariantData':
-        return VariantData(_base_value=self._base_value, _variants=list(self._variants))
+        return VariantData(base_value=self._base_value, variants=list(self._variants))
 
     def serialize(self) -> Mapping[str, Any]:
         return {
