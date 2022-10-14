@@ -9,6 +9,7 @@ from typing import Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, U
 
 from attrs import define, field, frozen
 
+from haros.analysis.python.dataflow import DataScope
 from haros.analysis.python.logic import to_condition
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
@@ -447,3 +448,74 @@ def from_module(module: PythonModule) -> ControlFlowGraph:
         builder.add_statement(statement)
     builder.clean_up()
     return builder.graph
+
+
+def find_qualified_name(graph: ControlFlowGraph, full_name: str) -> List[PythonAst]:
+    data = DataScope.with_builtins()
+    return find_name_in_graph(graph, full_name, data)
+
+
+def find_name_in_graph(
+    graph: ControlFlowGraph,
+    full_name: str,
+    data: DataScope,
+) -> List[PythonExpression]:
+    references = []
+    branch_queue = [graph.root_node]
+    while branch_queue:
+        node = branch_queue.pop(0)
+        while node is not None:
+            # set the scope's condition
+            data.condition = node.condition
+            # process the node's statements
+            for statement in node.body:
+                if statement.is_import:
+                    data.add_import(statement)
+                elif statement.is_function_def:
+                    data.add_function_def(statement)
+                elif statement.is_class_def:
+                    data.add_class_def(statement)
+                elif statement.is_assignment:
+                    data.add_assignment(statement)
+                elif statement.is_return:
+                    references.extend(find_name_in_expression(statement.value, full_name, data))
+                # FIXME TODO
+            # get the next node
+            if not node.outgoing:
+                node = None
+            else:
+                # follow the first node, queue up the rest
+                outgoing = list(node.outgoing)
+                node_id = outgoing[0]
+                node = graph.nodes[node_id]
+                for node_id in outgoing[1:]:
+                    branch_queue.append(graph.nodes[node_id])
+    for g in graph.nested_graphs.values():
+        references.extend(find_name_in_graph(g, full_name, data.duplicate()))
+    return references
+
+
+def find_name_in_expression(
+    expression: PythonExpression,
+    full_name: str,
+    data: DataScope,
+) -> List[PythonExpression]:
+    references = []
+    if expression.is_literal:
+        pass  # FIXME TODO
+    elif expression.is_reference:
+        if expression.object is not None:
+            return find_name_in_expression(expression.object, full_name, data)
+        name = expression.name
+        var = data.get(name)
+        for option in var.possible_values():
+            definition = option.value
+            if compare_qualified_names(full_name, definition.import_base, name):
+                references.append(expression)
+                break  # one is enough, unless we attach a condition
+    return references
+
+
+def compare_qualified_names(full_name: str, import_base: str, local_name: str) -> bool:
+    name = f'{import_base}.{local_name}' if import_base else local_name
+    return full_name == name
