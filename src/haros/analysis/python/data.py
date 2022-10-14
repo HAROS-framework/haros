@@ -5,19 +5,21 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, List, Optional
+from typing import Any, Final, List, Optional, Tuple
 
 import enum
 
-from attrs import define, field, frozen
+from attrs import define, evolve, field, frozen
 
 from haros.metamodel.common import VariantData
 from haros.metamodel.logic import TRUE, LogicValue
 from haros.parsing.python.ast import (
+    PythonAssignmentStatement,
     PythonAst,
     PythonClassDefStatement,
     PythonFunctionDefStatement,
     PythonImportStatement,
+    PythonLiteral,
 )
 
 ###############################################################################
@@ -178,35 +180,19 @@ class PythonType(enum.Flag):
     BOOL = enum.auto()
     INT = enum.auto()
     FLOAT = enum.auto()
+    COMPLEX = enum.auto()
     STRING = enum.auto()
     FUNCTION = enum.auto()
     CLASS = enum.auto()
     EXCEPTION = enum.auto()
     OBJECT = enum.auto()
-    ANY = BOOL | INT | FLOAT | STRING | FUNCTION | CLASS | EXCEPTION | OBJECT
+    NUMBER = INT | FLOAT | COMPLEX
+    ANY = BOOL | INT | FLOAT | COMPLEX | STRING | FUNCTION | CLASS | EXCEPTION | OBJECT
 
 
 ###############################################################################
 # Data Structures
 ###############################################################################
-
-
-@frozen
-class AnnotatedValue:
-
-    def cast_to(self, value_type: PythonType) -> 'AnnotatedValue':
-        if self.type == value_type:
-            return self
-        new_type = self.type & value_type
-        if bool(new_type):
-            return AnnotatedValue(self.value, type=new_type)
-        raise TypeError(f'unable to cast {self.type} to {value_type}')
-
-
-_UNKNOWN_ANY: Final[AnnotatedValue] = AnnotatedValue.of(UNKNOWN_VALUE)
-_UNKNOWN_FUNCTION: Final[AnnotatedValue] = _UNKNOWN_ANY.cast_to(PythonType.FUNCTION)
-_UNKNOWN_CLASS: Final[AnnotatedValue] = _UNKNOWN_ANY.cast_to(PythonType.CLASS)
-_UNKNOWN_EXCEPTION: Final[AnnotatedValue] = _UNKNOWN_ANY.cast_to(PythonType.EXCEPTION)
 
 
 @frozen
@@ -245,8 +231,12 @@ class Definition:
         return bool(self.type & PythonType.FLOAT)
 
     @property
+    def is_complex_type(self) -> bool:
+        return bool(self.type & PythonType.COMPLEX)
+
+    @property
     def is_number_type(self) -> bool:
-        return self.is_int or self.is_float
+        return bool(self.type & PythonType.NUMBER)
 
     @property
     def is_string_type(self) -> bool:
@@ -306,6 +296,14 @@ class Definition:
             return cls(value, type=PythonType.FUNCTION, ast=ast)
         return cls(value, type=PythonType.OBJECT, ast=ast)
 
+    def cast_to(self, value_type: PythonType) -> 'Definition':
+        if self.type == value_type:
+            return self
+        new_type = self.type & value_type
+        if bool(new_type):
+            return evolve(self, type=new_type)
+        raise TypeError(f'unable to cast {self.type} to {value_type}')
+
 
 ###############################################################################
 # Interface
@@ -357,7 +355,7 @@ class DataScope:
         assert statement.is_statement and statement.is_import
         for imported_name in statement.names:
             if imported_name.is_wildcard:
-                continue  # FIXME
+                continue  # FIXME TODO
             name = imported_name.alias if imported_name.alias else imported_name.name
             import_base = imported_name.base.dotted_name
             self.set(name, UNKNOWN_VALUE, ast=statement, import_base=import_base)
@@ -369,3 +367,38 @@ class DataScope:
     def add_class_def(self, statement: PythonClassDefStatement):
         assert statement.is_statement and statement.is_class_def
         self.set(statement.name, UNKNOWN_VALUE, type=PythonType.CLASS, ast=statement)
+
+    def add_assignment(self, statement: PythonAssignmentStatement):
+        assert statement.is_statement and statement.is_assignment
+        if statement.is_packed or statement.is_unpacked:
+            return  # FIXME TODO
+        if statement.is_augmented:
+            return  # FIXME TODO
+        variable = statement.variable
+        if not variable.is_reference:
+            return  # FIXME TODO
+        if variable.object is not None:
+            return  # FIXME TODO
+        name = variable.name
+        if not statement.value.is_literal:
+            return  # FIXME TODO
+        value, type = self.value_from_literal(statement.value)
+        self.set(name, value, type=type ast=statement)
+
+    def value_from_literal(self, literal: PythonLiteral) -> Tuple[Any, PythonType]:
+        assert literal.is_expression and literal.is_literal
+        if literal.is_none:
+            return None, PythonType.OBJECT
+        if literal.is_bool:
+            return literal.value, PythonType.BOOL
+        if literal.is_number:
+            if literal.is_int:
+                return literal.value, PythonType.INT
+            if literal.is_float:
+                return literal.value, PythonType.FLOAT
+            if literal.is_complex:
+                return literal.value, PythonType.COMPLEX
+        if literal.is_string:
+            return literal.value, PythonType.STRING
+        # TODO FIXME
+        return UNKNOWN_VALUE, PythonType.OBJECT
