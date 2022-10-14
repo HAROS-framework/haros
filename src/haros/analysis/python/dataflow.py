@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, List, Optional, Tuple
+from typing import Any, Dict, Final, List, Optional, Tuple
 
 import enum
 
@@ -260,20 +260,24 @@ class Definition:
 
     @classmethod
     def of_builtin_function(cls, name: str) -> 'Definition':
-        value = getattr(__builtins__, name)
+        #value = getattr(__builtins__, name)
+        value = __builtins__.get(name)
         assert callable(value),  f'expected function, got: {value!r}'
         return cls(value, type=PythonType.FUNCTION, import_base=BUILTINS_MODULE)
 
     @classmethod
     def of_builtin_class(cls, name: str) -> 'Definition':
-        value = getattr(__builtins__, name)
+        #value = getattr(__builtins__, name)
+        value = __builtins__.get(name)
         assert isinstance(value, type), f'expected class, got: {value!r}'
         return cls(value, type=PythonType.CLASS, import_base=BUILTINS_MODULE)
 
     @classmethod
     def of_builtin_exception(cls, name: str) -> 'Definition':
-        value = getattr(__builtins__, name)
-        assert isinstance(value, BaseException), f'expected exception, got: {value!r}'
+        #value = getattr(__builtins__, name)
+        value = __builtins__.get(name)
+        assert isinstance(value, type), f'expected class, got: {value!r}'
+        assert issubclass(value, BaseException), f'expected exception, got: {value!r}'
         return cls(value, type=PythonType.EXCEPTION, import_base=BUILTINS_MODULE)
 
     @classmethod
@@ -383,7 +387,7 @@ class DataScope:
         if not statement.value.is_literal:
             return  # FIXME TODO
         value, type = self.value_from_literal(statement.value)
-        self.set(name, value, type=type ast=statement)
+        self.set(name, value, type=type, ast=statement)
 
     def value_from_literal(self, literal: PythonLiteral) -> Tuple[Any, PythonType]:
         assert literal.is_expression and literal.is_literal
