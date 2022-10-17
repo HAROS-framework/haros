@@ -16,7 +16,7 @@ import logging
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_model
-from haros.analysis.python.graph import find_qualified_name
+from haros.analysis.python.graph import find_qualified_function_call
 from haros.internal.settings import Settings
 
 ###############################################################################
@@ -54,14 +54,13 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     #print(graph.pretty())
     #print_subgraphs(graph.name, graph)
 
-    # qualified_name = 'generate_launch_description'
     qualified_name = 'launch.LaunchDescription'
-    print(f'Find references of: `{qualified_name}`')
-    refs = find_qualified_name(graph, qualified_name)
-    for ref in refs:
-        print('  >', ref)
-    if not refs:
-        print('-- no references were found --')
+    print(f'Find calls to: `{qualified_name}`')
+    calls = find_qualified_function_call(graph, qualified_name)
+    for call in calls:
+        print(f'  > {call.name} (line {call.line}, column {call.column})')
+    if not calls:
+        print('-- no function calls were found --')
 
     return 0
 

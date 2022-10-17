@@ -18,6 +18,7 @@ from haros.parsing.python.ast import (
     PythonBooleanLiteral,
     PythonExpression,
     PythonForStatement,
+    PythonFunctionCall,
     PythonModule,
     PythonStatement,
     PythonWhileStatement,
@@ -452,7 +453,8 @@ def from_module(module: PythonModule) -> ControlFlowGraph:
 
 def find_qualified_name(graph: ControlFlowGraph, full_name: str) -> List[PythonAst]:
     data = DataScope.with_builtins()
-    return find_name_in_graph(graph, full_name, data)
+    matches = find_name_in_graph(graph, full_name, data)
+    return list(dict.fromkeys(matches))
 
 
 def find_name_in_graph(
@@ -523,3 +525,70 @@ def find_name_in_expression(
 def compare_qualified_names(full_name: str, import_base: str, local_name: str) -> bool:
     name = f'{import_base}.{local_name}' if import_base else local_name
     return full_name == name
+
+
+
+###############################################################################
+# Duplicate Code
+###############################################################################
+
+
+def find_qualified_function_call(graph: ControlFlowGraph, full_name: str) -> List[PythonFunctionCall]:
+    data = DataScope.with_builtins()
+    matches = find_function_call_in_graph(graph, full_name, data)
+    return list(dict.fromkeys(matches))
+
+
+def find_function_call_in_graph(
+    graph: ControlFlowGraph,
+    full_name: str,
+    starting_data: DataScope,
+) -> List[PythonFunctionCall]:
+    calls = []
+    branch_queue = [(graph.root_node, starting_data)]
+    while branch_queue:
+        node, data = branch_queue.pop(0)
+        while node is not None:
+            # set the scope's condition
+            data.condition = node.condition
+            # process the node's statements
+            for statement in node.body:
+                if statement.is_import:
+                    data.add_import(statement)
+                elif statement.is_function_def:
+                    data.add_function_def(statement)
+                elif statement.is_class_def:
+                    data.add_class_def(statement)
+                elif statement.is_assignment:
+                    data.add_assignment(statement)
+                elif statement.is_return:
+                    calls.extend(find_name_in_expression(statement.value, full_name, data))
+                # FIXME TODO
+            # get the next node
+            if not node.outgoing:
+                node = None
+            else:
+                # follow the first node, queue up the rest
+                outgoing = list(node.outgoing)
+                node_id = outgoing[0]
+                node = graph.nodes[node_id]
+                for node_id in outgoing[1:]:
+                    branch_queue.append((graph.nodes[node_id], data.duplicate()))
+    for g in graph.nested_graphs.values():
+        calls.extend(find_name_in_graph(g, full_name, data.duplicate()))
+    return calls
+
+
+def find_function_call_in_expression(
+    expression: PythonExpression,
+    full_name: str,
+    data: DataScope,
+) -> List[PythonFunctionCall]:
+    calls = []
+    if expression.is_function_call:
+        if find_name_in_expression(expression.function, full_name, data):
+            calls.append(expression)
+        for arg in expression.arguments:
+            calls.extend(find_function_call_in_expression(arg.value, full_name, data))
+    # FIXME TODO operators etc.
+    return calls
