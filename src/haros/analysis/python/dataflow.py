@@ -17,9 +17,11 @@ from haros.parsing.python.ast import (
     PythonAssignmentStatement,
     PythonAst,
     PythonClassDefStatement,
+    PythonExpression,
     PythonFunctionDefStatement,
     PythonImportStatement,
     PythonLiteral,
+    PythonReference,
 )
 
 ###############################################################################
@@ -189,10 +191,59 @@ class PythonType(enum.Flag):
     NUMBER = INT | FLOAT | COMPLEX
     ANY = BOOL | INT | FLOAT | COMPLEX | STRING | FUNCTION | CLASS | EXCEPTION | OBJECT
 
+    def can_be_bool(self) -> bool:
+        return bool(self & PythonType.BOOL)
+
+    def can_be_int(self) -> bool:
+        return bool(self & PythonType.INT)
+
+    def can_be_float(self) -> bool:
+        return bool(self & PythonType.FLOAT)
+
+    def can_be_complex(self) -> bool:
+        return bool(self & PythonType.COMPLEX)
+
+    def can_be_number(self) -> bool:
+        return bool(self & PythonType.NUMBER)
+
+    def can_be_string(self) -> bool:
+        return bool(self & PythonType.STRING)
+
+    def can_be_function(self) -> bool:
+        return bool(self & PythonType.FUNCTION)
+
+    def can_be_class(self) -> bool:
+        return bool(self & PythonType.CLASS)
+
+    def can_be_exception(self) -> bool:
+        return bool(self & PythonType.EXCEPTION)
+
+    def can_be_object(self) -> bool:
+        return bool(self & PythonType.OBJECT)
+
+    def can_have_attributes(self) -> bool:
+        return not self.can_be_number() and not self.can_be_bool()
+
 
 ###############################################################################
 # Data Structures
 ###############################################################################
+
+
+@frozen
+class TypedValue:
+    value: Any
+    type: PythonType
+
+
+@frozen
+class UnknownObject:
+    attributes: Dict[str, TypedValue] = field(factory=dict)
+    keys: Dict[Any, TypedValue] = field(factory=dict)
+
+    @property
+    def type(self) -> PythonType:
+        return PythonType.OBJECT
 
 
 @frozen
@@ -384,10 +435,37 @@ class DataScope:
         if variable.object is not None:
             return  # FIXME TODO
         name = variable.name
-        if not statement.value.is_literal:
-            return  # FIXME TODO
-        value, type = self.value_from_literal(statement.value)
+        value, type = self.value_from_expression(statement.value)
         self.set(name, value, type=type, ast=statement)
+
+    def value_from_expression(self, expression: PythonExpression) -> Tuple[Any, PythonType]:
+        assert expression.is_expression
+        if expression.is_literal:
+            return self.value_from_literal(expression)
+        if expression.is_reference:
+            return self.value_from_reference(expression)
+        if expression.is_item_access:
+            return UNKNOWN_VALUE, PythonType.ANY
+        if expression.is_function_call:
+            return UNKNOWN_VALUE, PythonType.ANY
+        if expression.is_star_expression:
+            return UNKNOWN_VALUE, PythonType.OBJECT
+        if expression.is_generator:
+            return UNKNOWN_VALUE, PythonType.OBJECT
+        if expression.is_operator:
+            return UNKNOWN_VALUE, PythonType.ANY
+        if expression.is_conditional:
+            return UNKNOWN_VALUE, PythonType.ANY
+        if expression.is_lambda:
+            return UNKNOWN_VALUE, PythonType.FUNCTION
+        if expression.is_assignment:
+            # Python >= 3.8
+            return UNKNOWN_VALUE, PythonType.ANY
+        if expression.is_yield:
+            return UNKNOWN_VALUE, PythonType.ANY
+        if expression.is_await:
+            return UNKNOWN_VALUE, PythonType.ANY
+        return UNKNOWN_VALUE, PythonType.ANY
 
     def value_from_literal(self, literal: PythonLiteral) -> Tuple[Any, PythonType]:
         assert literal.is_expression and literal.is_literal
@@ -406,3 +484,16 @@ class DataScope:
             return literal.value, PythonType.STRING
         # TODO FIXME
         return UNKNOWN_VALUE, PythonType.OBJECT
+
+    def value_from_reference(self, reference: PythonReference) -> Tuple[Any, PythonType]:
+        if reference.object is not None:
+            obj, t = self.value_from_expression(reference.object)
+            if not t.can_have_attributes():
+                return UNKNOWN_VALUE, PythonType.ANY
+            return UNKNOWN_VALUE, PythonType.ANY
+        var = self.get(reference.name)
+        if not var.has_values or not var.is_deterministic:
+            return UNKNOWN_VALUE, PythonType.ANY
+        assert var.has_base_value
+        definition = var.get()
+        return definition.value, definition.type
