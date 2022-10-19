@@ -31,6 +31,7 @@ from haros.parsing.python.ast import (
 ###############################################################################
 
 ControlNodeId = NewType('ControlNodeId', int)
+ProgramNodeId = NewType('ProgramNodeId', int)
 
 ROOT_ID: Final[ControlNodeId] = ControlNodeId(0)
 
@@ -39,6 +40,21 @@ MAIN: Final[str] = '__main__'
 ###############################################################################
 # Data Structures
 ###############################################################################
+
+
+@frozen
+class ControlJump:
+    node: ProgramNodeId
+    condition: LogicValue
+
+
+@frozen
+class ProgramNode:
+    id: ProgramNodeId
+    ast: PythonStatement
+    condition: LogicValue = field(default=TRUE)
+    control_in: Set[ControlJump] = field(factory=set)
+    control_out: Set[ControlJump] = field(factory=set)
 
 
 @define
