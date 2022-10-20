@@ -179,6 +179,7 @@ UNKNOWN_VALUE: Final[object] = object()
 
 
 class PythonType(enum.Flag):
+    NONE = enum.auto()
     BOOL = enum.auto()
     INT = enum.auto()
     FLOAT = enum.auto()
@@ -187,9 +188,14 @@ class PythonType(enum.Flag):
     FUNCTION = enum.auto()
     CLASS = enum.auto()
     EXCEPTION = enum.auto()
+    ITERABLE = enum.auto()
+    MAPPING = enum.auto()
     OBJECT = enum.auto()
     NUMBER = INT | FLOAT | COMPLEX
-    ANY = BOOL | INT | FLOAT | COMPLEX | STRING | FUNCTION | CLASS | EXCEPTION | OBJECT
+    ATOMIC = NONE | BOOL | NUMBER | STRING
+    DEFINITIONS = FUNCTION | CLASS | EXCEPTION
+    OBJECTS = STRING | ITERABLE | MAPPING | OBJECT
+    ANY = ATOMIC | DEFINITIONS | OBJECT
 
     def can_be_bool(self) -> bool:
         return bool(self & PythonType.BOOL)
@@ -209,6 +215,9 @@ class PythonType(enum.Flag):
     def can_be_string(self) -> bool:
         return bool(self & PythonType.STRING)
 
+    def can_be_atomic(self) -> bool:
+        return bool(self & PythonType.ATOMIC)
+
     def can_be_function(self) -> bool:
         return bool(self & PythonType.FUNCTION)
 
@@ -218,8 +227,20 @@ class PythonType(enum.Flag):
     def can_be_exception(self) -> bool:
         return bool(self & PythonType.EXCEPTION)
 
+    def can_be_definitions(self) -> bool:
+        return bool(self & PythonType.DEFINITIONS)
+
+    def can_be_iterable(self) -> bool:
+        return bool(self & PythonType.ITERABLE)
+
+    def can_be_mapping(self) -> bool:
+        return bool(self & PythonType.MAPPING)
+
     def can_be_object(self) -> bool:
         return bool(self & PythonType.OBJECT)
+
+    def can_be_any_object(self) -> bool:
+        return bool(self & PythonType.OBJECTS)
 
     def can_have_attributes(self) -> bool:
         return not self.can_be_number() and not self.can_be_bool()

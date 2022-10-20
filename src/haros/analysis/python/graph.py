@@ -32,6 +32,7 @@ from haros.parsing.python.ast import (
 
 ControlNodeId = NewType('ControlNodeId', int)
 ProgramNodeId = NewType('ProgramNodeId', int)
+ExpressionNodeId = NewType('ExpressionNodeId', int)
 
 ROOT_ID: Final[ControlNodeId] = ControlNodeId(0)
 
@@ -55,6 +56,87 @@ class ProgramNode:
     condition: LogicValue = field(default=TRUE)
     control_in: Set[ControlJump] = field(factory=set)
     control_out: Set[ControlJump] = field(factory=set)
+
+
+@frozen
+class AnalysisExpression:
+    value: Any
+    type: PythonType
+
+    @property
+    def is_unknown(self) -> bool:
+        return False
+
+    @property
+    def is_literal(self) -> bool:
+        return False
+
+    @property
+    def is_operator(self) -> bool:
+        return False
+
+    @property
+    def is_function_call(self) -> bool:
+        return False
+
+    @property
+    def is_generator(self) -> bool:
+        return False
+
+    @property
+    def is_lambda(self) -> bool:
+        return False
+
+    @property
+    def is_star_expression(self) -> bool:
+        return False
+
+    @property
+    def is_yield(self) -> bool:
+        return False
+
+    @property
+    def is_await(self) -> bool:
+        return False
+
+
+@frozen
+class ExpressionNode:
+    id: ExpressionNodeId
+    ast: PythonExpression
+    variants: VariantData[AnalysisExpression] = field(factory=VariantData)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 @define
