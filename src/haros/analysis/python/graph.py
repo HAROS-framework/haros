@@ -549,6 +549,14 @@ def compare_qualified_names(full_name: str, import_base: str, local_name: str) -
 ###############################################################################
 
 
+# If the target function has only one part (e.g. 'function'), it is a local function,
+# and we have to look for variables whose definitions are a `def` AST statement.
+# If the target function has multiple name parts (e.g. 'pkg.module.function'),
+# it is an imported function, and we have to look for references to a variable
+# with the proper function name (e.g. 'function'), and whose definitions point
+# to an UnknownValue whose origin is the given module (e.g. 'pkg.module').
+
+
 def find_qualified_function_call(graph: ControlFlowGraph, full_name: str) -> List[PythonFunctionCall]:
     data = DataScope.with_builtins()
     matches = find_function_call_in_graph(graph, full_name, data)
