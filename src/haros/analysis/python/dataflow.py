@@ -253,6 +253,12 @@ class UnknownValue:
     module: str = ''  # where does it come from; empty string is current module
 
 
+# I think that control flow and data flow analyses will basically require a
+# transformed "AST" of sorts. It will have to mimic the structure of the AST
+# classes, but will have to include node ID, and possible values, along with
+# logic conditions.
+
+
 @frozen
 class Definition:
     value: Any
