@@ -247,6 +247,13 @@ class UnknownObject:
 
 
 @frozen
+class UnknownValue:
+    token: Any  # something abstract that represents the value
+    type: PythonType
+    module: str = ''  # where does it come from; empty string is current module
+
+
+@frozen
 class Definition:
     value: Any
     type: PythonType = PythonType.ANY
