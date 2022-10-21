@@ -109,10 +109,17 @@ class ExpressionNode:
 
 
 
+def eval_expression(expr: PythonExpression, data: DataScope) -> VariantData[AnalysisExpression]:
+    # function that evaluates all possible values an expression can take
+    # within a given context.
+    variants = VariantData()
+    return variants
 
 
-
-
+def make_expression_node(expr: PythonExpression, data: DataScope) -> ExpressionNode:
+    uid = ExpressionNodeId(0)
+    variants = eval_expression(expr, data)
+    return ExpressionNode(uid, expr, variants)
 
 
 
