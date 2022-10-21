@@ -107,6 +107,10 @@ class ExpressionNode:
     values: VariantData[AnalysisExpression] = field(factory=VariantData)
 
 
+@frozen
+class FunctionCallNode(ExpressionNode):
+    function: VariantData[str] = field(factory=VariantData)
+    arguments: Tuple[ExpressionNodeId] = field(factory=tuple)
 
 
 def eval_expression(expr: PythonExpression, data: DataScope) -> VariantData[AnalysisExpression]:
