@@ -698,7 +698,7 @@ def find_function_call_in_graph(
                 elif statement.is_assignment:
                     data.add_assignment(statement)
                 elif statement.is_return:
-                    calls.extend(find_name_in_expression(statement.value, full_name, data))
+                    calls.extend(find_function_call_in_expression(statement.value, full_name, data))
                 # FIXME TODO
             # get the next node
             if not node.outgoing:

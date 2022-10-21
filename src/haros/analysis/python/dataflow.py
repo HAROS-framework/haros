@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Optional, Tuple
+from typing import Any, Dict, Final, List, Optional, Tuple, Union
 
 import enum
 
@@ -273,6 +273,13 @@ class UnknownValue:
     type: PythonType
     module: str = ''  # where does it come from; empty string is current module
 
+    @classmethod
+    def of_type(cls, type: PythonType) -> 'UnknownValue':
+        return cls(UNKNOWN_VALUE, type)
+
+
+SomeValue = Union[TypedValue, UnknownValue]
+
 
 # I think that control flow and data flow analyses will basically require a
 # transformed "AST" of sorts. It will have to mimic the structure of the AST
@@ -447,15 +454,16 @@ class DataScope:
                 continue  # FIXME TODO
             name = imported_name.alias if imported_name.alias else imported_name.name
             import_base = imported_name.base.dotted_name
-            self.set(name, UNKNOWN_VALUE, ast=statement, import_base=import_base)
+            value = UnknownValue(UNKNOWN_VALUE, PythonType.ANY, module=import_base)
+            self.set(name, value, ast=statement, import_base=import_base)
 
     def add_function_def(self, statement: PythonFunctionDefStatement):
         assert statement.is_statement and statement.is_function_def
-        self.set(statement.name, UNKNOWN_VALUE, type=PythonType.FUNCTION, ast=statement)
+        self.set(statement.name, UnknownValue.of_type(PythonType.FUNCTION), type=PythonType.FUNCTION, ast=statement)
 
     def add_class_def(self, statement: PythonClassDefStatement):
         assert statement.is_statement and statement.is_class_def
-        self.set(statement.name, UNKNOWN_VALUE, type=PythonType.CLASS, ast=statement)
+        self.set(statement.name, UnknownValue.of_type(PythonType.CLASS), type=PythonType.CLASS, ast=statement)
 
     def add_assignment(self, statement: PythonAssignmentStatement):
         assert statement.is_statement and statement.is_assignment
@@ -469,65 +477,65 @@ class DataScope:
         if variable.object is not None:
             return  # FIXME TODO
         name = variable.name
-        value, type = self.value_from_expression(statement.value)
-        self.set(name, value, type=type, ast=statement)
+        value = self.value_from_expression(statement.value)
+        self.set(name, value, type=value.type, ast=statement)
 
-    def value_from_expression(self, expression: PythonExpression) -> Tuple[Any, PythonType]:
+    def value_from_expression(self, expression: PythonExpression) -> SomeValue:
         assert expression.is_expression
         if expression.is_literal:
             return self.value_from_literal(expression)
         if expression.is_reference:
             return self.value_from_reference(expression)
         if expression.is_item_access:
-            return UNKNOWN_VALUE, PythonType.ANY
+            return UnknownValue.of_type(PythonType.ANY)
         if expression.is_function_call:
-            return UNKNOWN_VALUE, PythonType.ANY
+            return UnknownValue.of_type(PythonType.ANY)
         if expression.is_star_expression:
-            return UNKNOWN_VALUE, PythonType.OBJECT
+            return UnknownValue.of_type(PythonType.OBJECT)
         if expression.is_generator:
-            return UNKNOWN_VALUE, PythonType.OBJECT
+            return UnknownValue.of_type(PythonType.OBJECT)
         if expression.is_operator:
-            return UNKNOWN_VALUE, PythonType.ANY
+            return UnknownValue.of_type(PythonType.ANY)
         if expression.is_conditional:
-            return UNKNOWN_VALUE, PythonType.ANY
+            return UnknownValue.of_type(PythonType.ANY)
         if expression.is_lambda:
-            return UNKNOWN_VALUE, PythonType.FUNCTION
+            return UnknownValue.of_type(PythonType.FUNCTION)
         if expression.is_assignment:
             # Python >= 3.8
-            return UNKNOWN_VALUE, PythonType.ANY
+            return UnknownValue.of_type(PythonType.ANY)
         if expression.is_yield:
-            return UNKNOWN_VALUE, PythonType.ANY
+            return UnknownValue.of_type(PythonType.ANY)
         if expression.is_await:
-            return UNKNOWN_VALUE, PythonType.ANY
-        return UNKNOWN_VALUE, PythonType.ANY
+            return UnknownValue.of_type(PythonType.ANY)
+        return UnknownValue.of_type(PythonType.ANY)
 
-    def value_from_literal(self, literal: PythonLiteral) -> Tuple[Any, PythonType]:
+    def value_from_literal(self, literal: PythonLiteral) -> SomeValue:
         assert literal.is_expression and literal.is_literal
         if literal.is_none:
-            return None, PythonType.OBJECT
+            return TypedValue(None, PythonType.OBJECT)
         if literal.is_bool:
-            return literal.value, PythonType.BOOL
+            return TypedValue(literal.value, PythonType.BOOL)
         if literal.is_number:
             if literal.is_int:
-                return literal.value, PythonType.INT
+                return TypedValue(literal.value, PythonType.INT)
             if literal.is_float:
-                return literal.value, PythonType.FLOAT
+                return TypedValue(literal.value, PythonType.FLOAT)
             if literal.is_complex:
-                return literal.value, PythonType.COMPLEX
+                return TypedValue(literal.value, PythonType.COMPLEX)
         if literal.is_string:
-            return literal.value, PythonType.STRING
+            return TypedValue(literal.value, PythonType.STRING)
         # TODO FIXME
-        return UNKNOWN_VALUE, PythonType.OBJECT
+        return UnknownValue.of_type(PythonType.OBJECT)
 
-    def value_from_reference(self, reference: PythonReference) -> Tuple[Any, PythonType]:
+    def value_from_reference(self, reference: PythonReference) -> SomeValue:
         if reference.object is not None:
             obj, t = self.value_from_expression(reference.object)
             if not t.can_have_attributes():
-                return UNKNOWN_VALUE, PythonType.ANY
-            return UNKNOWN_VALUE, PythonType.ANY
+                return UnknownValue.of_type(PythonType.ANY)
+            return UnknownValue.of_type(PythonType.ANY)
         var = self.get(reference.name)
         if not var.has_values or not var.is_deterministic:
-            return UNKNOWN_VALUE, PythonType.ANY
+            return UnknownValue.of_type(PythonType.ANY)
         assert var.has_base_value
         definition = var.get()
-        return definition.value, definition.type
+        return definition.value
