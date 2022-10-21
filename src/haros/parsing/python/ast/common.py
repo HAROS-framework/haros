@@ -5,15 +5,17 @@
 # Imports
 ###############################################################################
 
-from typing import List, Tuple
+from typing import Any, Dict, List, NewType, Tuple
 
 from enum import Enum, auto
 
-from attrs import frozen
+from attrs import field, frozen
 
 ###############################################################################
-# AST
+# Constants
 ###############################################################################
+
+PythonAstNodeId = NewType('PythonAstNodeId', int)
 
 
 class PythonAstNodeType(Enum):
@@ -23,7 +25,23 @@ class PythonAstNodeType(Enum):
     HELPER = auto()
 
 
+###############################################################################
+# AST
+###############################################################################
+
+
+@frozen
+class PythonAstNodeMetadata:
+    id: PythonAstNodeId
+    type: PythonAstNodeType
+    line: int = 0
+    column: int = 0
+    annotations: Dict[str, Any] = field(factory=dict)
+
+
 class PythonAst:
+    # node metadata goes here
+
     @property
     def ast_node_type(self) -> PythonAstNodeType:
         raise NotImplementedError()
