@@ -104,7 +104,7 @@ class AnalysisExpression:
 class ExpressionNode:
     id: ExpressionNodeId
     ast: PythonExpression
-    variants: VariantData[AnalysisExpression] = field(factory=VariantData)
+    values: VariantData[AnalysisExpression] = field(factory=VariantData)
 
 
 
