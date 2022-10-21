@@ -128,9 +128,28 @@ def make_expression_node(expr: PythonExpression, data: DataScope) -> ExpressionN
 
 
 
+def program_to_nodes(module):
+    statements = {}
+    expressions = {}
+    for statement in module.statements:
+        uid = ProgramNodeId(len(statements))
+        node = statement_to_node(statement, uid)
+        statements[uid] = node
+        # traverse expressions and add to dict
+    return statements, expressions
 
 
-
+def statement_to_node(statement: PythonStatement, uid: ProgramNodeId) -> ProgramNode:
+    condition = TRUE
+    control_in = set()
+    control_out = set()
+    return ProgramNode(
+        uid,
+        statement,
+        condition=condition,
+        control_in=control_in,
+        control_out=control_out,
+    )
 
 
 
