@@ -11,6 +11,7 @@ from attrs import define, field, frozen
 
 from haros.analysis.python.dataflow import DataScope, PythonType
 from haros.analysis.python.logic import to_condition
+from haros.metamodel.common import VariantData
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
     PythonAst,
