@@ -9,7 +9,7 @@ from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tup
 
 from attrs import define, field, frozen
 
-from haros.analysis.python.dataflow import DataScope
+from haros.analysis.python.dataflow import DataScope, PythonType
 from haros.analysis.python.logic import to_condition
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
