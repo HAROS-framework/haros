@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
+from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
 
 from attrs import define, field, frozen
 
