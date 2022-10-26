@@ -24,6 +24,7 @@ from haros.parsing.python.ast.helpers import (
 ###############################################################################
 
 
+@frozen
 class PythonLiteral(PythonExpression):
     @property
     def is_literal(self) -> bool:
@@ -64,10 +65,6 @@ class PythonLiteral(PythonExpression):
 
 @frozen
 class PythonNoneLiteral(PythonLiteral):
-    # meta
-    line: int = 0
-    column: int = 0
-
     @property
     def value(self) -> None:
         return None
@@ -84,9 +81,6 @@ class PythonNoneLiteral(PythonLiteral):
 @frozen
 class PythonBooleanLiteral(PythonLiteral):
     value: bool
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_bool(self) -> bool:
@@ -109,9 +103,6 @@ class PythonBooleanLiteral(PythonLiteral):
 @frozen
 class PythonNumberLiteral(PythonLiteral):
     value: Union[int, float, complex]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_number(self) -> bool:
@@ -142,9 +133,6 @@ class PythonStringLiteral(PythonLiteral):
     is_unicode: bool = True
     is_format: bool = False
     is_long: bool = False
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_string(self) -> bool:
@@ -159,9 +147,6 @@ class PythonStringLiteral(PythonLiteral):
 @frozen
 class PythonTupleLiteral(PythonLiteral):
     values: Tuple[PythonExpression]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_tuple(self) -> bool:
@@ -180,9 +165,6 @@ class PythonTupleLiteral(PythonLiteral):
 @frozen
 class PythonListLiteral(PythonLiteral):
     values: Tuple[PythonExpression]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_list(self) -> bool:
@@ -201,9 +183,6 @@ class PythonListLiteral(PythonLiteral):
 @frozen
 class PythonDictLiteral(PythonLiteral):
     entries: Tuple[PythonDictEntry]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_dict(self) -> bool:
@@ -222,9 +201,6 @@ class PythonDictLiteral(PythonLiteral):
 @frozen
 class PythonSetLiteral(PythonLiteral):
     values: Tuple[PythonExpression]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_set(self) -> bool:
@@ -245,9 +221,6 @@ class PythonTupleComprehension(PythonLiteral):
     expression: PythonExpression
     iterators: Tuple[PythonIterator]
     test: Optional[PythonExpression] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_tuple(self) -> bool:
@@ -263,9 +236,6 @@ class PythonListComprehension(PythonLiteral):
     expression: PythonExpression
     iterators: Tuple[PythonIterator]
     test: Optional[PythonExpression] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_list(self) -> bool:
@@ -281,9 +251,6 @@ class PythonDictComprehension(PythonLiteral):
     entry: PythonKeyValuePair
     iterators: Tuple[PythonIterator]
     test: Optional[PythonExpression] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_dict(self) -> bool:
@@ -299,9 +266,6 @@ class PythonSetComprehension(PythonLiteral):
     expression: PythonExpression
     iterators: Tuple[PythonIterator]
     test: Optional[PythonExpression] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_set(self) -> bool:
@@ -321,9 +285,6 @@ class PythonSetComprehension(PythonLiteral):
 class PythonReference(PythonExpression):
     name: str
     object: Optional[PythonExpression] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_reference(self) -> bool:
@@ -343,13 +304,13 @@ class PythonItemAccess(PythonExpression):
     object: PythonExpression
     key: PythonSubscript
 
-    @property
-    def line(self) -> int:
-        return self.object.line
+    # @property
+    # def line(self) -> int:
+    #     return self.object.line
 
-    @property
-    def column(self) -> int:
-        return self.object.column
+    # @property
+    # def column(self) -> int:
+    #     return self.object.column
 
     @property
     def is_item_access(self) -> bool:
@@ -368,6 +329,7 @@ class PythonItemAccess(PythonExpression):
 ###############################################################################
 
 
+@frozen
 class PythonOperator(PythonExpression):
     @property
     def is_operator(self) -> bool:
@@ -394,9 +356,6 @@ class PythonOperator(PythonExpression):
 class PythonUnaryOperator(PythonOperator):
     operator: str
     operand: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def arity(self) -> int:
@@ -420,9 +379,6 @@ class PythonBinaryOperator(PythonOperator):
     operator: str
     operand1: PythonExpression
     operand2: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def arity(self) -> int:
@@ -475,9 +431,6 @@ class PythonConditionalExpression(PythonExpression):
     condition: PythonExpression
     expression1: PythonExpression
     expression2: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_conditional(self) -> bool:
@@ -506,9 +459,6 @@ class PythonGenerator(PythonExpression):
     result: PythonAst
     iterators: Tuple[PythonIterator]
     test: Optional[PythonExpression] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_generator(self) -> bool:
@@ -519,9 +469,6 @@ class PythonGenerator(PythonExpression):
 class PythonFunctionCall(PythonExpression):
     function: PythonExpression
     arguments: Tuple[PythonArgument]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_function_call(self) -> bool:
@@ -532,9 +479,6 @@ class PythonFunctionCall(PythonExpression):
 class PythonLambdaExpression(PythonExpression):
     parameters: Tuple[PythonFunctionParameter]
     expression: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_lambda(self) -> bool:
@@ -565,9 +509,6 @@ class PythonLambdaExpression(PythonExpression):
 class PythonAssignmentExpression(PythonExpression):
     name: str
     expression: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_assignment(self) -> bool:
@@ -578,9 +519,6 @@ class PythonAssignmentExpression(PythonExpression):
 class PythonYieldExpression(PythonExpression):
     expressions: Tuple[PythonExpression]
     is_from: bool = False
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_yield(self) -> bool:
@@ -590,9 +528,6 @@ class PythonYieldExpression(PythonExpression):
 @frozen
 class PythonStarExpression(PythonExpression):
     expression: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_star_expression(self) -> bool:
@@ -602,9 +537,6 @@ class PythonStarExpression(PythonExpression):
 @frozen
 class PythonAwaitExpression(PythonExpression):
     expression: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_await(self) -> bool:

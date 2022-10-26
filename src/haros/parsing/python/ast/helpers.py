@@ -20,9 +20,6 @@ from haros.parsing.python.ast.common import PythonExpression, PythonHelperNode, 
 class PythonKeyValuePair(PythonHelperNode):
     key: PythonExpression
     value: PythonExpression
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_key_value(self) -> bool:
@@ -42,6 +39,7 @@ PythonDictEntry = Union[PythonKeyValuePair, PythonExpression]
 ###############################################################################
 
 
+@frozen
 class PythonSubscript(PythonHelperNode):
     @property
     def is_subscript(self) -> bool:
@@ -60,13 +58,13 @@ class PythonSubscript(PythonHelperNode):
 class PythonKeyAccess(PythonSubscript):
     expression: PythonExpression
 
-    @property
-    def line(self) -> int:
-        return self.expression.line
+    # @property
+    # def line(self) -> int:
+    #     return self.expression.meta.line
 
-    @property
-    def column(self) -> int:
-        return self.expression.column
+    # @property
+    # def column(self) -> int:
+    #     return self.expression.meta.column
 
     @property
     def is_key(self) -> bool:
@@ -78,9 +76,6 @@ class PythonSlice(PythonSubscript):
     start: Optional[PythonExpression] = None
     end: Optional[PythonExpression] = None
     step: Optional[PythonExpression] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_slice(self) -> bool:
@@ -101,9 +96,6 @@ class PythonIterator(PythonHelperNode):
     variables: Tuple[PythonExpression]
     iterable: PythonExpression
     asynchronous: bool = False
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_iterator(self) -> bool:
@@ -123,6 +115,7 @@ class PythonIterator(PythonHelperNode):
 ###############################################################################
 
 
+@frozen
 class PythonArgument(PythonHelperNode):
     @property
     def is_argument(self) -> bool:
@@ -149,9 +142,6 @@ class PythonArgument(PythonHelperNode):
 class PythonSimpleArgument(PythonArgument):
     value: PythonExpression
     name: Optional[str] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_positional(self) -> bool:
@@ -166,9 +156,6 @@ class PythonSimpleArgument(PythonArgument):
 class PythonSpecialArgument(PythonArgument):
     value: PythonExpression
     is_double_star: bool = False
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_star(self) -> bool:
@@ -188,9 +175,6 @@ class PythonSpecialArgument(PythonArgument):
 class PythonImportBase(PythonHelperNode):
     names: Tuple[str]
     dots: int = 0
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_import_base(self) -> bool:
@@ -212,21 +196,23 @@ class PythonImportBase(PythonHelperNode):
     def is_global(self) -> bool:
         return not self.is_relative
 
-    def add_dots(self, dots: int, line: int = 0, column: int = 0) -> 'PythonImportBase':
-        return PythonImportBase(
-            self.names,
-            dots=(self.dots + dots),
-            line=(line or self.line),
-            column=(column or self.column),
-        )
+    # YAGNI
+    # def add_dots(self, dots: int, line: int = 0, column: int = 0) -> 'PythonImportBase':
+    #     return PythonImportBase(
+    #         self.names,
+    #         dots=(self.dots + dots),
+    #         line=(line or self.line),
+    #         column=(column or self.column),
+    #     )
 
-    def append(self, names: Iterable[str]) -> 'PythonImportBase':
-        return PythonImportBase(
-            self.names + names,
-            dots=self.dots,
-            line=self.line,
-            column=self.column,
-        )
+    # YAGNI
+    # def append(self, names: Iterable[str]) -> 'PythonImportBase':
+    #     return PythonImportBase(
+    #         self.names + names,
+    #         dots=self.dots,
+    #         line=self.line,
+    #         column=self.column,
+    #     )
 
 
 @frozen
@@ -239,13 +225,13 @@ class PythonImportedName(PythonHelperNode):
     def is_imported_name(self) -> bool:
         return True
 
-    @property
-    def line(self) -> int:
-        return self.base.line
+    # @property
+    # def line(self) -> int:
+    #     return self.base.line
 
-    @property
-    def column(self) -> int:
-        return self.base.column
+    # @property
+    # def column(self) -> int:
+    #     return self.base.column
 
     @property
     def is_wildcard(self) -> bool:
@@ -261,9 +247,6 @@ class PythonImportedName(PythonHelperNode):
 class PythonDecorator(PythonHelperNode):
     names: Tuple[str]
     arguments: Tuple[PythonArgument]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_decorator(self) -> bool:
@@ -280,9 +263,6 @@ class PythonFunctionParameter(PythonHelperNode):
     default_value: Optional[PythonExpression] = None
     type_hint: Optional[str] = None
     modifier: str = ''
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_function_parameter(self) -> bool:
@@ -318,9 +298,6 @@ class PythonFunctionParameter(PythonHelperNode):
 class PythonConditionalBlock(PythonHelperNode):
     condition: PythonExpression
     body: Tuple[PythonStatement]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_conditional_block(self) -> bool:
@@ -332,9 +309,6 @@ class PythonExceptClause(PythonHelperNode):
     body: Tuple[PythonStatement]
     exception: Optional[PythonExpression] = None
     alias: Optional[str] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_except_clause(self) -> bool:
@@ -350,15 +324,16 @@ class PythonContextManager(PythonHelperNode):
     def is_context_manager(self) -> bool:
         return True
 
-    @property
-    def line(self) -> int:
-        return self.manager.line
+    # @property
+    # def line(self) -> int:
+    #     return self.manager.line
 
-    @property
-    def column(self) -> int:
-        return self.manager.column
+    # @property
+    # def column(self) -> int:
+    #     return self.manager.column
 
 
+@frozen
 class PythonCasePattern(PythonHelperNode):
     @property
     def is_case_pattern(self) -> bool:
@@ -401,9 +376,6 @@ class PythonCasePattern(PythonHelperNode):
 class PythonNamedCasePattern(PythonHelperNode):
     name: str
     pattern: PythonCasePattern
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_named_pattern(self) -> bool:
@@ -415,9 +387,6 @@ class PythonWildcardCasePattern(PythonHelperNode):
     # captures `_`, `*_`, `*name`, `**name`
     name: Optional[str] = None
     is_star_pattern: bool = False
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_wildcard_pattern(self) -> bool:
@@ -429,13 +398,13 @@ class PythonSimpleCasePattern(PythonHelperNode):
     expression: PythonExpression
     alias: Optional[str] = None
 
-    @property
-    def line(self) -> int:
-        return self.expression.line
+    # @property
+    # def line(self) -> int:
+    #     return self.expression.line
 
-    @property
-    def column(self) -> int:
-        return self.expression.column
+    # @property
+    # def column(self) -> int:
+    #     return self.expression.column
 
     @property
     def is_simple_pattern(self) -> bool:
@@ -451,13 +420,13 @@ class PythonKeyCasePattern(PythonHelperNode):
     key: PythonExpression
     pattern: PythonCasePattern
 
-    @property
-    def line(self) -> int:
-        return self.key.line
+    # @property
+    # def line(self) -> int:
+    #     return self.key.line
 
-    @property
-    def column(self) -> int:
-        return self.key.column
+    # @property
+    # def column(self) -> int:
+    #     return self.key.column
 
     @property
     def is_key_pattern(self) -> bool:
@@ -470,13 +439,13 @@ class PythonClassCasePattern(PythonHelperNode):
     arguments: Tuple[PythonCasePattern]
     alias: Optional[str] = None
 
-    @property
-    def line(self) -> int:
-        return self.type_reference.line
+    # @property
+    # def line(self) -> int:
+    #     return self.type_reference.line
 
-    @property
-    def column(self) -> int:
-        return self.type_reference.column
+    # @property
+    # def column(self) -> int:
+    #     return self.type_reference.column
 
     @property
     def is_class_pattern(self) -> bool:
@@ -496,13 +465,13 @@ class PythonOrCasePattern(PythonHelperNode):
     patterns: Tuple[PythonCasePattern]
     alias: Optional[str] = None
 
-    @property
-    def line(self) -> int:
-        return self.patterns[0].line
+    # @property
+    # def line(self) -> int:
+    #     return self.patterns[0].line
 
-    @property
-    def column(self) -> int:
-        return self.patterns[0].column
+    # @property
+    # def column(self) -> int:
+    #     return self.patterns[0].column
 
     @property
     def is_or_pattern(self) -> bool:
@@ -518,9 +487,6 @@ class PythonOrCasePattern(PythonHelperNode):
 @frozen
 class PythonSequenceCasePattern(PythonHelperNode):
     patterns: Tuple[PythonCasePattern]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_sequence_pattern(self) -> bool:
@@ -536,9 +502,6 @@ class PythonSequenceCasePattern(PythonHelperNode):
 @frozen
 class PythonMappingCasePattern(PythonHelperNode):
     patterns: Tuple[PythonKeyCasePattern]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_mapping_pattern(self) -> bool:
@@ -565,9 +528,6 @@ class PythonCaseStatement(PythonHelperNode):
     pattern: PythonCasePattern
     body: Tuple[PythonStatement]
     condition: Optional[PythonExpression] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_case_statement(self) -> bool:

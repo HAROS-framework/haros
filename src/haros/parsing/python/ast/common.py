@@ -151,11 +151,19 @@ class PythonAstNodeMetadata:
     # type: PythonAstNodeType
     line: int = 0
     column: int = 0
-    annotations: Dict[str, Any] = field(factory=dict)
+    annotations: Dict[str, Any] = field(factory=dict, eq=False, hash=False)
 
-
+@frozen
 class PythonAst:
-    # node metadata goes here
+    meta: PythonAstNodeMetadata
+
+    @property
+    def line(self) -> int:
+        return self.meta.line
+
+    @property
+    def column(self) -> int:
+        return self.meta.column
 
     # @property
     # def ast_node_type(self) -> PythonAstNodeType:
@@ -186,6 +194,7 @@ class PythonAst:
         return ws + str(self)
 
 
+@frozen
 class PythonStatement(PythonAst):
     # @property
     # def ast_node_type(self) -> PythonAstNodeType:
@@ -304,6 +313,7 @@ class PythonStatement(PythonAst):
         return []
 
 
+@frozen
 class PythonExpression(PythonAst):
     # @property
     # def ast_node_type(self) -> PythonAstNodeType:
@@ -362,6 +372,7 @@ class PythonExpression(PythonAst):
         return False
 
 
+@frozen
 class PythonHelperNode(PythonAst):
     # @property
     # def ast_node_type(self) -> PythonAstNodeType:

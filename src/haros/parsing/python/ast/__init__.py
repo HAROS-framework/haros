@@ -7,6 +7,8 @@
 
 from haros.parsing.python.ast.common import (
     PythonAst,
+    PythonAstNodeId,
+    PythonAstNodeMetadata,
     PythonAstNodeType,
     PythonExpression,
     PythonHelperNode,

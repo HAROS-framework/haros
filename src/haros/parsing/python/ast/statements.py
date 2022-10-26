@@ -29,10 +29,6 @@ from haros.parsing.python.ast.helpers import (
 
 @frozen
 class PythonPassStatement(PythonStatement):
-    # meta
-    line: int = 0
-    column: int = 0
-
     @property
     def is_pass(self) -> bool:
         return True
@@ -40,10 +36,6 @@ class PythonPassStatement(PythonStatement):
 
 @frozen
 class PythonBreakStatement(PythonStatement):
-    # meta
-    line: int = 0
-    column: int = 0
-
     @property
     def is_break(self) -> bool:
         return True
@@ -51,10 +43,6 @@ class PythonBreakStatement(PythonStatement):
 
 @frozen
 class PythonContinueStatement(PythonStatement):
-    # meta
-    line: int = 0
-    column: int = 0
-
     @property
     def is_continue(self) -> bool:
         return True
@@ -63,9 +51,6 @@ class PythonContinueStatement(PythonStatement):
 @frozen
 class PythonDeleteStatement(PythonStatement):
     expressions: Tuple[PythonExpression]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_delete(self) -> bool:
@@ -75,9 +60,6 @@ class PythonDeleteStatement(PythonStatement):
 @frozen
 class PythonReturnStatement(PythonStatement):
     value: Optional[PythonExpression]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_return(self) -> bool:
@@ -88,9 +70,6 @@ class PythonReturnStatement(PythonStatement):
 class PythonRaiseStatement(PythonStatement):
     exception: Optional[PythonExpression]
     cause: Optional[PythonExpression]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_raise(self) -> bool:
@@ -105,21 +84,18 @@ class PythonExpressionStatement(PythonStatement):
     def is_expression_statement(self) -> bool:
         return True
 
-    @property
-    def line(self) -> int:
-        return self.expression.line
+    # @property
+    # def line(self) -> int:
+    #     return self.expression.line
 
-    @property
-    def column(self) -> int:
-        return self.expression.column
+    # @property
+    # def column(self) -> int:
+    #     return self.expression.column
 
 
 @frozen
 class PythonImportStatement(PythonStatement):
     names: Tuple[PythonImportedName]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_import(self) -> bool:
@@ -132,9 +108,6 @@ class PythonAssignmentStatement(PythonStatement):
     value: PythonExpression
     operator: str = '='
     type_hint: Optional[PythonExpression] = None
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_assignment(self) -> bool:
@@ -165,9 +138,6 @@ class PythonAssignmentStatement(PythonStatement):
 class PythonScopeStatement(PythonStatement):
     names: Tuple[str]
     global_scope: bool = True
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_global(self) -> bool:
@@ -182,9 +152,6 @@ class PythonScopeStatement(PythonStatement):
 class PythonAssertStatement(PythonStatement):
     condition: PythonExpression
     message: Optional[PythonExpression]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_assert(self) -> bool:
@@ -204,9 +171,6 @@ class PythonFunctionDefStatement(PythonStatement):
     type_hint: Optional[PythonExpression] = None
     asynchronous: bool = False
     decorators: Tuple[PythonDecorator] = field(factory=tuple)
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_function_def(self) -> bool:
@@ -242,9 +206,6 @@ class PythonClassDefStatement(PythonStatement):
     body: Tuple[PythonStatement]
     arguments: Tuple[PythonArgument] = field(factory=tuple)
     decorators: Tuple[PythonDecorator] = field(factory=tuple)
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_class_def(self) -> bool:
@@ -285,13 +246,13 @@ class PythonIfStatement(PythonStatement):
     def body(self) -> Tuple[PythonStatement]:
         return self.then_branch.body
 
-    @property
-    def line(self) -> int:
-        return self.then_branch.line
+    # @property
+    # def line(self) -> int:
+    #     return self.then_branch.line
 
-    @property
-    def column(self) -> int:
-        return self.then_branch.column
+    # @property
+    # def column(self) -> int:
+    #     return self.then_branch.column
 
     @property
     def has_else_branch(self) -> bool:
@@ -322,13 +283,13 @@ class PythonWhileStatement(PythonStatement):
     def body(self) -> Tuple[PythonStatement]:
         return self.loop.body
 
-    @property
-    def line(self) -> int:
-        return self.loop.line
+    # @property
+    # def line(self) -> int:
+    #     return self.loop.line
 
-    @property
-    def column(self) -> int:
-        return self.loop.column
+    # @property
+    # def column(self) -> int:
+    #     return self.loop.column
 
     @property
     def has_else_branch(self) -> bool:
@@ -362,13 +323,13 @@ class PythonForStatement(PythonStatement):
     def asynchronous(self) -> bool:
         return self.iterator.asynchronous
 
-    @property
-    def line(self) -> int:
-        return self.iterator.variables[0].line
+    # @property
+    # def line(self) -> int:
+    #     return self.iterator.variables[0].line
 
-    @property
-    def column(self) -> int:
-        return self.iterator.variables[0].column
+    # @property
+    # def column(self) -> int:
+    #     return self.iterator.variables[0].column
 
     @property
     def has_else_branch(self) -> bool:
@@ -386,9 +347,6 @@ class PythonTryStatement(PythonStatement):
     except_clauses: Tuple[PythonExceptClause] = field(factory=tuple)
     else_branch: Tuple[PythonStatement] = field(factory=tuple)
     finally_block: Tuple[PythonStatement] = field(factory=tuple)
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_try(self) -> bool:
@@ -424,9 +382,6 @@ class PythonWithStatement(PythonStatement):
     managers: Tuple[PythonContextManager]
     body: Tuple[PythonStatement]
     asynchronous: bool = False
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_with(self) -> bool:
@@ -440,9 +395,6 @@ class PythonWithStatement(PythonStatement):
 class PythonMatchStatement(PythonStatement):
     value: PythonExpression
     cases: Tuple[PythonCaseStatement]
-    # meta
-    line: int = 0
-    column: int = 0
 
     @property
     def is_match(self) -> bool:
