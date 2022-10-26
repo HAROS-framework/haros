@@ -148,7 +148,7 @@ class PythonAstNodeType(Enum):
 @frozen
 class PythonAstNodeMetadata:
     id: PythonAstNodeId
-    type: PythonAstNodeType
+    # type: PythonAstNodeType
     line: int = 0
     column: int = 0
     annotations: Dict[str, Any] = field(factory=dict)
@@ -157,25 +157,29 @@ class PythonAstNodeMetadata:
 class PythonAst:
     # node metadata goes here
 
-    @property
-    def ast_node_type(self) -> PythonAstNodeType:
-        raise NotImplementedError()
+    # @property
+    # def ast_node_type(self) -> PythonAstNodeType:
+    #     raise NotImplementedError()
 
     @property
     def is_module(self) -> bool:
-        return self.ast_node_type is PythonAstNodeType.MODULE
+        # return self.ast_node_type is PythonAstNodeType.MODULE
+        return False
 
     @property
     def is_statement(self) -> bool:
-        return self.ast_node_type is PythonAstNodeType.STATEMENT
+        # return self.ast_node_type is PythonAstNodeType.STATEMENT
+        return False
 
     @property
     def is_expression(self) -> bool:
-        return self.ast_node_type is PythonAstNodeType.EXPRESSION
+        # return self.ast_node_type is PythonAstNodeType.EXPRESSION
+        return False
 
     @property
     def is_helper(self) -> bool:
-        return self.ast_node_type is PythonAstNodeType.HELPER
+        # return self.ast_node_type is PythonAstNodeType.HELPER
+        return False
 
     def pretty(self, indent: int = 0, step: int = 2) -> str:
         ws = ' ' * indent
@@ -183,9 +187,13 @@ class PythonAst:
 
 
 class PythonStatement(PythonAst):
+    # @property
+    # def ast_node_type(self) -> PythonAstNodeType:
+    #     return PythonAstNodeType.STATEMENT
+
     @property
-    def ast_node_type(self) -> PythonAstNodeType:
-        return PythonAstNodeType.STATEMENT
+    def is_statement(self) -> bool:
+        return True
 
     @property
     def is_simple_statement(self) -> bool:
@@ -297,9 +305,13 @@ class PythonStatement(PythonAst):
 
 
 class PythonExpression(PythonAst):
+    # @property
+    # def ast_node_type(self) -> PythonAstNodeType:
+    #     return PythonAstNodeType.EXPRESSION
+
     @property
-    def ast_node_type(self) -> PythonAstNodeType:
-        return PythonAstNodeType.EXPRESSION
+    def is_expression(self) -> bool:
+        return True
 
     @property
     def is_literal(self) -> bool:
@@ -351,9 +363,13 @@ class PythonExpression(PythonAst):
 
 
 class PythonHelperNode(PythonAst):
+    # @property
+    # def ast_node_type(self) -> PythonAstNodeType:
+    #     return PythonAstNodeType.HELPER
+
     @property
-    def ast_node_type(self) -> PythonAstNodeType:
-        return PythonAstNodeType.HELPER
+    def is_helper(self) -> bool:
+        return True
 
     @property
     def is_key_value(self) -> bool:
@@ -413,6 +429,10 @@ class PythonModule(PythonAst):
     statements: Tuple[PythonStatement]
     name: str = '__main__'
 
+    # @property
+    # def ast_node_type(self) -> PythonAstNodeType:
+    #     return PythonAstNodeType.MODULE
+
     @property
-    def ast_node_type(self) -> PythonAstNodeType:
-        return PythonAstNodeType.MODULE
+    def is_module(self) -> bool:
+        return True
