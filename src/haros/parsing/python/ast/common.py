@@ -20,9 +20,124 @@ PythonAstNodeId = NewType('PythonAstNodeId', int)
 
 class PythonAstNodeType(Enum):
     MODULE = auto()
+
+    # Python Statement
     STATEMENT = auto()
+    EXPRESSION_STMT = auto()
+    ASSIGNMENT_STMT = auto()
+    DELETE_STMT = auto()
+    PASS_STMT = auto()
+    BREAK_STMT = auto()
+    CONTINUE_STMT = auto()
+    RETURN_STMT = auto()
+    RAISE_STMT = auto()
+    IMPORT_STMT = auto()
+    GLOBAL_STMT = auto()
+    NONLOCAL_STMT = auto()
+    ASSERT_STMT = auto()
+    IF_STMT = auto()
+    WHILE_STMT = auto()
+    FOR_STMT = auto()
+    TRY_STMT = auto()
+    MATCH_STMT = auto()
+    WITH_STMT = auto()
+    FUNCTION_DEF = auto()
+    CLASS_DEF = auto()
+
+    # Python Expression
     EXPRESSION = auto()
+    LITERAL = auto()
+    REFERENCE = auto()
+    ITEM_ACCESS = auto()
+    FUNCTION_CALL = auto()
+    STAR_EXPR = auto()
+    GENERATOR_EXPR = auto()
+    OPERATOR = auto()
+    CONDITIONAL_EXPR = auto()
+    LAMBDA_EXPR = auto()
+    ASSIGNMENT_EXPR = auto()  # Python >= 3.8
+    YIELD_EXPR = auto()
+    AWAIT_EXPR = auto()
+
+    # Python Helper Node
     HELPER = auto()
+    KEY_VALUE_NODE = auto()
+    SUBSCRIPT_NODE = auto()
+    ITERATOR_NODE = auto()
+    ARGUMENT_NODE = auto()
+    IMPORT_BASE = auto()
+    IMPORTED_NAME = auto()
+    FUNCTION_PARAMETER = auto()
+    CONDITIONAL_BLOCK = auto()
+    EXCEPT_CLAUSE = auto()
+    DECORATOR = auto()
+    CONTEXT_MANAGER = auto()
+    CASE_STATEMENT = auto()
+    CASE_PATTERN = auto()
+
+    @property
+    def is_module(self) -> bool:
+        return self == PythonAstNodeType.MODULE
+
+    @property
+    def is_statement(self) -> bool:
+        return (
+            self == PythonAstNodeType.EXPRESSION_STMT
+            or self == PythonAstNodeType.ASSIGNMENT_STMT
+            or self == PythonAstNodeType.DELETE_STMT
+            or self == PythonAstNodeType.PASS_STMT
+            or self == PythonAstNodeType.BREAK_STMT
+            or self == PythonAstNodeType.CONTINUE_STMT
+            or self == PythonAstNodeType.RETURN_STMT
+            or self == PythonAstNodeType.RAISE_STMT
+            or self == PythonAstNodeType.IMPORT_STMT
+            or self == PythonAstNodeType.GLOBAL_STMT
+            or self == PythonAstNodeType.NONLOCAL_STMT
+            or self == PythonAstNodeType.ASSERT_STMT
+            or self == PythonAstNodeType.IF_STMT
+            or self == PythonAstNodeType.WHILE_STMT
+            or self == PythonAstNodeType.FOR_STMT
+            or self == PythonAstNodeType.TRY_STMT
+            or self == PythonAstNodeType.MATCH_STMT
+            or self == PythonAstNodeType.WITH_STMT
+            or self == PythonAstNodeType.FUNCTION_DEF
+            or self == PythonAstNodeType.CLASS_DEF
+        )
+
+    @property
+    def is_expression(self) -> bool:
+        return (
+            self == PythonAstNodeType.LITERAL
+            or self == PythonAstNodeType.REFERENCE
+            or self == PythonAstNodeType.ITEM_ACCESS
+            or self == PythonAstNodeType.FUNCTION_CALL
+            or self == PythonAstNodeType.STAR_EXPR
+            or self == PythonAstNodeType.GENERATOR_EXPR
+            or self == PythonAstNodeType.OPERATOR
+            or self == PythonAstNodeType.CONDITIONAL_EXPR
+            or self == PythonAstNodeType.LAMBDA_EXPR
+            or self == PythonAstNodeType.ASSIGNMENT_EXPR
+            or self == PythonAstNodeType.YIELD_EXPR
+            or self == PythonAstNodeType.AWAIT_EXPR
+        )
+
+    @property
+    def is_helper(self) -> bool:
+        return (
+            self == PythonAstNodeType.KEY_VALUE_NODE
+            or self == PythonAstNodeType.SUBSCRIPT_NODE
+            or self == PythonAstNodeType.ITERATOR_NODE
+            or self == PythonAstNodeType.ARGUMENT_NODE
+            or self == PythonAstNodeType.IMPORT_BASE
+            or self == PythonAstNodeType.IMPORTED_NAME
+            or self == PythonAstNodeType.FUNCTION_PARAMETER
+            or self == PythonAstNodeType.CONDITIONAL_BLOCK
+            or self == PythonAstNodeType.EXCEPT_CLAUSE
+            or self == PythonAstNodeType.DECORATOR
+            or self == PythonAstNodeType.CONTEXT_MANAGER
+            or self == PythonAstNodeType.CASE_STATEMENT
+            or self == PythonAstNodeType.CASE_PATTERN
+        )
 
 
 ###############################################################################
