@@ -10,7 +10,8 @@ from typing import Any, Final, Tuple
 from pathlib import Path
 
 #from haros.analysis.python import query
-from haros.analysis.python.graph import from_ast
+from haros.analysis.python.cfg import from_ast
+#from haros.analysis.python.graph import from_ast
 from haros.errors import ParseError
 from haros.parsing.python import parse
 

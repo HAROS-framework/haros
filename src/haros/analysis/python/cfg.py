@@ -5,14 +5,15 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
+from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
 
 from attrs import define, field, frozen
 
-from haros.analysis.python.logic import to_condition
+from haros.analysis.python import logic as PythonLogic
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
     PythonAst,
+    PythonAstNodeId,
     PythonBinaryOperator,
     PythonBooleanLiteral,
     PythonExpression,
@@ -39,13 +40,25 @@ MAIN: Final[str] = '__main__'
 ###############################################################################
 
 
-@define
+@frozen
+class ControlJump:
+    node: ControlNodeId
+    condition: LogicValue
+
+    def pretty(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        return f'{self.node} ({self.condition})'
+
+
+@frozen
 class ControlNode:
     id: ControlNodeId
-    body: List[PythonStatement] = field(factory=list)
-    condition: LogicValue = field(default=TRUE)
-    incoming: Set[ControlNodeId] = field(factory=set)
-    outgoing: Set[ControlNodeId] = field(factory=set)
+    body: List[PythonStatement] = field(factory=list, eq=False, hash=False)
+    condition: LogicValue = field(default=TRUE, eq=False, hash=False)
+    incoming: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    outgoing: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
     @property
     def is_empty(self) -> bool:
@@ -66,16 +79,16 @@ class ControlNode:
     def append(self, statement: PythonStatement):
         self.body.append(statement)
 
-    def jump_to(self, other: 'ControlNode'):
-        self.outgoing.add(other.id)
-        other.incoming.add(self.id)
+    def jump_to(self, other: 'ControlNode', condition: LogicValue = TRUE):
+        self.outgoing[other.id] = condition
+        other.incoming[self.id] = condition
 
     def pretty(self) -> str:
         lines = [
             f'# Node {self.id}',
             f'condition:\n  {self.condition}',
-            f'incoming:\n  {list(self.incoming)}',
-            f'outgoing:\n  {list(self.outgoing)}',
+            f'incoming:\n  {map(str, self.incoming)}',
+            f'outgoing:\n  {map(str, self.outgoing)}',
         ]
         if self.body:
             lines.append('body:')
@@ -84,7 +97,7 @@ class ControlNode:
         return '\n'.join(lines)
 
 
-@define
+@frozen
 class ControlFlowGraph:
     name: str
     root_id: ControlNodeId = field()
@@ -110,15 +123,15 @@ class ControlFlowGraph:
         header = f'# async {self.name}' if self.asynchronous else f'# {self.name}'
         root = f'root: {self.root_id}'
         lines = [header, root, 'graph:']
-        lines.append(f'  {self.root_id} -> {list(self.root_node.outgoing)}')
+        lines.append(f'  {self.root_id} -> {map(str, self.root_node.outgoing)}')
         unreachable = []
         for uid, node in self.nodes.items():
             if uid == self.root_id:
                 continue
             if node.incoming:
-                lines.append(f'  {uid} -> {list(node.outgoing)}')
+                lines.append(f'  {uid} -> {map(str, node.outgoing)}')
             else:
-                unreachable.append(f'  {uid} -> {list(node.outgoing)}')
+                unreachable.append(f'  {uid} -> {map(str, node.outgoing)}')
         if unreachable:
             lines.append('dead code:')
             lines.extend(unreachable)
@@ -162,17 +175,11 @@ class LoopingContext:
 @define
 class BranchingContext:
     guard_node: ControlNode
-    future_node: ControlNode
+    branch_leaves: List[ControlNode] = field(init=False, factory=list)
     condition: LogicValue = field(init=False, default=FALSE)
     previous: LogicValue = field(init=False, default=TRUE)
 
-    def add_branch(self, test: PythonExpression) -> LogicValue:
-        return self._add_branch(to_condition(test))
-
-    def add_else_branch(self) -> LogicValue:
-        return self._add_branch(TRUE)
-
-    def _add_branch(self, phi: LogicValue) -> LogicValue:
+    def add_branch(self, phi: LogicValue) -> LogicValue:
         if self.condition.is_true:
             raise MalformedProgramError.if_after_else()
         # negate the condition of the current (now previous) branch
@@ -184,22 +191,33 @@ class BranchingContext:
         # return full condition
         return self.previous.join(self.condition)
 
+    def add_else_branch(self) -> LogicValue:
+        return self.add_branch(TRUE)
 
-# ProgramGraphBuilder is ready to `add_statement` after initialisation.
+    def add_branch_leaf(self, node: ControlNode):
+        self.branch_leaves.append(node)
+
+    def close_branches(self, future_node: ControlNode):
+        for node in self.branch_leaves:
+            node.jump_to(future_node)
+
+
+# ControlFlowGraphBuilder is ready to `add_statement` after initialisation.
 # It keeps a stack of `LoopingContext` and a stack of `BranchingContext`
 # which it uses to build and link nodes.
 
 
 @define
-class ProgramGraphBuilder:
+class ControlFlowGraphBuilder:
     graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
     current_id: ControlNodeId = ROOT_ID
-    _loop_stack: List[LoopingContext] = field(factory=list)
-    _branch_stack: List[BranchingContext] = field(factory=list)
+    logic_solver: Any = field(default=PythonLogic, eq=False, hash=False)
+    _loop_stack: List[LoopingContext] = field(factory=list, eq=False, hash=False)
+    _branch_stack: List[BranchingContext] = field(factory=list, eq=False, hash=False)
 
     @classmethod
-    def from_scratch(cls, name: str = MAIN):
-        graph = ControlFlowGraph.singleton(name=name)
+    def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
+        graph = ControlFlowGraph.singleton(name=name, asynchronous=asynchronous)
         return cls(graph=graph, current_id=graph.root_id)
 
     @property
@@ -232,8 +250,7 @@ class ProgramGraphBuilder:
                 it = statement.iterator
                 variables = PythonTupleLiteral(it.variables)
                 phi = PythonBinaryOperator('in', variables, it.iterable)
-            guard_node = self._follow_up_node(switch=True)
-            self._start_looping(guard_node)
+            self._start_looping()
             self._build_loop(phi, statement.body)
             self._build_loop_else(statement.else_branch)
             self._stop_looping()
@@ -312,9 +329,11 @@ class ProgramGraphBuilder:
                 self.current_id = future_node.id
 
             elif statement.is_function_def or statement.is_class_def:
-                builder = ProgramGraphBuilder.from_scratch(name=statement.name)
+                factory = ControlFlowGraphBuilder.from_scratch
                 if statement.is_function_def:
-                    builder.graph.asynchronous = statement.asynchronous
+                    builder = factory(name=statement.name, asynchronous = statement.asynchronous)
+                else:
+                    builder = factory(name=statement.name)
                 for stmt in statement.body:
                     builder.add_statement(stmt)
                 builder.clean_up()
@@ -323,7 +342,7 @@ class ProgramGraphBuilder:
     def start_dead_code(self):
         # push a new node that propagates the current condition,
         # but has no incoming links from other nodes
-        self._new_node(phi=self.current_node.condition, switch=True)
+        self._new_node(self.current_node.condition, switch=True)
 
     def clean_up(self):
         # removes useless nodes from the graph
@@ -341,10 +360,13 @@ class ProgramGraphBuilder:
         switch: bool = False,
     ) -> ControlNode:
         uid = ControlNodeId(len(self.graph.nodes))
-        node = ControlNode(uid, condition=phi)
+        if origin is None:
+            node = ControlNode(uid, condition=phi)
+        else:
+            condition = origin.condition.join(phi)
+            node = ControlNode(uid, condition=condition)
+            origin.jump_to(node, condition=phi)
         self.graph.nodes[uid] = node
-        if origin is not None:
-            origin.jump_to(node)
         if switch:
             self.current_id = node.id
         return node
@@ -355,8 +377,7 @@ class ProgramGraphBuilder:
         return self._new_node(phi, origin=this_node, switch=switch)
 
     def _start_branching(self, guard_node: ControlNode) -> BranchingContext:
-        future_node = self._new_node(guard_node.condition)
-        context = BranchingContext(guard_node, future_node)
+        context = BranchingContext(guard_node)
         self._branch_stack.append(context)
         return context
 
@@ -364,6 +385,9 @@ class ProgramGraphBuilder:
         if not self._branch_stack:
             raise MalformedProgramError.not_branching()
         context = self._branch_stack.pop()
+        future_node = self._new_node(context.guard_node.condition)
+        # link dangling branches to the node that comes after
+        context.close_branches(future_node)
         self.current_id = context.future_node.id
 
     def _build_branch(
@@ -377,17 +401,19 @@ class ProgramGraphBuilder:
         if test is None:
             phi = conditional.add_else_branch()
         else:
-            phi = conditional.add_branch(test)
+            phi = self.logic_solver.to_condition(test)
+            phi = conditional.add_branch(phi)
         self._follow_up_node(phi, switch=True)
 
         # recursively process the statements
         for statement in statements:
             self.add_statement(statement)
 
-        # link to the node that comes after
-        self.current_node.jump_to(conditional.future_node)
+        # register dangling branch to link to a new node later
+        conditional.add_branch_leaf(self.current_node)
 
-    def _start_looping(self, guard_node: ControlNode) -> LoopingContext:
+    def _start_looping(self) -> LoopingContext:
+        guard_node = self._follow_up_node(switch=True)
         future_node = self._new_node(guard_node.condition)
         context = LoopingContext(guard_node, future_node)
         self._loop_stack.append(context)
@@ -442,7 +468,7 @@ def from_ast(ast: PythonAst) -> ControlFlowGraph:
 
 
 def from_module(module: PythonModule) -> ControlFlowGraph:
-    builder = ProgramGraphBuilder.from_scratch(name=module.name)
+    builder = ControlFlowGraphBuilder.from_scratch(name=module.name)
     for statement in module.statements:
         builder.add_statement(statement)
     builder.clean_up()

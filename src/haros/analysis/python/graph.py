@@ -325,6 +325,7 @@ class BranchingContext:
 class ProgramGraphBuilder:
     graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
     current_id: ControlNodeId = ROOT_ID
+    data: DataScope = field(factory=DataScope.with_builtins)
     _loop_stack: List[LoopingContext] = field(factory=list)
     _branch_stack: List[BranchingContext] = field(factory=list)
 
