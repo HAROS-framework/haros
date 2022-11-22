@@ -178,10 +178,13 @@ class BranchingContext:
     branch_leaves: List[ControlNode] = field(init=False, factory=list)
     condition: LogicValue = field(init=False, default=FALSE)
     previous: LogicValue = field(init=False, default=TRUE)
+    terminal_branch: bool = False
 
     def add_branch(self, phi: LogicValue) -> LogicValue:
         if self.condition.is_true:
             raise MalformedProgramError.if_after_else()
+        # reset terminal flag
+        self.terminal_branch = False
         # negate the condition of the current (now previous) branch
         psi = self.condition.negate()
         # join with conditions from past branches
@@ -195,7 +198,8 @@ class BranchingContext:
         return self.add_branch(TRUE)
 
     def add_branch_leaf(self, node: ControlNode):
-        self.branch_leaves.append(node)
+        if not self.terminal_branch:
+            self.branch_leaves.append(node)
 
     def close_branches(self, future_node: ControlNode):
         for node in self.branch_leaves:
@@ -343,6 +347,9 @@ class ControlFlowGraphBuilder:
         # push a new node that propagates the current condition,
         # but has no incoming links from other nodes
         self._new_node(self.current_node.condition, switch=True)
+        # dead code should not link beyond the current if statement (if any)
+        if self._branch_stack:
+            self._branch_stack[-1].terminal_branch = True
 
     def clean_up(self):
         # removes useless nodes from the graph
