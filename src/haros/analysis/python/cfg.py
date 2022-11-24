@@ -199,6 +199,165 @@ class BranchingContext:
 
 
 @define
+class BasicControlFlowGraphBuilder:
+    graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
+    current_id: ControlNodeId = ROOT_ID
+    logic_solver: Any = field(default=PythonLogic, eq=False, hash=False)
+    _loop_stack: List[LoopingContext] = field(factory=list, eq=False, hash=False)
+    _branch_stack: List[BranchingContext] = field(factory=list, eq=False, hash=False)
+
+    @classmethod
+    def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
+        graph = ControlFlowGraph.singleton(name=name, asynchronous=asynchronous)
+        return cls(graph=graph, current_id=graph.root_id)
+
+    @property
+    def current_node(self) -> ControlNode:
+        return self.graph.nodes[self.current_id]
+
+    @current_node.setter
+    def current_node(self, node: ControlNode):
+        self.current_id = node.id
+
+    @property
+    def loop_context(self) -> LoopingContext:
+        if not self._loop_stack:
+            raise ControlFlowError.not_looping()
+        return self._loop_stack[-1]
+
+    @property
+    def branch_context(self) -> BranchingContext:
+        if not self._branch_stack:
+            raise ControlFlowError.not_branching()
+        return self._branch_stack[-1]
+
+    def add_statement(self, statement: PythonStatement):
+        self.current_node.append(statement)
+
+    def start_dead_code(self):
+        # push a new node that propagates the current condition,
+        # but has no incoming links from other nodes
+        self.new_node(self.current_node.condition, switch=True)
+        # dead code should not link beyond the current if statement (if any)
+        if self._branch_stack:
+            self._branch_stack[-1].terminal_branch = True
+
+    def clean_up(self):
+        # removes useless nodes from the graph
+        for node in list(self.graph.nodes.values()):
+            if node.id == self.graph.root_id or len(node.body) > 0:
+                continue
+            if node.is_unreachable:
+                del self.graph.nodes[node.id]
+
+    def follow_up_node(self, phi: LogicValue = TRUE) -> ControlNodeId:
+        this_node = self.current_node
+        phi = this_node.condition.join(phi)
+        return self.new_node(phi, origin=this_node, switch=True)
+
+    def new_terminal_node(self, phi: LogicValue = TRUE) -> ControlNodeId:
+        this_node = self.current_node
+        phi = this_node.condition.join(phi)
+        return self.new_node(phi, origin=this_node.id, switch=False)
+
+    def new_node(
+        self,
+        phi: LogicValue,
+        *,
+        origin: Optional[ControlNodeId] = None,
+        switch: bool = False,
+    ) -> ControlNodeId:
+        uid = ControlNodeId(len(self.graph.nodes))
+        if origin is None:
+            node = ControlNode(uid, condition=phi)
+        else:
+            assert uid != origin, f'duplicate ControlNodeId: {uid} == {origin}'
+            source = this.graph.nodes[origin]
+            condition = source.condition.join(phi)
+            node = ControlNode(uid, condition=condition)
+            source.jump_to(node, condition=phi)
+        self.graph.nodes[uid] = node
+        if switch:
+            self.current_id = node.id
+        return node.id
+
+    def start_branching(self):
+        context = BranchingContext(self.current_node)
+        self._branch_stack.append(context)
+
+    def stop_branching(self):
+        if not self._branch_stack:
+            raise ControlFlowError.not_branching()
+        context = self._branch_stack.pop()
+        future_node = self._new_node(context.guard_node.condition)
+        # link dangling branches to the node that comes after
+        context.close_branches(future_node)
+        self.current_id = context.future_node.id
+
+    def build_branch(
+        self,
+        test: Optional[PythonExpression],
+        statements: Iterable[PythonStatement],
+    ):
+        # create and move to a new branch
+        conditional = self.branch_context
+        self.current_id = conditional.guard_node.id
+        if test is None:
+            phi = conditional.add_else_branch()
+        else:
+            phi = self.logic_solver.to_condition(test)
+            phi = conditional.add_branch(phi)
+        self._follow_up_node(phi, switch=True)
+
+        # recursively process the statements
+        for statement in statements:
+            self.add_statement(statement)
+
+        # register dangling branch to link to a new node later
+        conditional.add_branch_leaf(self.current_node)
+
+    def start_looping(self):
+        guard_node = self._follow_up_node(switch=True)
+        future_node = self._new_node(guard_node.condition)
+        context = LoopingContext(guard_node, future_node)
+        self._loop_stack.append(context)
+
+    def stop_looping(self):
+        if not self._loop_stack:
+            raise ControlFlowError.not_looping()
+        context = self._loop_stack.pop()
+        self.current_id = context.future_node.id
+
+    def build_loop(self, test: PythonExpression, statements: Iterable[PythonStatement]):
+        # very similar to `_build_branch`
+        # create and move to a new branch
+        phi = to_condition(test)
+        self._follow_up_node(phi, switch=True)
+
+        # recursively process the statements
+        for statement in statements:
+            self.add_statement(statement)
+
+        # link back to the loop guard node
+        self.current_node.jump_to(self.loop_context.guard_node)
+
+    def build_loop_else(self, statements: Iterable[PythonStatement]):
+        loop = self.loop_context
+        self.current_id = loop.guard_node.id
+
+        # create and move to a new branch
+        phi = loop.break_condition.negate()
+        self._follow_up_node(phi, switch=True)
+
+        # recursively process the statements
+        for statement in statements:
+            self.add_statement(statement)
+
+        # link to the node that comes after
+        self.current_node.jump_to(loop.future_node)
+
+
+@define
 class ControlFlowGraphBuilder:
     graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
     current_id: ControlNodeId = ROOT_ID

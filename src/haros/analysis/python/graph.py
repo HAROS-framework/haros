@@ -9,6 +9,7 @@ from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tup
 
 from attrs import define, field, frozen
 
+from haros.analysis.python.cfg import BasicControlFlowGraphBuilder
 from haros.analysis.python.dataflow import DataScope, PythonType
 from haros.analysis.python.logic import to_condition
 from haros.metamodel.common import VariantData
@@ -164,199 +165,24 @@ def statement_to_node(statement: PythonStatement, uid: ProgramNodeId) -> Program
 
 
 
-
-
-
-
-
-
-@define
-class ControlNode:
-    id: ControlNodeId
-    body: List[PythonStatement] = field(factory=list)
-    condition: LogicValue = field(default=TRUE)
-    incoming: Set[ControlNodeId] = field(factory=set)
-    outgoing: Set[ControlNodeId] = field(factory=set)
-
-    @property
-    def is_empty(self) -> bool:
-        return not self.body
-
-    @property
-    def is_terminal(self) -> bool:
-        return not self.outgoing
-
-    @property
-    def is_unreachable(self) -> bool:
-        return not self.incoming
-
-    @property
-    def is_conditional(self) -> bool:
-        return not self.condition.is_true and not self.condition.is_false
-
-    def append(self, statement: PythonStatement):
-        self.body.append(statement)
-
-    def jump_to(self, other: 'ControlNode'):
-        self.outgoing.add(other.id)
-        other.incoming.add(self.id)
-
-    def pretty(self) -> str:
-        lines = [
-            f'# Node {self.id}',
-            f'condition:\n  {self.condition}',
-            f'incoming:\n  {list(self.incoming)}',
-            f'outgoing:\n  {list(self.outgoing)}',
-        ]
-        if self.body:
-            lines.append('body:')
-            for statement in self.body:
-                lines.append(statement.pretty(indent=1, step=2))
-        return '\n'.join(lines)
-
-
-@define
-class ControlFlowGraph:
-    name: str
-    root_id: ControlNodeId = field()
-    nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
-    asynchronous: bool = False
-    nested_graphs: Dict[str, 'ControlFlowGraph'] = field(factory=dict)
-
-    @root_id.validator
-    def _check_root_id(self, attribute, value: ControlNodeId):
-        if value not in self.nodes:
-            raise ValueError(f'unknown node id: {value!r}')
-
-    @property
-    def root_node(self) -> ControlNode:
-        return self.nodes[self.root_id]
-
-    @classmethod
-    def singleton(cls, name: str = MAIN, asynchronous: bool = False) -> 'ControlFlowGraph':
-        nodes = {ROOT_ID: ControlNode(ROOT_ID)}
-        return cls(name, ROOT_ID, nodes=nodes, asynchronous=asynchronous)
-
-    def pretty(self) -> str:
-        header = f'# async {self.name}' if self.asynchronous else f'# {self.name}'
-        root = f'root: {self.root_id}'
-        lines = [header, root, 'graph:']
-        lines.append(f'  {self.root_id} -> {list(self.root_node.outgoing)}')
-        unreachable = []
-        for uid, node in self.nodes.items():
-            if uid == self.root_id:
-                continue
-            if node.incoming:
-                lines.append(f'  {uid} -> {list(node.outgoing)}')
-            else:
-                unreachable.append(f'  {uid} -> {list(node.outgoing)}')
-        if unreachable:
-            lines.append('dead code:')
-            lines.extend(unreachable)
-        return '\n'.join(lines)
-
-
 ###############################################################################
 # Graph Builder
 ###############################################################################
 
 
-class MalformedProgramError(Exception):
-    @classmethod
-    def not_looping(cls) -> 'MalformedProgramError':
-        return cls('found a loop jump statement outside of a loop')
-
-    @classmethod
-    def not_branching(cls) -> 'MalformedProgramError':
-        return cls('found a branching statement outside of a conditional')
-
-    @classmethod
-    def if_after_else(cls) -> 'MalformedProgramError':
-        return cls('found a branching statement after an else statement')
-
-
-@define
-class LoopingContext:
-    guard_node: ControlNode
-    future_node: ControlNode
-    break_condition: LogicValue = field(init=False, default=FALSE)
-
-    def break_from(self, node: ControlNode):
-        node.jump_to(self.future_node)
-        phi = node.condition.assume(self.guard_node.condition)
-        self.break_condition = self.break_condition.disjoin(phi)
-
-    def continue_from(self, node: ControlNode):
-        node.jump_to(self.guard_node)
-
-
-@define
-class BranchingContext:
-    guard_node: ControlNode
-    future_node: ControlNode
-    condition: LogicValue = field(init=False, default=FALSE)
-    previous: LogicValue = field(init=False, default=TRUE)
-
-    def add_branch(self, test: PythonExpression) -> LogicValue:
-        return self._add_branch(to_condition(test))
-
-    def add_else_branch(self) -> LogicValue:
-        return self._add_branch(TRUE)
-
-    def _add_branch(self, phi: LogicValue) -> LogicValue:
-        if self.condition.is_true:
-            raise MalformedProgramError.if_after_else()
-        # negate the condition of the current (now previous) branch
-        psi = self.condition.negate()
-        # join with conditions from past branches
-        self.previous = self.previous.join(psi)
-        # condition evaluated at the new branch
-        self.condition = phi
-        # return full condition
-        return self.previous.join(self.condition)
-
-
-# ProgramGraphBuilder is ready to `add_statement` after initialisation.
-# It keeps a stack of `LoopingContext` and a stack of `BranchingContext`
-# which it uses to build and link nodes.
-
-
 @define
 class ProgramGraphBuilder:
-    graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
-    current_id: ControlNodeId = ROOT_ID
+    #graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
+    #current_id: ControlNodeId = ROOT_ID
+    cfg: BasicControlFlowGraphBuilder = field(factory=BasicControlFlowGraphBuilder.from_scratch)
     data: DataScope = field(factory=DataScope.with_builtins)
-    _loop_stack: List[LoopingContext] = field(factory=list)
-    _branch_stack: List[BranchingContext] = field(factory=list)
 
     @classmethod
-    def from_scratch(cls, name: str = MAIN):
-        graph = ControlFlowGraph.singleton(name=name)
-        return cls(graph=graph, current_id=graph.root_id)
-
-    @property
-    def current_node(self) -> ControlNode:
-        return self.graph.nodes[self.current_id]
-
-    @current_node.setter
-    def current_node(self, node: ControlNode):
-        self.current_id = node.id
-
-    @property
-    def loop_context(self) -> LoopingContext:
-        if not self._loop_stack:
-            raise MalformedProgramError.not_looping()
-        return self._loop_stack[-1]
-
-    @property
-    def branch_context(self) -> BranchingContext:
-        if not self._branch_stack:
-            raise MalformedProgramError.not_branching()
-        return self._branch_stack[-1]
+    def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
+        cfg = BasicControlFlowGraphBuilder.from_scratch(name=name, asynchronous=asynchronous)
+        return cls(cfg=cfg)
 
     def add_statement(self, statement: PythonStatement):
-        this_node = self.current_node
-
         if statement.is_while or statement.is_for:
             if statement.is_while:
                 phi = statement.condition
