@@ -10,6 +10,7 @@ from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tup
 from attrs import define, field, frozen
 
 from haros.analysis.python import logic as PythonLogic
+from haros.errors import ControlFlowError
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
     PythonAst,
@@ -143,20 +144,6 @@ class ControlFlowGraph:
 ###############################################################################
 
 
-class MalformedProgramError(Exception):
-    @classmethod
-    def not_looping(cls) -> 'MalformedProgramError':
-        return cls('found a loop jump statement outside of a loop')
-
-    @classmethod
-    def not_branching(cls) -> 'MalformedProgramError':
-        return cls('found a branching statement outside of a conditional')
-
-    @classmethod
-    def if_after_else(cls) -> 'MalformedProgramError':
-        return cls('found a branching statement after an else statement')
-
-
 @define
 class LoopingContext:
     guard_node: ControlNode
@@ -182,7 +169,7 @@ class BranchingContext:
 
     def add_branch(self, phi: LogicValue) -> LogicValue:
         if self.condition.is_true:
-            raise MalformedProgramError.if_after_else()
+            raise ControlFlowError.if_after_else()
         # reset terminal flag
         self.terminal_branch = False
         # negate the condition of the current (now previous) branch
@@ -235,13 +222,13 @@ class ControlFlowGraphBuilder:
     @property
     def loop_context(self) -> LoopingContext:
         if not self._loop_stack:
-            raise MalformedProgramError.not_looping()
+            raise ControlFlowError.not_looping()
         return self._loop_stack[-1]
 
     @property
     def branch_context(self) -> BranchingContext:
         if not self._branch_stack:
-            raise MalformedProgramError.not_branching()
+            raise ControlFlowError.not_branching()
         return self._branch_stack[-1]
 
     def add_statement(self, statement: PythonStatement):
@@ -390,7 +377,7 @@ class ControlFlowGraphBuilder:
 
     def _stop_branching(self):
         if not self._branch_stack:
-            raise MalformedProgramError.not_branching()
+            raise ControlFlowError.not_branching()
         context = self._branch_stack.pop()
         future_node = self._new_node(context.guard_node.condition)
         # link dangling branches to the node that comes after
@@ -428,7 +415,7 @@ class ControlFlowGraphBuilder:
 
     def _stop_looping(self):
         if not self._loop_stack:
-            raise MalformedProgramError.not_looping()
+            raise ControlFlowError.not_looping()
         context = self._loop_stack.pop()
         self.current_id = context.future_node.id
 
