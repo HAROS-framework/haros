@@ -200,20 +200,23 @@ class BranchingContext:
 
 @define
 class BasicControlFlowGraphBuilder:
-    graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
+    name: str
+    asynchronous: bool = False
+    root_id: ControlNodeId = ROOT_ID
     current_id: ControlNodeId = ROOT_ID
-    logic_solver: Any = field(default=PythonLogic, eq=False, hash=False)
+    nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
+    nested_graphs: Dict[str, ControlFlowGraph] = field(factory=dict)
+    _node_id_counter: int = 0
     _loop_stack: List[LoopingContext] = field(factory=list, eq=False, hash=False)
     _branch_stack: List[BranchingContext] = field(factory=list, eq=False, hash=False)
 
     @classmethod
     def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
-        graph = ControlFlowGraph.singleton(name=name, asynchronous=asynchronous)
-        return cls(graph=graph, current_id=graph.root_id)
+        return cls(name, asynchronous=asynchronous)
 
     @property
     def current_node(self) -> ControlNode:
-        return self.graph.nodes[self.current_id]
+        return self.nodes[self.current_id]
 
     @current_node.setter
     def current_node(self, node: ControlNode):
@@ -234,52 +237,45 @@ class BasicControlFlowGraphBuilder:
     def add_statement(self, statement: PythonStatement):
         self.current_node.append(statement)
 
+    def clean_up(self):
+        # removes useless nodes from the graph
+        for node in list(self.nodes.values()):
+            if node.id == self.root_id or len(node.body) > 0:
+                continue
+            if node.is_unreachable:
+                del self.nodes[node.id]
+
+    def jump_to_new_node(self, phi: LogicValue = TRUE) -> ControlNode:
+        this_node = self.current_node
+        condition = this_node.condition.join(phi)
+        node = self.new_node(condition)
+        this_node.jump_to(node, condition=phi)
+        self.current_id = node.id
+        return node
+
+    def new_node(self, phi: LogicValue = TRUE) -> ControlNode:
+        uid = ControlNodeId(self._node_id_counter)
+        while uid in self.nodes:
+            self._node_id_counter += 1
+            uid = ControlNodeId(self._node_id_counter)
+        node = ControlNode(uid, condition=phi)
+        self.nodes[uid] = node
+        return node
+
+    def switch_to(self, node_or_id: Union[ControlNodeId, ControlNode]):
+        uid = node_or_id
+        if isinstance(node_or_id, ControlNode):
+            uid = node_or_id.id
+        # ensure that the node is registered
+        self.nodes[uid]
+        self.current_id = uid
+
     def start_dead_code(self):
-        # push a new node that propagates the current condition,
-        # but has no incoming links from other nodes
-        self.new_node(self.current_node.condition, switch=True)
+        # push a new node that has no incoming links from other nodes
+        self.current_node = self.new_node(FALSE)
         # dead code should not link beyond the current if statement (if any)
         if self._branch_stack:
             self._branch_stack[-1].terminal_branch = True
-
-    def clean_up(self):
-        # removes useless nodes from the graph
-        for node in list(self.graph.nodes.values()):
-            if node.id == self.graph.root_id or len(node.body) > 0:
-                continue
-            if node.is_unreachable:
-                del self.graph.nodes[node.id]
-
-    def follow_up_node(self, phi: LogicValue = TRUE) -> ControlNodeId:
-        this_node = self.current_node
-        phi = this_node.condition.join(phi)
-        return self.new_node(phi, origin=this_node, switch=True)
-
-    def new_terminal_node(self, phi: LogicValue = TRUE) -> ControlNodeId:
-        this_node = self.current_node
-        phi = this_node.condition.join(phi)
-        return self.new_node(phi, origin=this_node.id, switch=False)
-
-    def new_node(
-        self,
-        phi: LogicValue,
-        *,
-        origin: Optional[ControlNodeId] = None,
-        switch: bool = False,
-    ) -> ControlNodeId:
-        uid = ControlNodeId(len(self.graph.nodes))
-        if origin is None:
-            node = ControlNode(uid, condition=phi)
-        else:
-            assert uid != origin, f'duplicate ControlNodeId: {uid} == {origin}'
-            source = this.graph.nodes[origin]
-            condition = source.condition.join(phi)
-            node = ControlNode(uid, condition=condition)
-            source.jump_to(node, condition=phi)
-        self.graph.nodes[uid] = node
-        if switch:
-            self.current_id = node.id
-        return node.id
 
     def start_branching(self):
         context = BranchingContext(self.current_node)
@@ -293,6 +289,9 @@ class BasicControlFlowGraphBuilder:
         # link dangling branches to the node that comes after
         context.close_branches(future_node)
         self.current_id = context.future_node.id
+
+    def new_branch(self, phi: LogicValue = TRUE):
+        pass
 
     def build_branch(
         self,

@@ -183,7 +183,7 @@ class ProgramGraphBuilder:
         return cls(cfg=cfg)
 
     def add_statement(self, statement: PythonStatement):
-        if statement.is_while or statement.is_for:
+        if statement.is_while or statement.is_for:  # FIXME
             if statement.is_while:
                 phi = statement.condition
             else:
@@ -197,13 +197,13 @@ class ProgramGraphBuilder:
             self._stop_looping()
 
         else:
-            this_node.append(statement)
+            self.cfg.add_statement(statement)
 
-            if statement.is_break:
+            if statement.is_break:  # FIXME
                 self.loop_context.break_from(this_node)
                 self.start_dead_code()
 
-            elif statement.is_continue:
+            elif statement.is_continue:  # FIXME
                 self.loop_context.continue_from(this_node)
                 self.start_dead_code()
 
@@ -211,21 +211,21 @@ class ProgramGraphBuilder:
                 self.start_dead_code()
 
             elif statement.is_yield:
-                self.graph.asynchronous = True
-                self._follow_up_node(switch=True)
+                self.cfg.asynchronous = True
+                self.jump_to_new_node()
 
             elif statement.is_assert:
-                phi = to_condition(statement.condition)
-                self._follow_up_node(phi.negate())  # terminal node
-                self._follow_up_node(phi, switch=True)
+                phi = to_condition(statement.condition)  # FIXME
+                # self.jump_to_new_node(phi.negate())  # terminal node
+                self.jump_to_new_node(phi)
 
             elif statement.is_if:
-                self._start_branching(this_node)
+                self.start_branching()
                 self._build_branch(statement.condition, statement.body)
                 for branch in statement.elif_branches:
                     self._build_branch(branch.condition, branch.body)
                 self._build_branch(None, statement.else_branch)
-                self._stop_branching()
+                self.stop_branching()
 
             elif statement.is_match:
                 pass  # TODO
