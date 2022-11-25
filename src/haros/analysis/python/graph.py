@@ -329,14 +329,14 @@ class ProgramGraphBuilder:
         test: Optional[PythonExpression],
         statements: Iterable[PythonStatement],
     ):
-        # create and move to a new branch
-        conditional = self.branch_context
-        self.current_id = conditional.guard_node.id
         if test is None:
-            phi = conditional.add_else_branch()
+            # create and move to a new branch
+            psi = self.cfg.add_else_branch()
         else:
-            phi = conditional.add_branch(test)
-        self._follow_up_node(phi, switch=True)
+            # data flow analysis on the condition
+            phi = self.logic_solver.to_condition(test)  # FIXME
+            # create and move to a new branch
+            psi = self.cfg.add_branch(phi)
 
         # recursively process the statements
         for statement in statements:

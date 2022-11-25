@@ -166,9 +166,10 @@ class BranchingContext:
     condition: LogicValue = field(init=False, default=FALSE)
     previous: LogicValue = field(init=False, default=TRUE)
     terminal_branch: bool = False
+    got_else_branch: bool = False
 
     def add_branch(self, phi: LogicValue) -> LogicValue:
-        if self.condition.is_true:
+        if self.got_else_branch:
             raise ControlFlowError.if_after_else()
         # reset terminal flag
         self.terminal_branch = False
@@ -179,9 +180,10 @@ class BranchingContext:
         # condition evaluated at the new branch
         self.condition = phi
         # return full condition
-        return self.previous.join(self.condition)
+        return self.previous.join(phi)
 
     def add_else_branch(self) -> LogicValue:
+        self.got_else_branch = True
         return self.add_branch(TRUE)
 
     def add_branch_leaf(self, node: ControlNode):
@@ -290,8 +292,13 @@ class BasicControlFlowGraphBuilder:
         context.close_branches(future_node)
         self.current_id = context.future_node.id
 
-    def new_branch(self, phi: LogicValue = TRUE):
-        pass
+    def add_branch(self, phi: LogicValue) -> ControlNode:
+        conditional = self.branch_context
+        self.current_id = conditional.guard_node.id
+        # phi is the condition as written in the if statement
+        # psi is the full branch condition (negates previous branches)
+        psi = conditional.add_branch(phi)
+        return self.jump_to_new_node(psi)
 
     def build_branch(
         self,
