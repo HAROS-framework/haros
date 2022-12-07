@@ -242,7 +242,6 @@ class ProgramGraphBuilder:
 
             elif statement.is_try:
                 # create and move to a new node
-                future_node = self._new_node(this_node.condition)
                 node = self.cfg.jump_to_new_node()
                 # recursively process the statements
                 for stmt in statement.body:
@@ -261,13 +260,13 @@ class ProgramGraphBuilder:
                     for stmt in statement.else_branch:
                         self.add_statement(stmt)
                 # move on to the finally block
-                if statement.has_finally_block:
-                    self._follow_up_node(switch=True)
+                # FIXME jump also to finally block from except clauses
+                if statement.has_finally_block:  # FIXME
+                    self.cfg.jump_to_new_node()
                     for stmt in statement.finally_block:
                         self.add_statement(stmt)
                 # link to the node that comes after
-                self.current_node.jump_to(future_node)
-                self.current_id = future_node.id
+                self.cfg.jump_to_new_node()
 
             elif statement.is_function_def or statement.is_class_def:
                 builder = ProgramGraphBuilder.from_scratch(name=statement.name)
