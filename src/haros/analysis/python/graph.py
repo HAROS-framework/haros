@@ -18,6 +18,7 @@ from haros.parsing.python.ast import (
     PythonAst,
     PythonBinaryOperator,
     PythonBooleanLiteral,
+    PythonExceptClause,
     PythonExpression,
     PythonForStatement,
     PythonFunctionCall,
@@ -242,20 +243,21 @@ class ProgramGraphBuilder:
             elif statement.is_try:
                 # create and move to a new node
                 future_node = self._new_node(this_node.condition)
-                self._follow_up_node(switch=True)
+                node = self.cfg.jump_to_new_node()
                 # recursively process the statements
                 for stmt in statement.body:
                     self.add_statement(stmt)
+                    # keep track of the last node before dead code
+                    if not self.cfg.current_node.is_unreachable:
+                        node = self.cfg.current_node
                 # FIXME add links to the except clauses
                 for clause in statement.except_clauses:
-                    node = self._new_node(this_node.condition)
-                    self.current_id = node.id
-                    for stmt in clause.body:
-                        self.add_statement(stmt)
-                self.current_id = this_node.id
-                # move on to the else branch
-                if statement.has_else_branch:
-                    self._follow_up_node(switch=True)
+                    self._build_except_clause(clause)
+                # move back to last reachable node of try block
+                self.cfg.switch_to(node)
+                # move on to the else branch (if there is no dead code in try)
+                if statement.has_else_branch:  # FIXME
+                    self.cfg.jump_to_new_node()
                     for stmt in statement.else_branch:
                         self.add_statement(stmt)
                 # move on to the finally block
@@ -289,27 +291,6 @@ class ProgramGraphBuilder:
             if node.is_unreachable:
                 del self.graph.nodes[node.id]
 
-    def _new_node(
-        self,
-        phi: LogicValue,
-        *,
-        origin: Optional[ControlNode] = None,
-        switch: bool = False,
-    ) -> ControlNode:
-        uid = ControlNodeId(len(self.graph.nodes))
-        node = ControlNode(uid, condition=phi)
-        self.graph.nodes[uid] = node
-        if origin is not None:
-            origin.jump_to(node)
-        if switch:
-            self.current_id = node.id
-        return node
-
-    def _follow_up_node(self, phi: LogicValue = TRUE, *, switch: bool = False) -> ControlNode:
-        this_node = self.current_node
-        phi = this_node.condition.join(phi)
-        return self._new_node(phi, origin=this_node, switch=switch)
-
     def _build_branch(
         self,
         test: Optional[PythonExpression],
@@ -330,6 +311,13 @@ class ProgramGraphBuilder:
 
         # link to the node that comes after
         self.cfg.close_branch()
+
+    def _build_except_clause(self, clause: PythonExceptClause):  # FIXME
+        #node = self._new_node(this_node.condition)
+        #self.current_id = node.id
+        #for statement in clause.body:
+        #    self.add_statement(statement)
+        pass
 
     def _start_looping(self, guard_node: ControlNode) -> LoopingContext:
         future_node = self._new_node(guard_node.condition)
