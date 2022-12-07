@@ -201,23 +201,23 @@ class ProgramGraphBuilder:
 
             if statement.is_break:  # FIXME
                 self.loop_context.break_from(this_node)
-                self.start_dead_code()
+                self.cfg.start_dead_code()
 
             elif statement.is_continue:  # FIXME
                 self.loop_context.continue_from(this_node)
-                self.start_dead_code()
+                self.cfg.start_dead_code()
 
             elif statement.is_return or statement.is_raise:
-                self.start_dead_code()
+                self.cfg.start_dead_code()
 
             elif statement.is_yield:
                 self.cfg.asynchronous = True
-                self.jump_to_new_node()
+                self.cfg.jump_to_new_node()
 
             elif statement.is_assert:
                 phi = to_condition(statement.condition)  # FIXME
                 # self.jump_to_new_node(phi.negate())  # terminal node
-                self.jump_to_new_node(phi)
+                self.cfg.jump_to_new_node(phi)
 
             elif statement.is_if:
                 self.cfg.start_branching()
@@ -232,14 +232,12 @@ class ProgramGraphBuilder:
 
             elif statement.is_with:
                 # create and move to a new node
-                future_node = self._new_node(this_node.condition)
-                self._follow_up_node(switch=True)
+                self.cfg.jump_to_new_node()
                 # recursively process the statements
                 for stmt in statement.body:
                     self.add_statement(stmt)
-                # link to the node that comes after
-                self.current_node.jump_to(future_node)
-                self.current_id = future_node.id
+                # move out of the with context
+                self.cfg.jump_to_new_node()
 
             elif statement.is_try:
                 # create and move to a new node
