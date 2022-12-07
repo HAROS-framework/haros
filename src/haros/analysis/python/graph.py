@@ -220,12 +220,12 @@ class ProgramGraphBuilder:
                 self.jump_to_new_node(phi)
 
             elif statement.is_if:
-                self.start_branching()
+                self.cfg.start_branching()
                 self._build_branch(statement.condition, statement.body)
                 for branch in statement.elif_branches:
                     self._build_branch(branch.condition, branch.body)
                 self._build_branch(None, statement.else_branch)
-                self.stop_branching()
+                self.cfg.stop_branching()
 
             elif statement.is_match:
                 pass  # TODO
@@ -311,18 +311,6 @@ class ProgramGraphBuilder:
         this_node = self.current_node
         phi = this_node.condition.join(phi)
         return self._new_node(phi, origin=this_node, switch=switch)
-
-    def _start_branching(self, guard_node: ControlNode) -> BranchingContext:
-        future_node = self._new_node(guard_node.condition)
-        context = BranchingContext(guard_node, future_node)
-        self._branch_stack.append(context)
-        return context
-
-    def _stop_branching(self):
-        if not self._branch_stack:
-            raise MalformedProgramError.not_branching()
-        context = self._branch_stack.pop()
-        self.current_id = context.future_node.id
 
     def _build_branch(
         self,
