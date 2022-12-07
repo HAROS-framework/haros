@@ -300,25 +300,15 @@ class BasicControlFlowGraphBuilder:
         psi = conditional.add_branch(phi)
         return self.jump_to_new_node(psi)
 
-    def build_branch(
-        self,
-        test: Optional[PythonExpression],
-        statements: Iterable[PythonStatement],
-    ):
-        # create and move to a new branch
+    def add_else_branch(self) -> ControlNode:
         conditional = self.branch_context
         self.current_id = conditional.guard_node.id
-        if test is None:
-            phi = conditional.add_else_branch()
-        else:
-            phi = self.logic_solver.to_condition(test)
-            phi = conditional.add_branch(phi)
-        self._follow_up_node(phi, switch=True)
+        # psi is the full branch condition (negates previous branches)
+        psi = conditional.add_else_branch()
+        return self.jump_to_new_node(psi)
 
-        # recursively process the statements
-        for statement in statements:
-            self.add_statement(statement)
-
+    def close_branch(self):
+        conditional = self.branch_context
         # register dangling branch to link to a new node later
         conditional.add_branch_leaf(self.current_node)
 

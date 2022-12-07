@@ -343,7 +343,7 @@ class ProgramGraphBuilder:
             self.add_statement(statement)
 
         # link to the node that comes after
-        self.current_node.jump_to(conditional.future_node)
+        self.cfg.close_branch()
 
     def _start_looping(self, guard_node: ControlNode) -> LoopingContext:
         future_node = self._new_node(guard_node.condition)
