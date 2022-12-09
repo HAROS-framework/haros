@@ -124,15 +124,15 @@ class ControlFlowGraph:
         header = f'# async {self.name}' if self.asynchronous else f'# {self.name}'
         root = f'root: {self.root_id}'
         lines = [header, root, 'graph:']
-        lines.append(f'  {self.root_id} -> {map(str, self.root_node.outgoing)}')
+        lines.append(f'  {self.root_id} -> {list(map(str, self.root_node.outgoing))}')
         unreachable = []
         for uid, node in self.nodes.items():
             if uid == self.root_id:
                 continue
             if node.incoming:
-                lines.append(f'  {uid} -> {map(str, node.outgoing)}')
+                lines.append(f'  {uid} -> {list(map(str, node.outgoing))}')
             else:
-                unreachable.append(f'  {uid} -> {map(str, node.outgoing)}')
+                unreachable.append(f'  {uid} -> {list(map(str, node.outgoing))}')
         if unreachable:
             lines.append('dead code:')
             lines.extend(unreachable)
@@ -188,8 +188,9 @@ class BranchingContext:
         return self.previous.join(phi)
 
     def add_else_branch(self) -> LogicValue:
+        phi = self.add_branch(TRUE)
         self.got_else_branch = True
-        return self.add_branch(TRUE)
+        return phi
 
     def add_branch_leaf(self, node: ControlNode):
         if not self.terminal_branch:
@@ -219,7 +220,10 @@ class BasicControlFlowGraphBuilder:
 
     @classmethod
     def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
-        return cls(name, asynchronous=asynchronous)
+        builder = cls(name, asynchronous=asynchronous)
+        root = builder.new_node()
+        builder.root_id = root.id
+        return builder
 
     @property
     def current_node(self) -> ControlNode:
@@ -294,10 +298,10 @@ class BasicControlFlowGraphBuilder:
         if not self._branch_stack:
             raise ControlFlowError.not_branching()
         context = self._branch_stack.pop()
-        future_node = self._new_node(context.guard_node.condition)
+        future_node = self.new_node(phi=context.guard_node.condition)
         # link dangling branches to the node that comes after
         context.close_branches(future_node)
-        self.current_id = context.future_node.id
+        self.current_id = future_node.id
 
     def add_branch(self, phi: LogicValue) -> ControlNode:
         conditional = self.branch_context

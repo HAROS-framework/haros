@@ -284,25 +284,29 @@ class ProgramGraphBuilder:
     def clean_up(self):
         self.cfg.clean_up()
 
-    def build(self):
-        return self.cfg.build()  # FIXME
+    def build(self):  # FIXME
+        g = self.cfg.build()
+        for name, cfg in self.nested_graphs.items():
+            g.nested_graphs[name] = cfg
+        return g
 
     def _build_branch(
         self,
         test: Optional[PythonExpression],
-        statements: Iterable[PythonStatement],
+        body: Iterable[PythonStatement],
     ):
         if test is None:
             # create and move to a new branch
             psi = self.cfg.add_else_branch()
         else:
             # data flow analysis on the condition
-            phi = self.logic_solver.to_condition(test)  # FIXME
+            # phi = self.logic_solver.to_condition(test)  # FIXME
+            phi = to_condition(test)
             # create and move to a new branch
             psi = self.cfg.add_branch(phi)
 
         # recursively process the statements
-        for statement in statements:
+        for statement in body:
             self.add_statement(statement)
 
         # link to the node that comes after
