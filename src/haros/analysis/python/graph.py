@@ -193,6 +193,8 @@ class ProgramGraphBuilder:
                 variables = PythonTupleLiteral(it.variables)
                 test = PythonBinaryOperator('in', variables, it.iterable)
             self.cfg.start_looping()
+            # add statement to the loop's guard node
+            self.cfg.add_statement(statement)
             self._build_loop(test, statement.body)
             self._build_loop_else(statement.else_branch)
             self.cfg.stop_looping()
@@ -280,12 +282,7 @@ class ProgramGraphBuilder:
                 self.nested_graphs[statement.name] = builder.build()
 
     def clean_up(self):
-        # removes useless nodes from the graph
-        for node in list(self.graph.nodes.values()):
-            if node.id == self.graph.root_id or len(node.body) > 0:
-                continue
-            if node.is_unreachable:
-                del self.graph.nodes[node.id]
+        self.cfg.clean_up()
 
     def build(self):
         return self  # FIXME
@@ -318,47 +315,29 @@ class ProgramGraphBuilder:
         #    self.add_statement(statement)
         pass
 
-    def _start_looping(self, guard_node: ControlNode) -> LoopingContext:
-        future_node = self._new_node(guard_node.condition)
-        context = LoopingContext(guard_node, future_node)
-        self._loop_stack.append(context)
-        return context
-
-    def _stop_looping(self):
-        if not self._loop_stack:
-            raise MalformedProgramError.not_looping()
-        context = self._loop_stack.pop()
-        self.current_id = context.future_node.id
-
-    def _build_loop(self, test: PythonExpression, statements: Iterable[PythonStatement]):
-        # FIXME
+    def _build_loop(self, test: PythonExpression, body: Iterable[PythonStatement]):
         # very similar to `_build_branch`
         # create and move to a new branch
-        phi = to_condition(test)
-        self._follow_up_node(phi, switch=True)
+        phi = to_condition(test)  # FIXME
+        self.cfg.jump_to_new_node(phi=phi)
 
         # recursively process the statements
-        for statement in statements:
+        for statement in body:
             self.add_statement(statement)
 
         # link back to the loop guard node
-        self.current_node.jump_to(self.loop_context.guard_node)
+        self.cfg.close_loop()
 
-    def _build_loop_else(self, statements: Iterable[PythonStatement]):
-        # FIXME
-        loop = self.loop_context
-        self.current_id = loop.guard_node.id
+    def _build_loop_else(self, body: Iterable[PythonStatement]):
+        if not body:
+            return
 
         # create and move to a new branch
-        phi = loop.break_condition.negate()
-        self._follow_up_node(phi, switch=True)
+        self.cfg.add_loop_else_branch()
 
         # recursively process the statements
-        for statement in statements:
+        for statement in body:
             self.add_statement(statement)
-
-        # link to the node that comes after
-        self.current_node.jump_to(loop.future_node)
 
 
 ###############################################################################

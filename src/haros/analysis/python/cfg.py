@@ -143,6 +143,11 @@ class ControlFlowGraph:
 # Graph Builder
 ###############################################################################
 
+# TODO change loops to have an initial guard node and also a second guard
+# (or loop back node) at the end. This helps with unrolling and helps
+# evaluate conditions with data flow, and defining jumps when there
+# are breaks involved.
+
 
 @define
 class LoopingContext:
@@ -325,36 +330,22 @@ class BasicControlFlowGraphBuilder:
         if not self._loop_stack:
             raise ControlFlowError.not_looping()
         context = self._loop_stack.pop()
+        # link to the node that comes after
+        self.current_node.jump_to(context.future_node)
         self.current_id = context.future_node.id
         return context.future_node
 
-    def build_loop(self, test: PythonExpression, statements: Iterable[PythonStatement]):
-        # very similar to `_build_branch`
-        # create and move to a new branch
-        phi = to_condition(test)
-        self._follow_up_node(phi, switch=True)
-
-        # recursively process the statements
-        for statement in statements:
-            self.add_statement(statement)
-
+    def close_loop(self):
         # link back to the loop guard node
         self.current_node.jump_to(self.loop_context.guard_node)
 
-    def build_loop_else(self, statements: Iterable[PythonStatement]):
+    def add_loop_else_branch(self) -> ControlNode:
         loop = self.loop_context
         self.current_id = loop.guard_node.id
-
         # create and move to a new branch
         phi = loop.break_condition.negate()
-        self._follow_up_node(phi, switch=True)
+        return self.jump_to_new_node(phi=phi)
 
-        # recursively process the statements
-        for statement in statements:
-            self.add_statement(statement)
-
-        # link to the node that comes after
-        self.current_node.jump_to(loop.future_node)
 
 
 @define
