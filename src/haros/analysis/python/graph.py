@@ -177,6 +177,7 @@ class ProgramGraphBuilder:
     #current_id: ControlNodeId = ROOT_ID
     cfg: BasicControlFlowGraphBuilder = field(factory=BasicControlFlowGraphBuilder.from_scratch)
     data: DataScope = field(factory=DataScope.with_builtins)
+    nested_graphs: Dict[str, Any] = field(factory=dict)
 
     @classmethod
     def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
@@ -269,18 +270,15 @@ class ProgramGraphBuilder:
                 self.cfg.jump_to_new_node()
 
             elif statement.is_function_def or statement.is_class_def:
-                builder = ProgramGraphBuilder.from_scratch(name=statement.name)
-                if statement.is_function_def:
-                    builder.graph.asynchronous = statement.asynchronous
+                asynchronous = False if statement.is_class_def else statement.asynchronous
+                builder = ProgramGraphBuilder.from_scratch(
+                    name=statement.name,
+                    asynchronous=asynchronous,
+                )
                 for stmt in statement.body:
                     builder.add_statement(stmt)
                 builder.clean_up()
-                self.graph.nested_graphs[statement.name] = builder.graph
-
-    def start_dead_code(self):
-        # push a new node that propagates the current condition,
-        # but has no incoming links from other nodes
-        self._new_node(phi=self.current_node.condition, switch=True)
+                self.nested_graphs[statement.name] = builder.build()
 
     def clean_up(self):
         # removes useless nodes from the graph
@@ -289,6 +287,9 @@ class ProgramGraphBuilder:
                 continue
             if node.is_unreachable:
                 del self.graph.nodes[node.id]
+
+    def build(self):
+        return self  # FIXME
 
     def _build_branch(
         self,
