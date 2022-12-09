@@ -51,16 +51,16 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         return 1
 
     graph = get_launch_model(path)
-    #print(graph.pretty())
-    #print_subgraphs(graph.name, graph)
+    print(graph.pretty())
+    print_subgraphs(graph.name, graph)
 
-    qualified_name = 'launch.LaunchDescription'
-    print(f'Find calls to: `{qualified_name}`')
-    calls = find_qualified_function_call(graph, qualified_name)
-    for call in calls:
-        print(f'  > {call.name} (line {call.meta.line}, column {call.meta.column})')
-    if not calls:
-        print('-- no function calls were found --')
+    # qualified_name = 'launch.LaunchDescription'
+    # print(f'Find calls to: `{qualified_name}`')
+    # calls = find_qualified_function_call(graph, qualified_name)
+    # for call in calls:
+    #     print(f'  > {call.name} (line {call.meta.line}, column {call.meta.column})')
+    # if not calls:
+    #     print('-- no function calls were found --')
 
     return 0
 

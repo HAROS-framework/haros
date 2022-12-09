@@ -346,6 +346,13 @@ class BasicControlFlowGraphBuilder:
         phi = loop.break_condition.negate()
         return self.jump_to_new_node(phi=phi)
 
+    def build(self) -> ControlFlowGraph:
+        return ControlFlowGraph(
+            self.name,
+            root_id=self.root_id,
+            nodes=dict(self.nodes),
+            asynchronous=self.asynchronous,
+        )
 
 
 @define

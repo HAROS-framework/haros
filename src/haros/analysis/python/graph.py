@@ -9,7 +9,7 @@ from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tup
 
 from attrs import define, field, frozen
 
-from haros.analysis.python.cfg import BasicControlFlowGraphBuilder
+from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph
 from haros.analysis.python.dataflow import DataScope, PythonType
 from haros.analysis.python.logic import to_condition
 from haros.metamodel.common import VariantData
@@ -285,7 +285,7 @@ class ProgramGraphBuilder:
         self.cfg.clean_up()
 
     def build(self):
-        return self  # FIXME
+        return self.cfg.build()  # FIXME
 
     def _build_branch(
         self,
@@ -358,7 +358,7 @@ def from_module(module: PythonModule) -> ControlFlowGraph:
     for statement in module.statements:
         builder.add_statement(statement)
     builder.clean_up()
-    return builder.graph
+    return builder.build()
 
 
 def find_qualified_name(graph: ControlFlowGraph, full_name: str) -> List[PythonAst]:
