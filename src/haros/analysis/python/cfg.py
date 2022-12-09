@@ -248,6 +248,7 @@ class BasicControlFlowGraphBuilder:
                 del self.nodes[node.id]
 
     def jump_to_new_node(self, phi: LogicValue = TRUE) -> ControlNode:
+        # phi is the jump condition only
         this_node = self.current_node
         condition = this_node.condition.join(phi)
         node = self.new_node(condition)
@@ -256,6 +257,7 @@ class BasicControlFlowGraphBuilder:
         return node
 
     def new_node(self, phi: LogicValue = TRUE) -> ControlNode:
+        # phi is the full condition of the node
         uid = ControlNodeId(self._node_id_counter)
         while uid in self.nodes:
             self._node_id_counter += 1
@@ -312,17 +314,19 @@ class BasicControlFlowGraphBuilder:
         # register dangling branch to link to a new node later
         conditional.add_branch_leaf(self.current_node)
 
-    def start_looping(self):
-        guard_node = self._follow_up_node(switch=True)
-        future_node = self._new_node(guard_node.condition)
+    def start_looping(self) -> ControlNode:
+        guard_node = self.jump_to_new_node()
+        future_node = self.new_node(guard_node.condition)
         context = LoopingContext(guard_node, future_node)
         self._loop_stack.append(context)
+        return guard_node
 
-    def stop_looping(self):
+    def stop_looping(self) -> ControlNode:
         if not self._loop_stack:
             raise ControlFlowError.not_looping()
         context = self._loop_stack.pop()
         self.current_id = context.future_node.id
+        return context.future_node
 
     def build_loop(self, test: PythonExpression, statements: Iterable[PythonStatement]):
         # very similar to `_build_branch`

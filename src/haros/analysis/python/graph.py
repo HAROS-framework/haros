@@ -187,16 +187,15 @@ class ProgramGraphBuilder:
     def add_statement(self, statement: PythonStatement):
         if statement.is_while or statement.is_for:  # FIXME
             if statement.is_while:
-                phi = statement.condition
+                test = statement.condition
             else:
                 it = statement.iterator
                 variables = PythonTupleLiteral(it.variables)
-                phi = PythonBinaryOperator('in', variables, it.iterable)
-            guard_node = self._follow_up_node(switch=True)
-            self._start_looping(guard_node)
-            self._build_loop(phi, statement.body)
+                test = PythonBinaryOperator('in', variables, it.iterable)
+            self.cfg.start_looping()
+            self._build_loop(test, statement.body)
             self._build_loop_else(statement.else_branch)
-            self._stop_looping()
+            self.cfg.stop_looping()
 
         else:
             self.cfg.add_statement(statement)
@@ -332,6 +331,7 @@ class ProgramGraphBuilder:
         self.current_id = context.future_node.id
 
     def _build_loop(self, test: PythonExpression, statements: Iterable[PythonStatement]):
+        # FIXME
         # very similar to `_build_branch`
         # create and move to a new branch
         phi = to_condition(test)
@@ -345,6 +345,7 @@ class ProgramGraphBuilder:
         self.current_node.jump_to(self.loop_context.guard_node)
 
     def _build_loop_else(self, statements: Iterable[PythonStatement]):
+        # FIXME
         loop = self.loop_context
         self.current_id = loop.guard_node.id
 
