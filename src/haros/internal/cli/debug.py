@@ -50,9 +50,12 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
 
-    graph = get_launch_model(path)
+    graph, variables = get_launch_model(path)
     print(graph.pretty())
     print_subgraphs(graph.name, graph)
+
+    print('\n\nVariables:')
+    print_variables(variables)
 
     # qualified_name = 'launch.LaunchDescription'
     # print(f'Find calls to: `{qualified_name}`')
@@ -83,6 +86,16 @@ def print_subgraphs(name, graph):
                 print(node.pretty())
 
         print_subgraphs(full_name, subgraph)
+
+
+def print_variables(variables):
+    for name, var in variables.items():
+        if var.has_values:
+            for variant in var.possible_values():
+                if variant.value.import_base != '__builtins__':
+                    print(f' #{name} = {variant}')
+        else:
+            print(f' #{name} has no definitions')
 
 
 ###############################################################################

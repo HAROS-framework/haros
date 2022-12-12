@@ -202,7 +202,10 @@ class ProgramGraphBuilder:
         else:
             self.cfg.add_statement(statement)
 
-            if statement.is_break:  # FIXME
+            if statement.is_import:
+                self.data.add_import(statement)
+
+            elif statement.is_break:  # FIXME
                 self.loop_context.break_from(this_node)
                 self.cfg.start_dead_code()
 
@@ -279,7 +282,7 @@ class ProgramGraphBuilder:
                 for stmt in statement.body:
                     builder.add_statement(stmt)
                 builder.clean_up()
-                self.nested_graphs[statement.name] = builder.build()
+                self.nested_graphs[statement.name] = builder.build()[0]  # FIXME
 
     def clean_up(self):
         self.cfg.clean_up()
@@ -288,7 +291,7 @@ class ProgramGraphBuilder:
         g = self.cfg.build()
         for name, cfg in self.nested_graphs.items():
             g.nested_graphs[name] = cfg
-        return g
+        return g, self.data.variables
 
     def _build_branch(
         self,
@@ -349,7 +352,7 @@ class ProgramGraphBuilder:
 ###############################################################################
 
 
-def from_ast(ast: PythonAst) -> ControlFlowGraph:
+def from_ast(ast: PythonAst) -> Any:
     if ast.is_module:
         return from_module(ast)
     if not ast.is_statement:
@@ -357,7 +360,7 @@ def from_ast(ast: PythonAst) -> ControlFlowGraph:
     raise TypeError(f'unexpected tree node: {ast!r}')
 
 
-def from_module(module: PythonModule) -> ControlFlowGraph:
+def from_module(module: PythonModule) -> Any:
     builder = ProgramGraphBuilder.from_scratch(name=module.name)
     for statement in module.statements:
         builder.add_statement(statement)

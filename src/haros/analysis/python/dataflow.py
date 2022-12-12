@@ -257,6 +257,12 @@ class DataFlowValue:
     def is_resolved(self) -> bool:
         return False
 
+    def cast_to(self, type: PythonType) -> 'DataFlowValue':
+        return evolve(self, type=type)
+
+    def pretty(self) -> str:
+        return f'(?) ({self.type})'
+
 
 @frozen
 class TypedValue(DataFlowValue):
@@ -265,6 +271,9 @@ class TypedValue(DataFlowValue):
     @property
     def is_resolved(self) -> bool:
         return True
+
+    def pretty(self) -> str:
+        return f'{value} ({self.type})'
 
 
 @frozen
@@ -281,15 +290,9 @@ class UnknownObject(DataFlowValue):
         self.__attrs_init__(PythonType.OBJECT, *args, **kwargs)
 
 
-# I think that control flow and data flow analyses will basically require a
-# transformed "AST" of sorts. It will have to mimic the structure of the AST
-# classes, but will have to include node ID, and possible values, along with
-# logic conditions.
-
-
 @frozen
 class Definition:
-    value: SomeValue
+    value: DataFlowValue
     ast: Optional[PythonAst] = None
     import_base: str = ''
 
@@ -352,52 +355,58 @@ class Definition:
     @classmethod
     def of_builtin_function(cls, name: str) -> 'Definition':
         #value = getattr(__builtins__, name)
-        value = __builtins__.get(name)
-        assert callable(value),  f'expected function, got: {value!r}'
-        return cls(value, type=PythonType.FUNCTION, import_base=BUILTINS_MODULE)
+        raw_value = __builtins__.get(name)
+        assert callable(raw_value),  f'expected function, got: {raw_value!r}'
+        value = TypedValue(PythonType.FUNCTION, raw_value)
+        return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
     def of_builtin_class(cls, name: str) -> 'Definition':
         #value = getattr(__builtins__, name)
-        value = __builtins__.get(name)
-        assert isinstance(value, type), f'expected class, got: {value!r}'
-        return cls(value, type=PythonType.CLASS, import_base=BUILTINS_MODULE)
+        raw_value = __builtins__.get(name)
+        assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
+        value = TypedValue(PythonType.CLASS, raw_value)
+        return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
     def of_builtin_exception(cls, name: str) -> 'Definition':
         #value = getattr(__builtins__, name)
-        value = __builtins__.get(name)
-        assert isinstance(value, type), f'expected class, got: {value!r}'
-        assert issubclass(value, BaseException), f'expected exception, got: {value!r}'
-        return cls(value, type=PythonType.EXCEPTION, import_base=BUILTINS_MODULE)
+        raw_value = __builtins__.get(name)
+        assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
+        assert issubclass(raw_value, BaseException), f'expected exception, got: {raw_value!r}'
+        value = TypedValue(PythonType.EXCEPTION, raw_value)
+        return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def from_value(cls, value: Any, ast: Optional[PythonAst] = None) -> 'Definition':
-        if value is UNKNOWN_VALUE:
-            return cls(value, ast=ast)
-        if isinstance(value, bool):
-            return cls(value, type=PythonType.BOOL, ast=ast)
-        if isinstance(value, int):
-            return cls(value, type=PythonType.INT, ast=ast)
-        if isinstance(value, float):
-            return cls(value, type=PythonType.FLOAT, ast=ast)
-        if isinstance(value, str):
-            return cls(value, type=PythonType.STRING, ast=ast)
-        if isinstance(value, BaseException):
-            return cls(value, type=PythonType.EXCEPTION, ast=ast)
-        if isinstance(value, type):
-            return cls(value, type=PythonType.CLASS, ast=ast)
-        if callable(value):
-            return cls(value, type=PythonType.FUNCTION, ast=ast)
-        return cls(value, type=PythonType.OBJECT, ast=ast)
+    def from_value(cls, raw_value: Any, ast: Optional[PythonAst] = None) -> 'Definition':
+        if isinstance(raw_value, bool):
+            return cls(TypedValue(PythonType.BOOL, raw_value), ast=ast)
+        if isinstance(raw_value, int):
+            return cls(TypedValue(PythonType.INT, raw_value), ast=ast)
+        if isinstance(raw_value, float):
+            return cls(TypedValue(PythonType.FLOAT, raw_value), ast=ast)
+        if isinstance(raw_value, str):
+            return cls(TypedValue(PythonType.STRING, raw_value), ast=ast)
+        if isinstance(raw_value, BaseException):
+            return cls(TypedValue(PythonType.EXCEPTION, raw_value), ast=ast)
+        if isinstance(raw_value, type):
+            return cls(TypedValue(PythonType.CLASS, raw_value), ast=ast)
+        if callable(raw_value):
+            return cls(TypedValue(PythonType.FUNCTION, raw_value), ast=ast)
+        return cls(TypedValue(PythonType.OBJECT, raw_value), ast=ast)
 
-    def cast_to(self, value_type: PythonType) -> 'Definition':
-        if self.type == value_type:
+    def cast_to(self, type: PythonType) -> 'Definition':
+        if self.value.type == type:
             return self
-        new_type = self.type & value_type
+        new_type = self.value.type & type
         if bool(new_type):
-            return evolve(self, type=new_type)
-        raise TypeError(f'unable to cast {self.type} to {value_type}')
+            return evolve(self, value=self.value.cast_to(type))
+        raise TypeError(f'unable to cast {self.value.type} to {type}')
+
+    def __str__(self) -> str:
+        if self.import_base:
+            return f'{self.value} (import from {self.import_base})'
+        return f'{self.value}'
 
 
 ###############################################################################
@@ -431,13 +440,33 @@ class DataScope:
     def set(
         self,
         name: str,
-        value: Any,
+        value: DataFlowValue,
+        ast: Optional[PythonAst] = None,
+        import_base: str = '',
+    ):
+        definition = Definition(value, ast=ast, import_base=import_base)
+        self.define(name, definition)
+
+    def set_raw_value(
+        self,
+        name: str,
+        raw_value: Any,
         type: PythonType = PythonType.ANY,
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
-        definition = Definition(value, type=type, ast=ast, import_base=import_base)
-        self.define(name, definition)
+        value = TypedValue(type, raw_value)
+        return self.set(name, value, ast=ast, import_base=import_base)
+
+    def set_unknown(
+        self,
+        name: str,
+        type: PythonType = PythonType.ANY,
+        ast: Optional[PythonAst] = None,
+        import_base: str = '',
+    ):
+        value = UnknownValue(type)
+        return self.set(name, value, ast=ast, import_base=import_base)
 
     def define(self, name: str, definition: Definition):
         var = self.variables.get(name)
@@ -453,8 +482,7 @@ class DataScope:
                 continue  # FIXME TODO
             name = imported_name.alias if imported_name.alias else imported_name.name
             import_base = imported_name.base.dotted_name
-            value = UnknownValue(UNKNOWN_VALUE, PythonType.ANY, module=import_base)
-            self.set(name, value, ast=statement, import_base=import_base)
+            self.set_unknown(name, ast=statement, import_base=import_base)
 
     def add_function_def(self, statement: PythonFunctionDefStatement):
         assert statement.is_statement and statement.is_function_def
@@ -479,7 +507,7 @@ class DataScope:
         value = self.value_from_expression(statement.value)
         self.set(name, value, type=value.type, ast=statement)
 
-    def value_from_expression(self, expression: PythonExpression) -> SomeValue:
+    def value_from_expression(self, expression: PythonExpression) -> DataFlowValue:
         assert expression.is_expression
         if expression.is_literal:
             return self.value_from_literal(expression)
@@ -508,7 +536,7 @@ class DataScope:
             return UnknownValue.of_type(PythonType.ANY)
         return UnknownValue.of_type(PythonType.ANY)
 
-    def value_from_literal(self, literal: PythonLiteral) -> SomeValue:
+    def value_from_literal(self, literal: PythonLiteral) -> DataFlowValue:
         assert literal.is_expression and literal.is_literal
         if literal.is_none:
             return TypedValue(None, PythonType.OBJECT)
@@ -526,7 +554,7 @@ class DataScope:
         # TODO FIXME
         return UnknownValue.of_type(PythonType.OBJECT)
 
-    def value_from_reference(self, reference: PythonReference) -> SomeValue:
+    def value_from_reference(self, reference: PythonReference) -> DataFlowValue:
         if reference.object is not None:
             obj, t = self.value_from_expression(reference.object)
             if not t.can_have_attributes():
