@@ -481,18 +481,18 @@ class DataScope:
             if imported_name.is_wildcard:
                 continue  # FIXME TODO
             name = imported_name.alias if imported_name.alias else imported_name.name
-            import_base = imported_name.base.dotted_name
+            import_base = imported_name.base.dotted_name or imported_name.name
             self.set_unknown(name, ast=statement, import_base=import_base)
 
     def add_function_def(self, statement: PythonFunctionDefStatement):
         assert statement.is_statement and statement.is_function_def
-        self.set(statement.name, UnknownValue.of_type(PythonType.FUNCTION), type=PythonType.FUNCTION, ast=statement)
+        self.set_unknown(statement.name, type=PythonType.FUNCTION, ast=statement)
 
     def add_class_def(self, statement: PythonClassDefStatement):
         assert statement.is_statement and statement.is_class_def
-        self.set(statement.name, UnknownValue.of_type(PythonType.CLASS), type=PythonType.CLASS, ast=statement)
+        self.set_unknown(statement.name, type=PythonType.CLASS, ast=statement)
 
-    def add_assignment(self, statement: PythonAssignmentStatement):
+    def add_assignment(self, statement: PythonAssignmentStatement):  # FIXME
         assert statement.is_statement and statement.is_assignment
         if statement.is_packed or statement.is_unpacked:
             return  # FIXME TODO

@@ -92,8 +92,11 @@ def print_variables(variables):
     for name, var in variables.items():
         if var.has_values:
             for variant in var.possible_values():
-                if variant.value.import_base != '__builtins__':
-                    print(f' #{name} = {variant}')
+                if variant.value.import_base == '__builtins__':
+                    continue
+                if variant.value.import_base:
+                    continue  # skip imported names
+                print(f' #{name} = {variant}')
         else:
             print(f' #{name} has no definitions')
 

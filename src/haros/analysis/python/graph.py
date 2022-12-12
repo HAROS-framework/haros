@@ -274,7 +274,12 @@ class ProgramGraphBuilder:
                 self.cfg.jump_to_new_node()
 
             elif statement.is_function_def or statement.is_class_def:
-                asynchronous = False if statement.is_class_def else statement.asynchronous
+                if statement.is_class_def:
+                    asynchronous = False
+                    self.data.add_class_def(statement)
+                else:
+                    asynchronous = statement.asynchronous
+                    self.data.add_function_def(statement)
                 builder = ProgramGraphBuilder.from_scratch(
                     name=statement.name,
                     asynchronous=asynchronous,
