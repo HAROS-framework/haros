@@ -175,8 +175,6 @@ BUILTIN_EXCEPTIONS: Final[List[str]] = [
     'ResourceWarning',
 ]
 
-UNKNOWN_VALUE: Final[object] = object()
-
 
 class PythonType(enum.Flag):
     NONE = enum.auto()
@@ -252,33 +250,35 @@ class PythonType(enum.Flag):
 
 
 @frozen
-class TypedValue:
-    value: Any
-    type: PythonType
+class DataFlowValue:
+    type: PythonType = field()
+
+    @property
+    def is_resolved(self) -> bool:
+        return False
 
 
 @frozen
-class UnknownObject:
+class TypedValue(DataFlowValue):
+    value: Any
+
+    @property
+    def is_resolved(self) -> bool:
+        return True
+
+
+@frozen
+class UnknownValue(DataFlowValue):
+    pass
+
+
+@frozen
+class UnknownObject(DataFlowValue):
     attributes: Dict[str, TypedValue] = field(factory=dict)
     keys: Dict[Any, TypedValue] = field(factory=dict)
 
-    @property
-    def type(self) -> PythonType:
-        return PythonType.OBJECT
-
-
-@frozen
-class UnknownValue:
-    token: Any  # something abstract that represents the value
-    type: PythonType
-    module: str = ''  # where does it come from; empty string is current module
-
-    @classmethod
-    def of_type(cls, type: PythonType) -> 'UnknownValue':
-        return cls(UNKNOWN_VALUE, type)
-
-
-SomeValue = Union[TypedValue, UnknownValue]
+    def __init__(self, *args, **kwargs):
+        self.__attrs_init__(PythonType.OBJECT, *args, **kwargs)
 
 
 # I think that control flow and data flow analyses will basically require a
@@ -289,8 +289,7 @@ SomeValue = Union[TypedValue, UnknownValue]
 
 @frozen
 class Definition:
-    value: Any
-    type: PythonType = PythonType.ANY
+    value: SomeValue
     ast: Optional[PythonAst] = None
     import_base: str = ''
 
