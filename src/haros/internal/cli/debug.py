@@ -52,10 +52,10 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 
     graph, variables = get_launch_model(path)
     print(graph.pretty())
-    print_subgraphs(graph.name, graph)
-
-    print('\n\nVariables:')
+    print('\nVariables:')
     print_variables(variables)
+
+    print_subgraphs(graph.name, graph)
 
     # qualified_name = 'launch.LaunchDescription'
     # print(f'Find calls to: `{qualified_name}`')
@@ -74,7 +74,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 
 
 def print_subgraphs(name, graph):
-    for subgraph in graph.nested_graphs.values():
+    for subgraph, variables in graph.nested_graphs.values():
         full_name = f'{name}/{subgraph.name}'
         print('')
         print(f'>> {name}')
@@ -84,6 +84,10 @@ def print_subgraphs(name, graph):
             if node.id != subgraph.root_id and node.is_unreachable:
                 print('')
                 print(node.pretty())
+
+        print('')
+        print('Variables')
+        print_variables(variables)
 
         print_subgraphs(full_name, subgraph)
 

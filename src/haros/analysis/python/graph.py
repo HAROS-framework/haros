@@ -205,6 +205,9 @@ class ProgramGraphBuilder:
             if statement.is_import:
                 self.data.add_import(statement)
 
+            elif statement.is_assignment:
+                self.data.add_assignment(statement)
+
             elif statement.is_break:  # FIXME
                 self.loop_context.break_from(this_node)
                 self.cfg.start_dead_code()
@@ -287,7 +290,7 @@ class ProgramGraphBuilder:
                 for stmt in statement.body:
                     builder.add_statement(stmt)
                 builder.clean_up()
-                self.nested_graphs[statement.name] = builder.build()[0]  # FIXME
+                self.nested_graphs[statement.name] = builder.build()  # FIXME
 
     def clean_up(self):
         self.cfg.clean_up()

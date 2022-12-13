@@ -492,7 +492,7 @@ class DataScope:
         assert statement.is_statement and statement.is_class_def
         self.set_unknown(statement.name, type=PythonType.CLASS, ast=statement)
 
-    def add_assignment(self, statement: PythonAssignmentStatement):  # FIXME
+    def add_assignment(self, statement: PythonAssignmentStatement):
         assert statement.is_statement and statement.is_assignment
         if statement.is_packed or statement.is_unpacked:
             return  # FIXME TODO
@@ -505,7 +505,7 @@ class DataScope:
             return  # FIXME TODO
         name = variable.name
         value = self.value_from_expression(statement.value)
-        self.set(name, value, type=value.type, ast=statement)
+        self.set(name, value, ast=statement)
 
     def value_from_expression(self, expression: PythonExpression) -> DataFlowValue:
         assert expression.is_expression
@@ -514,55 +514,55 @@ class DataScope:
         if expression.is_reference:
             return self.value_from_reference(expression)
         if expression.is_item_access:
-            return UnknownValue.of_type(PythonType.ANY)
+            return UnknownValue(PythonType.ANY)
         if expression.is_function_call:
-            return UnknownValue.of_type(PythonType.ANY)
+            return UnknownValue(PythonType.ANY)
         if expression.is_star_expression:
-            return UnknownValue.of_type(PythonType.OBJECT)
+            return UnknownValue(PythonType.OBJECT)
         if expression.is_generator:
-            return UnknownValue.of_type(PythonType.OBJECT)
+            return UnknownValue(PythonType.OBJECT)
         if expression.is_operator:
-            return UnknownValue.of_type(PythonType.ANY)
+            return UnknownValue(PythonType.ANY)
         if expression.is_conditional:
-            return UnknownValue.of_type(PythonType.ANY)
+            return UnknownValue(PythonType.ANY)
         if expression.is_lambda:
-            return UnknownValue.of_type(PythonType.FUNCTION)
+            return UnknownValue(PythonType.FUNCTION)
         if expression.is_assignment:
             # Python >= 3.8
-            return UnknownValue.of_type(PythonType.ANY)
+            return UnknownValue(PythonType.ANY)
         if expression.is_yield:
-            return UnknownValue.of_type(PythonType.ANY)
+            return UnknownValue(PythonType.ANY)
         if expression.is_await:
-            return UnknownValue.of_type(PythonType.ANY)
-        return UnknownValue.of_type(PythonType.ANY)
+            return UnknownValue(PythonType.ANY)
+        return UnknownValue(PythonType.ANY)
 
     def value_from_literal(self, literal: PythonLiteral) -> DataFlowValue:
         assert literal.is_expression and literal.is_literal
         if literal.is_none:
-            return TypedValue(None, PythonType.OBJECT)
+            return TypedValue(PythonType.OBJECT, None)
         if literal.is_bool:
-            return TypedValue(literal.value, PythonType.BOOL)
+            return TypedValue(PythonType.BOOL, literal.value)
         if literal.is_number:
             if literal.is_int:
-                return TypedValue(literal.value, PythonType.INT)
+                return TypedValue(PythonType.INT, literal.value)
             if literal.is_float:
-                return TypedValue(literal.value, PythonType.FLOAT)
+                return TypedValue(PythonType.FLOAT,literal.value)
             if literal.is_complex:
-                return TypedValue(literal.value, PythonType.COMPLEX)
+                return TypedValue(PythonType.COMPLEX, literal.value)
         if literal.is_string:
-            return TypedValue(literal.value, PythonType.STRING)
+            return TypedValue(PythonType.STRING, literal.value)
         # TODO FIXME
-        return UnknownValue.of_type(PythonType.OBJECT)
+        return UnknownValue(PythonType.OBJECT)
 
     def value_from_reference(self, reference: PythonReference) -> DataFlowValue:
         if reference.object is not None:
             obj, t = self.value_from_expression(reference.object)
             if not t.can_have_attributes():
-                return UnknownValue.of_type(PythonType.ANY)
-            return UnknownValue.of_type(PythonType.ANY)
+                return UnknownValue(PythonType.ANY)
+            return UnknownValue(PythonType.ANY)
         var = self.get(reference.name)
         if not var.has_values or not var.is_deterministic:
-            return UnknownValue.of_type(PythonType.ANY)
+            return UnknownValue(PythonType.ANY)
         assert var.has_base_value
         definition = var.get()
         return definition.value
