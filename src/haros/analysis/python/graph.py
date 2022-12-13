@@ -308,13 +308,15 @@ class ProgramGraphBuilder:
     ):
         if test is None:
             # create and move to a new branch
-            psi = self.cfg.add_else_branch()
+            psi = self.cfg.add_else_branch().condition
         else:
             # data flow analysis on the condition
-            # phi = self.logic_solver.to_condition(test)  # FIXME
-            phi = to_condition(test)
+            phi = self.data.evaluate_condition(test)
             # create and move to a new branch
-            psi = self.cfg.add_branch(phi)
+            psi = self.cfg.add_branch(phi).condition
+
+        # update the logic condition for data flow analysis
+        self.data.push_condition(psi)
 
         # recursively process the statements
         for statement in body:
@@ -322,6 +324,7 @@ class ProgramGraphBuilder:
 
         # link to the node that comes after
         self.cfg.close_branch()
+        self.data.pop_condition()
 
     def _build_except_clause(self, clause: PythonExceptClause):  # FIXME
         #node = self._new_node(this_node.condition)

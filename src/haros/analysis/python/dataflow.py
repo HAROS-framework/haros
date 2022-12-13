@@ -12,7 +12,7 @@ import enum
 from attrs import define, evolve, field, frozen
 
 from haros.metamodel.common import VariantData
-from haros.metamodel.logic import TRUE, LogicValue
+from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
 from haros.parsing.python.ast import (
     PythonAssignmentStatement,
     PythonAst,
@@ -436,7 +436,13 @@ class Definition:
 @define
 class DataScope:
     variables: Dict[str, VariantData[Definition]] = field(factory=dict)
-    condition: LogicValue = TRUE
+    _condition_stack: List[LogicValue] = field(init=False, factory=list)
+
+    @property
+    def condition(self) -> LogicValue:
+        if not self._condition_stack:
+            return TRUE
+        return self._condition_stack[-1]
 
     @classmethod
     def with_builtins(cls) -> 'DataScope':
@@ -494,6 +500,12 @@ class DataScope:
             self.variables[name] = var
         var.set(definition, self.condition)
 
+    def push_condition(self, condition: LogicValue):
+        self._condition_stack.append(condition)
+
+    def pop_condition(self) -> LogicValue:
+        self._condition_stack.pop()
+
     def add_import(self, statement: PythonImportStatement):
         assert statement.is_statement and statement.is_import
         for imported_name in statement.names:
@@ -525,6 +537,13 @@ class DataScope:
         name = variable.name
         value = self.value_from_expression(statement.value)
         self.set(name, value, ast=statement)
+
+    def evaluate_condition(self, expression: PythonExpression) -> LogicValue:
+        # FIXME this can be improved to actually convert operators into logic
+        value = self.value_from_expression(expression)
+        if value.is_resolved:
+            return TRUE if bool(value.value) else FALSE
+        return LogicVariable(data=expression)
 
     def value_from_expression(self, expression: PythonExpression) -> DataFlowValue:
         assert expression.is_expression
