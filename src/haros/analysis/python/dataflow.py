@@ -16,12 +16,15 @@ from haros.metamodel.logic import TRUE, LogicValue
 from haros.parsing.python.ast import (
     PythonAssignmentStatement,
     PythonAst,
+    PythonBinaryOperator,
     PythonClassDefStatement,
     PythonExpression,
     PythonFunctionDefStatement,
     PythonImportStatement,
     PythonLiteral,
+    PythonOperator,
     PythonReference,
+    PythonUnaryOperator,
 )
 
 ###############################################################################
@@ -195,51 +198,67 @@ class PythonType(enum.Flag):
     OBJECTS = STRING | ITERABLE | MAPPING | OBJECT
     ANY = ATOMIC | DEFINITIONS | OBJECT
 
+    @property
     def can_be_bool(self) -> bool:
         return bool(self & PythonType.BOOL)
 
+    @property
     def can_be_int(self) -> bool:
         return bool(self & PythonType.INT)
 
+    @property
     def can_be_float(self) -> bool:
         return bool(self & PythonType.FLOAT)
 
+    @property
     def can_be_complex(self) -> bool:
         return bool(self & PythonType.COMPLEX)
 
+    @property
     def can_be_number(self) -> bool:
         return bool(self & PythonType.NUMBER)
 
+    @property
     def can_be_string(self) -> bool:
         return bool(self & PythonType.STRING)
 
+    @property
     def can_be_atomic(self) -> bool:
         return bool(self & PythonType.ATOMIC)
 
+    @property
     def can_be_function(self) -> bool:
         return bool(self & PythonType.FUNCTION)
 
+    @property
     def can_be_class(self) -> bool:
         return bool(self & PythonType.CLASS)
 
+    @property
     def can_be_exception(self) -> bool:
         return bool(self & PythonType.EXCEPTION)
 
+    @property
     def can_be_definitions(self) -> bool:
         return bool(self & PythonType.DEFINITIONS)
 
+    @property
     def can_be_iterable(self) -> bool:
         return bool(self & PythonType.ITERABLE)
 
+    @property
     def can_be_mapping(self) -> bool:
         return bool(self & PythonType.MAPPING)
 
+    @property
     def can_be_object(self) -> bool:
         return bool(self & PythonType.OBJECT)
 
+    @property
     def can_be_any_object(self) -> bool:
         return bool(self & PythonType.OBJECTS)
 
+    @property
     def can_have_attributes(self) -> bool:
         return not self.can_be_number() and not self.can_be_bool()
 
@@ -522,7 +541,7 @@ class DataScope:
         if expression.is_generator:
             return UnknownValue(PythonType.OBJECT)
         if expression.is_operator:
-            return UnknownValue(PythonType.ANY)
+            return self.value_from_operator(expression)
         if expression.is_conditional:
             return UnknownValue(PythonType.ANY)
         if expression.is_lambda:
@@ -566,3 +585,112 @@ class DataScope:
         assert var.has_base_value
         definition = var.get()
         return definition.value
+
+    def value_from_operator(self, operator: PythonOperator) -> DataFlowValue:
+        assert operator.is_operator
+        if operator.is_unary:
+            return self.value_from_unary_operator(operator)
+        if operator.is_binary:
+            return self.value_from_binary_operator(operator)
+        return UnknownValue(PythonType.ANY)
+
+    def value_from_unary_operator(self, operator: PythonUnaryOperator) -> DataFlowValue:
+        assert operator.is_unary
+        value = self.value_from_expression(operator.operand)
+        if operator.is_bitwise:
+            if not value.type.can_be_int:
+                raise DataFlowError.type_check('INT', value.type.name, value)
+            if not value.is_resolved:
+                return UnknownValue(PythonType.INT)
+            r = ~value.value
+            return TypedValue(PythonType.INT, r)
+        if operator.is_arithmetic:
+            if not value.type.can_be_number:
+                raise DataFlowError.type_check('NUMBER', value.type.name, value)
+            if not value.is_resolved:
+                return UnknownValue(PythonType.NUMBER)
+            if operator.operator == '+':
+                r = +value.value
+            elif operator.operator == '-':
+                r = -value.value
+            else:
+                return UnknownValue(PythonType.NUMBER)
+            # TODO FIXME refine return type
+            return TypedValue(PythonType.NUMBER, r)
+        if operator.is_logic:
+            if not value.is_resolved:
+                return UnknownValue(PythonType.BOOL)
+            r = not value.value
+            return TypedValue(PythonType.BOOL, r)
+        return UnknownValue(PythonType.ANY)
+
+    def value_from_binary_operator(self, operator: PythonBinaryOperator) -> DataFlowValue:
+        assert operator.is_binary
+        a = self.value_from_expression(operator.operand1)
+        b = self.value_from_expression(operator.operand2)
+        o = operator.operator
+        if not a.is_resolved:
+            return UnknownValue(PythonType.ANY)
+        if not b.is_resolved:
+            return UnknownValue(PythonType.ANY)
+        if operator.is_logic:
+            if o == 'and':
+                r = a.value and b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == 'or':
+                r = a.value or b.value
+                return TypedValue(PythonType.BOOL, r)
+            return UnknownValue(PythonType.BOOL)
+        if operator.is_comparison:
+            if o == '==':
+                r = a.value == b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == '!=':
+                r = a.value != b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == '<':
+                r = a.value < b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == '<=':
+                r = a.value <= b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == '>':
+                r = a.value > b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == '>=':
+                r = a.value >= b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == 'in':
+                r = a.value in b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == 'not in':
+                r = a.value not in b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == 'is':
+                r = a.value is b.value
+                return TypedValue(PythonType.BOOL, r)
+            if o == 'is not':
+                r = a.value is not b.value
+                return TypedValue(PythonType.BOOL, r)
+            return UnknownValue(PythonType.BOOL)
+        if operator.is_arithmetic:
+            if o == '+':
+                r = a.value + b.value
+                return TypedValue(PythonType.NUMBER, r)
+            if o == '-':
+                r = a.value - b.value
+                return TypedValue(PythonType.NUMBER, r)
+            if o == '*':
+                r = a.value * b.value
+                return TypedValue(PythonType.NUMBER, r)
+            if o == '/':
+                r = a.value / b.value
+                return TypedValue(PythonType.NUMBER, r)
+            if o == '//':
+                r = a.value // b.value
+                return TypedValue(PythonType.INT, r)
+            if o == '**':
+                r = a.value ** b.value
+                return TypedValue(PythonType.NUMBER, r)
+            return UnknownValue(PythonType.NUMBER)
+        return UnknownValue(PythonType.ANY)

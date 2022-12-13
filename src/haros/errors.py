@@ -53,3 +53,7 @@ class ControlFlowError(AnalysisError):
 
 class DataFlowError(AnalysisError):
     """Errors related to data flow analysis."""
+
+    @classmethod
+    def type_check(cls, expected: str, found: str, expr) -> 'DataFlowError':
+        return cls(f'type check failed: expected {expected}, found {found}: {expr}')
