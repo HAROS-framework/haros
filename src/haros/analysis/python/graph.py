@@ -287,6 +287,7 @@ class ProgramGraphBuilder:
                     name=statement.name,
                     asynchronous=asynchronous,
                 )
+                builder.data = self.data.duplicate()
                 for stmt in statement.body:
                     builder.add_statement(stmt)
                 builder.clean_up()
