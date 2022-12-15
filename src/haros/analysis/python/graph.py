@@ -224,9 +224,13 @@ class ProgramGraphBuilder:
                 self.cfg.jump_to_new_node()
 
             elif statement.is_assert:
-                phi = to_condition(statement.condition)  # FIXME
-                # self.jump_to_new_node(phi.negate())  # terminal node
-                self.cfg.jump_to_new_node(phi)
+                # data flow analysis on the condition
+                phi = self.data.evaluate_condition(statement.condition)
+                if phi.is_false:
+                    self.cfg.start_dead_code()
+                else:
+                    # self.jump_to_new_node(phi.negate())  # terminal node
+                    self.cfg.jump_to_new_node(phi)
 
             elif statement.is_if:
                 self.cfg.start_branching()
