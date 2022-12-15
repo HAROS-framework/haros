@@ -46,3 +46,7 @@ def basic_if_control_flow():
 
 def sum_args(a, b=0):
     return a + b
+
+
+def basic_function_call():
+    return sum_args(THE_X - 2, 2)

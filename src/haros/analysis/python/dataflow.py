@@ -19,6 +19,7 @@ from haros.parsing.python.ast import (
     PythonBinaryOperator,
     PythonClassDefStatement,
     PythonExpression,
+    PythonFunctionCall,
     PythonFunctionDefStatement,
     PythonImportStatement,
     PythonLiteral,
@@ -520,7 +521,7 @@ class DataScope:
             import_base = imported_name.base.dotted_name or imported_name.name
             self.set_unknown(name, ast=statement, import_base=import_base)
 
-    def add_function_def(self, statement: PythonFunctionDefStatement):
+    def add_function_def(self, statement: PythonFunctionDefStatement, cb = None):
         assert statement.is_statement and statement.is_function_def
         self.set_unknown(statement.name, type=PythonType.FUNCTION, ast=statement)
 
@@ -566,7 +567,7 @@ class DataScope:
         if expression.is_item_access:
             return UnknownValue(PythonType.ANY)
         if expression.is_function_call:
-            return UnknownValue(PythonType.ANY)
+            return self.value_from_function_call(expression)
         if expression.is_star_expression:
             return UnknownValue(PythonType.OBJECT)
         if expression.is_generator:
@@ -724,4 +725,8 @@ class DataScope:
                 r = a.value ** b.value
                 return TypedValue(PythonType.NUMBER, r)
             return UnknownValue(PythonType.NUMBER)
+        return UnknownValue(PythonType.ANY)
+
+    def value_from_function_call(self, call: PythonFunctionCall) -> DataFlowValue:
+        function = self.value_from_expression(call.function)
         return UnknownValue(PythonType.ANY)
