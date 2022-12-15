@@ -50,10 +50,10 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
 
-    graph, variables = get_launch_model(path)
+    graph, data = get_launch_model(path)
     print(graph.pretty())
     print('\nVariables:')
-    print_variables(variables)
+    print_variables(data.variables)
 
     print_subgraphs(graph.name, graph)
 
@@ -74,7 +74,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 
 
 def print_subgraphs(name, graph):
-    for subgraph, variables in graph.nested_graphs.values():
+    for subgraph, data in graph.nested_graphs.values():
         full_name = f'{name}/{subgraph.name}'
         print('')
         print(f'>> {name}')
@@ -87,7 +87,11 @@ def print_subgraphs(name, graph):
 
         print('')
         print('Variables')
-        print_variables(variables)
+        print_variables(data.variables)
+        print('')
+        print('Return values:')
+        for r in data.return_values.possible_values():
+            print(' $', r)
 
         print_subgraphs(full_name, subgraph)
 

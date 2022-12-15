@@ -433,9 +433,14 @@ class Definition:
 ###############################################################################
 
 
+def _default_return_value() -> VariantData[DataFlowValue]:
+    return VariantData.with_base_value(TypedValue(PythonType.NONE, None))
+
+
 @define
 class DataScope:
     variables: Dict[str, VariantData[Definition]] = field(factory=dict)
+    return_values: VariantData[DataFlowValue] = field(factory=_default_return_value)
     _condition_stack: List[LogicValue] = field(init=False, factory=list)
 
     @property
@@ -537,6 +542,13 @@ class DataScope:
         name = variable.name
         value = self.value_from_expression(statement.value)
         self.set(name, value, ast=statement)
+
+    def add_return_value(self, expression: Optional[PythonExpression] = None):
+        if expression is None:
+            value = TypedValue(PythonType.NONE, None)
+        else:
+            value = self.value_from_expression(expression)
+        self.return_values.set(value, self.condition)
 
     def evaluate_condition(self, expression: PythonExpression) -> LogicValue:
         # FIXME this can be improved to actually convert operators into logic

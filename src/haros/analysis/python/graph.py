@@ -10,7 +10,7 @@ from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tup
 from attrs import define, field, frozen
 
 from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph
-from haros.analysis.python.dataflow import DataScope, PythonType
+from haros.analysis.python.dataflow import DataFlowValue, DataScope, PythonType, TypedValue
 from haros.analysis.python.logic import to_condition
 from haros.metamodel.common import VariantData
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
@@ -216,7 +216,11 @@ class ProgramGraphBuilder:
                 self.loop_context.continue_from(this_node)
                 self.cfg.start_dead_code()
 
-            elif statement.is_return or statement.is_raise:
+            elif statement.is_raise:  # FIXME
+                self.cfg.start_dead_code()
+
+            elif statement.is_return:
+                self.data.add_return_value(statement.value)
                 self.cfg.start_dead_code()
 
             elif statement.is_yield:
@@ -304,7 +308,7 @@ class ProgramGraphBuilder:
         g = self.cfg.build()
         for name, cfg in self.nested_graphs.items():
             g.nested_graphs[name] = cfg
-        return g, self.data.variables
+        return g, self.data
 
     def _build_branch(
         self,
