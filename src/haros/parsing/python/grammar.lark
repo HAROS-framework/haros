@@ -34,7 +34,7 @@ poststarparams: ("," paramvalue)* ["," kwparams]
 kwparams: "**" typedparam ","?
 
 ?paramvalue: typedparam ("=" test)?
-?typedparam: name (":" test)?
+typedparam: name (":" test)?
 
 
 lambdef: "lambda" [lambda_params] ":" test
