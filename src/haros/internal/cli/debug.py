@@ -50,12 +50,14 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
 
-    graph, data = get_launch_model(path)
+    builder = get_launch_model(path)
+    graph, data = builder.build()
     print(graph.pretty())
-    print('\nVariables:')
+    print('')
+    print('Variables:')
     print_variables(data.variables)
 
-    print_subgraphs(graph.name, graph)
+    print_subgraphs(builder)
 
     # qualified_name = 'launch.LaunchDescription'
     # print(f'Find calls to: `{qualified_name}`')
@@ -73,11 +75,14 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 ###############################################################################
 
 
-def print_subgraphs(name, graph):
-    for subgraph, data in graph.nested_graphs.values():
-        full_name = f'{name}/{subgraph.name}'
+def print_subgraphs(builder):
+    for name, statement in builder.nested_graphs.items():
+        # full_name = f'{builder.name}/{name}'
         print('')
         print(f'>> {name}')
+
+        subbuilder = builder.subgraph_builder(name)
+        subgraph, data = subbuilder.build()
         print(subgraph.pretty())
 
         for node in subgraph.nodes.values():
@@ -86,14 +91,14 @@ def print_subgraphs(name, graph):
                 print(node.pretty())
 
         print('')
-        print('Variables')
+        print('Variables:')
         print_variables(data.variables)
         print('')
         print('Return values:')
         for r in data.return_values.possible_values():
             print(' $', r)
 
-        print_subgraphs(full_name, subgraph)
+        print_subgraphs(subbuilder)
 
 
 def print_variables(variables):

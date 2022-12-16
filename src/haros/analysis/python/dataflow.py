@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Final, List, Optional, Tuple, Union
 
 import enum
 
@@ -292,6 +292,28 @@ class TypedValue(DataFlowValue):
     def is_resolved(self) -> bool:
         return True
 
+    @classmethod
+    def of(cls, raw_value: Any) -> 'TypedValue':
+        if raw_value is None:
+            return cls(PythonType.NONE, None)
+        if isinstance(raw_value, bool):
+            return cls(PythonType.BOOL, raw_value)
+        if isinstance(raw_value, int):
+            return cls(PythonType.INT, raw_value)
+        if isinstance(raw_value, float):
+            return cls(PythonType.FLOAT, raw_value)
+        if isinstance(raw_value, complex):
+            return cls(PythonType.COMPLEX, raw_value)
+        if isinstance(raw_value, str):
+            return cls(PythonType.STRING, raw_value)
+        if isinstance(raw_value, BaseException):
+            return cls(PythonType.EXCEPTION, raw_value)
+        if isinstance(raw_value, type):
+            return cls(PythonType.CLASS, raw_value)
+        if callable(raw_value):
+            return cls(PythonType.FUNCTION, raw_value)
+        return cls(PythonType.OBJECT, raw_value)
+
     def pretty(self) -> str:
         return f'{value} ({self.type})'
 
@@ -308,6 +330,22 @@ class UnknownObject(DataFlowValue):
 
     def __init__(self, *args, **kwargs):
         self.__attrs_init__(PythonType.OBJECT, *args, **kwargs)
+
+
+def builtin_function_wrapper(function: Callable) -> Callable:
+    # The purpose of this is just to make return values uniform.
+    def wrapper(*args, **kwargs) -> VariantData[DataFlowValue]:
+        for arg in args:
+            if not arg.is_resolved:
+                return UnknownValue(PythonType.ANY)
+        for arg in kwargs.values():
+            if not arg.is_resolved:
+                return UnknownValue(PythonType.ANY)
+        raw_args = [arg.value for arg in args]
+        raw_kwargs = {key: arg.value for key, arg in kwargs.items()}
+        raw_value = function(*raw_args, **raw_kwargs)
+        return VariantData.with_base_value(TypedValue.of(raw_value))
+    return wrapper
 
 
 @frozen
@@ -376,6 +414,7 @@ class Definition:
     def of_builtin_function(cls, name: str) -> 'Definition':
         #value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
+        raw_value = builtin_function_wrapper(raw_value)
         assert callable(raw_value),  f'expected function, got: {raw_value!r}'
         value = TypedValue(PythonType.FUNCTION, raw_value)
         return cls(value, import_base=BUILTINS_MODULE)
@@ -399,21 +438,7 @@ class Definition:
 
     @classmethod
     def from_value(cls, raw_value: Any, ast: Optional[PythonAst] = None) -> 'Definition':
-        if isinstance(raw_value, bool):
-            return cls(TypedValue(PythonType.BOOL, raw_value), ast=ast)
-        if isinstance(raw_value, int):
-            return cls(TypedValue(PythonType.INT, raw_value), ast=ast)
-        if isinstance(raw_value, float):
-            return cls(TypedValue(PythonType.FLOAT, raw_value), ast=ast)
-        if isinstance(raw_value, str):
-            return cls(TypedValue(PythonType.STRING, raw_value), ast=ast)
-        if isinstance(raw_value, BaseException):
-            return cls(TypedValue(PythonType.EXCEPTION, raw_value), ast=ast)
-        if isinstance(raw_value, type):
-            return cls(TypedValue(PythonType.CLASS, raw_value), ast=ast)
-        if callable(raw_value):
-            return cls(TypedValue(PythonType.FUNCTION, raw_value), ast=ast)
-        return cls(TypedValue(PythonType.OBJECT, raw_value), ast=ast)
+        return cls(TypedValue.of(raw_value), ast=ast)
 
     def cast_to(self, type: PythonType) -> 'Definition':
         if self.value.type == type:
@@ -523,7 +548,10 @@ class DataScope:
 
     def add_function_def(self, statement: PythonFunctionDefStatement, cb = None):
         assert statement.is_statement and statement.is_function_def
-        self.set_unknown(statement.name, type=PythonType.FUNCTION, ast=statement)
+        if cb is None:
+            self.set_unknown(statement.name, type=PythonType.FUNCTION, ast=statement)
+        else:
+            self.set_raw_value(statement.name, cb, type=PythonType.FUNCTION, ast=statement)
 
     def add_class_def(self, statement: PythonClassDefStatement):
         assert statement.is_statement and statement.is_class_def
@@ -728,5 +756,35 @@ class DataScope:
         return UnknownValue(PythonType.ANY)
 
     def value_from_function_call(self, call: PythonFunctionCall) -> DataFlowValue:
-        function = self.value_from_expression(call.function)
+        value = self.value_from_expression(call.function)
+        if not value.is_resolved:
+            return UnknownValue(PythonType.ANY)
+        if not value.type.can_be_function:
+            return UnknownValue(PythonType.ANY)
+        function = value.value
+        assert callable(function), f'not callable: {repr(function)}'
+        if not call.arguments:
+            return TypedValue.of(function())
+        args = []
+        kwargs = {}
+        for argument in call.arguments:
+            arg = self.value_from_expression(argument.value)
+            if argument.is_positional:
+                args.append(arg)
+            elif argument.is_key_value:
+                kwargs[argument.name] = arg
+            elif arg.is_resolved:
+                if argument.is_star:
+                    args.extend(arg)
+                elif argument.is_double_star:
+                    kwargs.update(arg)
+            else:
+                if argument.is_star:
+                    args.append(arg)
+                elif argument.is_double_star:
+                    # kwargs.update(arg)
+                    return UnknownValue(PythonType.ANY)  # FIXME
+        result = function(*args, **kwargs)
+        if result.has_values and result.is_deterministic:
+            return result.get()
         return UnknownValue(PythonType.ANY)

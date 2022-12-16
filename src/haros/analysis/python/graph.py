@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
 
 from attrs import define, field, frozen
 
@@ -22,6 +22,7 @@ from haros.parsing.python.ast import (
     PythonExpression,
     PythonForStatement,
     PythonFunctionCall,
+    PythonFunctionDefStatement,
     PythonModule,
     PythonStatement,
     PythonWhileStatement,
@@ -175,14 +176,15 @@ def statement_to_node(statement: PythonStatement, uid: ProgramNodeId) -> Program
 class ProgramGraphBuilder:
     #graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
     #current_id: ControlNodeId = ROOT_ID
+    name: str = '__main__'
     cfg: BasicControlFlowGraphBuilder = field(factory=BasicControlFlowGraphBuilder.from_scratch)
     data: DataScope = field(factory=DataScope.with_builtins)
-    nested_graphs: Dict[str, Any] = field(factory=dict)
+    nested_graphs: Dict[str, PythonStatement] = field(factory=dict)
 
     @classmethod
     def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
         cfg = BasicControlFlowGraphBuilder.from_scratch(name=name, asynchronous=asynchronous)
-        return cls(cfg=cfg)
+        return cls(name=name, cfg=cfg)
 
     def add_statement(self, statement: PythonStatement):
         if statement.is_while or statement.is_for:  # FIXME
@@ -290,25 +292,29 @@ class ProgramGraphBuilder:
                     self.data.add_class_def(statement)
                 else:
                     asynchronous = statement.asynchronous
-                    self.data.add_function_def(statement)
-                builder = ProgramGraphBuilder.from_scratch(
-                    name=statement.name,
-                    asynchronous=asynchronous,
-                )
-                builder.data = self.data.duplicate()
-                for stmt in statement.body:
-                    builder.add_statement(stmt)
-                builder.clean_up()
-                self.nested_graphs[statement.name] = builder.build()  # FIXME
+                    cb = self._function_interpreter(statement)
+                    self.data.add_function_def(statement, cb=cb)
+                self.nested_graphs[statement.name] = statement
 
     def clean_up(self):
         self.cfg.clean_up()
 
     def build(self):  # FIXME
         g = self.cfg.build()
-        for name, cfg in self.nested_graphs.items():
-            g.nested_graphs[name] = cfg
+        #for name, cfg in self.nested_graphs.items():
+        #    g.nested_graphs[name] = cfg
         return g, self.data
+
+    def subgraph_builder(self, name: str):
+        statement = self.nested_graphs[name]
+        assert statement.is_function_def or statement.is_class_def, repr(statement)
+        asynchronous = False if not statement.is_function_def else statement.asynchronous
+        builder = ProgramGraphBuilder.from_scratch(name=name, asynchronous=asynchronous)
+        builder.data = self.data.duplicate()
+        for stmt in statement.body:
+            builder.add_statement(stmt)
+        builder.clean_up()
+        return builder
 
     def _build_branch(
         self,
@@ -366,6 +372,57 @@ class ProgramGraphBuilder:
         for statement in body:
             self.add_statement(statement)
 
+    def _function_interpreter(self, function: PythonFunctionDefStatement) -> Callable:
+        # returns a callable that, given the proper arguments, interprets the function
+        # retains the current data scope (where the def appears) to act as globals
+        global_vars = self.data
+        # FIXME what to do if `len(function.decorators) > 0`?
+        def cb(*args, **kwargs) -> VariantData[DataFlowValue]:
+            # args and kwargs should be DataFlowValue
+            builder = ProgramGraphBuilder.from_scratch(
+                name=function.name,
+                asynchronous=function.asynchronous,
+            )
+            builder.data = global_vars.duplicate()
+            # assign arguments to parameters
+            stack = list(reversed(args))
+            mapping = dict(kwargs)
+            if function.parameters:
+                for param in function.parameters:
+                    # FIXME check parameter order (positional, standard, etc)?
+                    if param.is_positional:
+                        # FIXME check for errors here (num of args, etc)
+                        builder.data.set(param.name, stack.pop())
+                    elif param.is_standard:
+                        if stack:
+                            builder.data.set(param.name, stack.pop())
+                        else:
+                            value = mapping.get(param.name)
+                            if value is None:
+                                if param.default_value is None:
+                                    raise ValueError(f'expected argument for {param.name}')
+                                value = global_vars.value_from_expression(param.default_value)
+                            else:
+                                del mapping[param.name]
+                            builder.data.set(param.name, value)
+                    elif param.is_variadic_list:
+                        builder.data.set_raw_value(param.name, stack)  # FIXME
+                    elif param.is_keyword:
+                        value = mapping.get(param.name)
+                        if value is None:
+                            value = global_vars.value_from_expression(param.default_value)
+                        else:
+                            del mapping[param.name]
+                        builder.data.set(param.name, value)
+                    elif param.is_variadic_keywords:
+                        builder.data.set_raw_value(param.name, mapping)  # FIXME
+            for statement in function.body:
+                builder.add_statement(statement)
+            # builder.clean_up()
+            # builder.build()
+            return builder.data.return_values
+        return cb
+
 
 ###############################################################################
 # Interface
@@ -385,7 +442,8 @@ def from_module(module: PythonModule) -> Any:
     for statement in module.statements:
         builder.add_statement(statement)
     builder.clean_up()
-    return builder.build()
+    #return builder.build()
+    return builder
 
 
 def find_qualified_name(graph: ControlFlowGraph, full_name: str) -> List[PythonAst]:

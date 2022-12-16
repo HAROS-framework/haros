@@ -50,3 +50,7 @@ def sum_args(a, b=0):
 
 def basic_function_call():
     return sum_args(THE_X - 2, 2)
+
+
+def two_function_calls():
+    return max(sum_args(1, 1), 1)
