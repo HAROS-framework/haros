@@ -332,7 +332,14 @@ class UnknownObject(DataFlowValue):
         self.__attrs_init__(PythonType.OBJECT, *args, **kwargs)
 
 
-def builtin_function_wrapper(function: Callable) -> Callable:
+@frozen
+class FunctionWrapper:
+    function: str
+    module: str
+    call: Callable
+
+
+def builtin_function_wrapper(name: str, function: Callable) -> FunctionWrapper:
     # The purpose of this is just to make return values uniform.
     def wrapper(*args, **kwargs) -> VariantData[DataFlowValue]:
         for arg in args:
@@ -345,7 +352,7 @@ def builtin_function_wrapper(function: Callable) -> Callable:
         raw_kwargs = {key: arg.value for key, arg in kwargs.items()}
         raw_value = function(*raw_args, **raw_kwargs)
         return VariantData.with_base_value(TypedValue.of(raw_value))
-    return wrapper
+    return FunctionWrapper(name, '__builtins__', wrapper)
 
 
 @frozen
@@ -414,9 +421,9 @@ class Definition:
     def of_builtin_function(cls, name: str) -> 'Definition':
         #value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
-        raw_value = builtin_function_wrapper(raw_value)
         assert callable(raw_value),  f'expected function, got: {raw_value!r}'
-        value = TypedValue(PythonType.FUNCTION, raw_value)
+        wrapper = builtin_function_wrapper(name, raw_value)
+        value = TypedValue(PythonType.FUNCTION, wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
@@ -762,9 +769,10 @@ class DataScope:
         if not value.type.can_be_function:
             return UnknownValue(PythonType.ANY)
         function = value.value
-        assert callable(function), f'not callable: {repr(function)}'
+        assert isinstance(function, FunctionWrapper), f'not function wrapper: {repr(function)}'
+        assert callable(function.call), f'not callable: {repr(function.call)}'
         if not call.arguments:
-            return TypedValue.of(function())
+            return TypedValue.of(function.call())
         args = []
         kwargs = {}
         for argument in call.arguments:
@@ -784,7 +792,7 @@ class DataScope:
                 elif argument.is_double_star:
                     # kwargs.update(arg)
                     return UnknownValue(PythonType.ANY)  # FIXME
-        result = function(*args, **kwargs)
+        result = function.call(*args, **kwargs)
         if result.has_values and result.is_deterministic:
             return result.get()
         return UnknownValue(PythonType.ANY)

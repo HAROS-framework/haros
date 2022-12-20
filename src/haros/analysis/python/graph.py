@@ -10,7 +10,13 @@ from typing import Any, Callable, Dict, Final, Iterable, List, NewType, Optional
 from attrs import define, field, frozen
 
 from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph
-from haros.analysis.python.dataflow import DataFlowValue, DataScope, PythonType, TypedValue
+from haros.analysis.python.dataflow import (
+    DataFlowValue,
+    DataScope,
+    FunctionWrapper,
+    PythonType,
+    TypedValue,
+)
 from haros.analysis.python.logic import to_condition
 from haros.metamodel.common import VariantData
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
@@ -372,8 +378,8 @@ class ProgramGraphBuilder:
         for statement in body:
             self.add_statement(statement)
 
-    def _function_interpreter(self, function: PythonFunctionDefStatement) -> Callable:
-        # returns a callable that, given the proper arguments, interprets the function
+    def _function_interpreter(self, function: PythonFunctionDefStatement) -> FunctionWrapper:
+        # returns a wrapper that, given the proper arguments, interprets the function
         # retains the current data scope (where the def appears) to act as globals
         global_vars = self.data
         # FIXME what to do if `len(function.decorators) > 0`?
@@ -421,7 +427,7 @@ class ProgramGraphBuilder:
             # builder.clean_up()
             # builder.build()
             return builder.data.return_values
-        return cb
+        return FunctionWrapper(function.name, '__main__', cb)
 
 
 ###############################################################################
