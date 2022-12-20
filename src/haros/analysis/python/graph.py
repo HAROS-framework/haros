@@ -15,7 +15,6 @@ from haros.analysis.python.dataflow import (
     DataScope,
     FunctionWrapper,
     PythonType,
-    TypedValue,
 )
 from haros.analysis.python.logic import to_condition
 from haros.metamodel.common import VariantData
