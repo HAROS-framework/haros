@@ -37,5 +37,8 @@ def get_python_launch_model(path: Path) -> LaunchModel:
     ast = parse(code)
     #q = query(ast)
     #return q.functions().named(LAUNCH_ENTRY_POINT)
-    graph = from_ast(ast)
+    symbols = {
+        'mymodule.MY_CONSTANT': 44,
+    }
+    graph = from_ast(ast, symbols=symbols)
     return graph

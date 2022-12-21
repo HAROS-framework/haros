@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, NewType, Optional, Set, Tuple
 
 from attrs import define, field, frozen
 
@@ -191,6 +191,12 @@ class ProgramGraphBuilder:
         cfg = BasicControlFlowGraphBuilder.from_scratch(name=name, asynchronous=asynchronous)
         return cls(name=name, cfg=cfg)
 
+    def add_imported_function(self, name: str, module: str, function: Callable):
+        self.data.add_imported_function(name, module, function)
+
+    def add_imported_symbol(self, name: str, module: str, value: Any):
+        self.data.add_imported_symbol(name, module, value)
+
     def add_statement(self, statement: PythonStatement):
         if statement.is_while or statement.is_for:  # FIXME
             if statement.is_while:
@@ -298,7 +304,7 @@ class ProgramGraphBuilder:
                 else:
                     asynchronous = statement.asynchronous
                     cb = self._function_interpreter(statement)
-                    self.data.add_function_def(statement, cb=cb)
+                    self.data.add_function_def(statement, fun=cb)
                 self.nested_graphs[statement.name] = statement
 
     def clean_up(self):
@@ -434,21 +440,45 @@ class ProgramGraphBuilder:
 ###############################################################################
 
 
-def from_ast(ast: PythonAst) -> Any:
+def from_ast(ast: PythonAst, symbols: Optional[Mapping[str, Any]] = None) -> Any:
     if ast.is_module:
-        return from_module(ast)
+        return from_module(ast, symbols=symbols)
     if not ast.is_statement:
         raise TypeError(f'expected a statement, got {ast!r}')
     raise TypeError(f'unexpected tree node: {ast!r}')
 
 
-def from_module(module: PythonModule) -> Any:
+def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = None) -> Any:
     builder = ProgramGraphBuilder.from_scratch(name=module.name)
+    if symbols:
+        for key, value in symbols.items():
+            name, import_base = _split_names(key)
+            assert bool(name), f'expected non-empty name: {full_name}'
+            assert bool(import_base), f'expected non-empty import base: {full_name}'
+            if callable(value):
+                builder.add_imported_function(name, import_base, value)
+            else:
+                builder.add_imported_symbol(name, import_base, value)
     for statement in module.statements:
         builder.add_statement(statement)
     builder.clean_up()
     #return builder.build()
     return builder
+
+
+def _split_names(full_name: str) -> Tuple[str, str]:
+    initial = full_name
+    prefix = ''
+    if full_name.startswith('..'):
+        prefix = '..'
+        initial = full_name[2:]
+    elif full_name.startswith('.'):
+        prefix = '.'
+        initial = full_name[1:]
+    parts = initial.rsplit('.', maxsplit=1)
+    name = parts[-1] if len(parts) > 1 else ''
+    module = f'{prefix}{parts[0]}'
+    return name, module
 
 
 def find_qualified_name(graph: ControlFlowGraph, full_name: str) -> List[PythonAst]:

@@ -311,7 +311,7 @@ class DataFlowValue:
             return cls(PythonType.EXCEPTION, raw_value)
         if isinstance(raw_value, type):
             return cls(PythonType.CLASS, raw_value)
-        if callable(raw_value):
+        if isinstance(raw_value, FunctionWrapper) or callable(raw_value):
             return cls(PythonType.FUNCTION, raw_value)
         return cls(PythonType.OBJECT, raw_value)
 
@@ -343,6 +343,13 @@ def builtin_function_wrapper(name: str, function: Callable) -> FunctionWrapper:
         raw_value = function(*raw_args, **raw_kwargs)
         return VariantData.with_base_value(DataFlowValue.of(raw_value))
     return FunctionWrapper(name, '__builtins__', wrapper)
+
+
+def custom_function_wrapper(name: str, module: str, function: Callable) -> FunctionWrapper:
+    def wrapper(*args, **kwargs) -> VariantData[DataFlowValue]:
+        raw_value = function(*args, **kwargs)
+        return VariantData.with_base_value(DataFlowValue.of(raw_value))
+    return FunctionWrapper(name, module, wrapper)
 
 
 @frozen
@@ -465,6 +472,7 @@ class DataScope:
     variables: Dict[str, VariantData[Definition]] = field(factory=dict)
     return_values: VariantData[DataFlowValue] = field(factory=_default_return_value)
     _condition_stack: List[LogicValue] = field(init=False, factory=list)
+    _symbols: Dict[str, Any] = field(factory=dict)
 
     @property
     def condition(self) -> LogicValue:
@@ -534,21 +542,47 @@ class DataScope:
     def pop_condition(self) -> LogicValue:
         self._condition_stack.pop()
 
+    def add_imported_function(self, name: str, module: str, function: Callable):
+        wrapper = custom_function_wrapper(name, module, function)
+        self.add_imported_symbol(name, module, wrapper)
+
+    def add_imported_symbol(self, name: str, module: str, value: Any):
+        full_name = f'{module}.{name}' if module else name
+        print('\n\n')
+        print(f'Setting symbol "{full_name}" with value: {value}')
+        self._symbols[full_name] = value
+
     def add_import(self, statement: PythonImportStatement):
         assert statement.is_statement and statement.is_import
         for imported_name in statement.names:
             if imported_name.is_wildcard:
                 continue  # FIXME TODO
             name = imported_name.alias if imported_name.alias else imported_name.name
-            import_base = imported_name.base.dotted_name or imported_name.name
-            self.set_unknown(name, ast=statement, import_base=import_base)
+            import_base = imported_name.base.dotted_name
+            print('\n\n')
+            print(f'Import registry: "{name}" from "{import_base}"')
+            if import_base:
+                full_name = f'{import_base}.{imported_name.name}'
+                print(f'Lookup symbol: {full_name}')
+                print(f'Symbols: {self._symbols}')
+                if full_name in self._symbols:
+                    raw_value = self._symbols[full_name]
+                    print('\n\n\n')
+                    print(f'Setting symbol "{name}" with value: {raw_value}')
+                    value = DataFlowValue.of(raw_value)
+                    self.set(name, value, ast=statement, import_base=import_base)
+                else:
+                    self.set_unknown(name, ast=statement, import_base=import_base)
+            else:
+                import_base = imported_name.name
+                self.set_unknown(name, ast=statement, import_base=import_base)
 
-    def add_function_def(self, statement: PythonFunctionDefStatement, cb = None):
+    def add_function_def(self, statement: PythonFunctionDefStatement, fun: FunctionWrapper = None):
         assert statement.is_statement and statement.is_function_def
-        if cb is None:
+        if fun is None:
             self.set_unknown(statement.name, type=PythonType.FUNCTION, ast=statement)
         else:
-            self.set_raw_value(statement.name, cb, type=PythonType.FUNCTION, ast=statement)
+            self.set_raw_value(statement.name, fun, type=PythonType.FUNCTION, ast=statement)
 
     def add_class_def(self, statement: PythonClassDefStatement):
         assert statement.is_statement and statement.is_class_def
@@ -627,6 +661,11 @@ class DataScope:
                 return DataFlowValue(type=PythonType.COMPLEX, value=literal.value)
         if literal.is_string:
             return DataFlowValue(type=PythonType.STRING, value=literal.value)
+        if literal.is_tuple and not literal.is_comprehension:
+            values = tuple(self.value_from_expression(v) for v in literal.values)
+            if all(v.is_resolved for v in values):
+                values = tuple(v.value for v in values)
+                return DataFlowValue(type=PythonType.ITERABLE, value=values)
         # TODO FIXME
         return DataFlowValue(type=PythonType.OBJECT)
 
