@@ -109,11 +109,9 @@ OperatorSequence = Iterable[Union[str, PythonExpression]]
 
 @frozen
 class PythonAliasName:
+    meta: PythonAstNodeMetadata
     name: str
     alias: Optional[str]
-    # meta
-    line: int = 0
-    column: int = 0
 
 
 class ToAst(Transformer):
@@ -381,6 +379,7 @@ class ToAst(Transformer):
         alias: Optional[Token] = None,
     ) -> PythonImportedName:
         name = dotted_name[-1]
+        assert isinstance(name, str), repr(name)
         base = self._new_node(
             PythonImportBase,
             dotted_name[:-1],

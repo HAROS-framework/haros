@@ -7,7 +7,7 @@
 
 from typing import Any, Iterable, Optional, Tuple, Union
 
-from attrs import frozen
+from attrs import field, frozen
 
 from haros.parsing.python.ast.common import PythonExpression, PythonHelperNode, PythonStatement
 
@@ -218,8 +218,13 @@ class PythonImportBase(PythonHelperNode):
 @frozen
 class PythonImportedName(PythonHelperNode):
     base: PythonImportBase
-    name: str
+    name: str = field()
     alias: Optional[str] = None
+
+    @name.validator
+    def _check_name(self, attribute, value):
+        if not isinstance(value, str):
+            raise TypeError(f'expected string "name", got: {value!r}')
 
     @property
     def is_imported_name(self) -> bool:
