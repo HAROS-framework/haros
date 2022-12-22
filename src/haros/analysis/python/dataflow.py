@@ -543,6 +543,7 @@ class DataScope:
         self._condition_stack.pop()
 
     def add_imported_function(self, name: str, module: str, function: Callable):
+        # `function` receives `DataFlowValue`, returns `Any`
         wrapper = custom_function_wrapper(name, module, function)
         self.add_imported_symbol(name, module, wrapper)
 

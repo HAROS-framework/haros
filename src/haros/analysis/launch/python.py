@@ -39,6 +39,7 @@ def get_python_launch_model(path: Path) -> LaunchModel:
     #return q.functions().named(LAUNCH_ENTRY_POINT)
     symbols = {
         'mymodule.MY_CONSTANT': 44,
+        'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
     }
     graph = from_ast(ast, symbols=symbols)
     return graph

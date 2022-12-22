@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from mymodule import MY_CONSTANT
+from mymodule import MY_CONSTANT, my_division
 
 ###############################################################################
 # Tests
@@ -54,3 +54,7 @@ def basic_function_call():
 
 def two_function_calls():
     return max(sum_args(1, 1), 1)
+
+
+def imported_function_call():
+    return my_division(42 * 2, 2)
