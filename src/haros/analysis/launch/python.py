@@ -28,8 +28,14 @@ LAUNCH_ENTRY_POINT: Final[str] = 'generate_launch_description'
 
 
 def launch_description_function(arg_list):
-    # arg_list.is_resolved ?
-    return "launch.LaunchDescription"
+    values = []
+    if arg_list.is_resolved:
+        for arg in arg_list.value:
+            if arg.is_resolved:
+                values.append(arg)
+            else:
+                values.append('?')
+    return f'launch.LaunchDescription({values!r})'
 
 
 def declare_launch_argument_function(name, default_value=None, description=None):

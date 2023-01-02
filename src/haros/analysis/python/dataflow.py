@@ -667,6 +667,13 @@ class DataScope:
             if all(v.is_resolved for v in values):
                 values = tuple(v.value for v in values)
                 return DataFlowValue(type=PythonType.ITERABLE, value=values)
+        if literal.is_list and not literal.is_comprehension:
+            values = list(self.value_from_expression(v) for v in literal.values)
+            if all(v.is_resolved for v in values):
+                values = list(v.value for v in values)
+                return DataFlowValue(type=PythonType.ITERABLE, value=values)
+            else:
+                return DataFlowValue(type=PythonType.ITERABLE, value=values)
         # TODO FIXME
         return DataFlowValue(type=PythonType.OBJECT)
 
