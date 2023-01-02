@@ -261,7 +261,7 @@ class PythonType(enum.Flag):
 
     @property
     def can_have_attributes(self) -> bool:
-        return not self.can_be_number() and not self.can_be_bool()
+        return not self.can_be_number and not self.can_be_bool
 
 
 ###############################################################################
@@ -672,8 +672,8 @@ class DataScope:
 
     def value_from_reference(self, reference: PythonReference) -> DataFlowValue:
         if reference.object is not None:
-            obj, t = self.value_from_expression(reference.object)
-            if not t.can_have_attributes():
+            obj = self.value_from_expression(reference.object)
+            if not obj.type.can_have_attributes:
                 return DataFlowValue()
             return DataFlowValue()
         var = self.get(reference.name)
