@@ -5,22 +5,33 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Tuple
+from typing import Any, Final, Optional
 
 from pathlib import Path
 
 #from haros.analysis.python import query
+from haros.analysis.python.dataflow import DataFlowValue
 from haros.analysis.python.graph import from_ast
 from haros.errors import ParseError
+from haros.metamodel.builder.launch import LaunchModelBuilder
+from haros.metamodel.launch import (
+    LaunchArgument,
+    LaunchConfiguration,
+    LaunchInclusion,
+    LaunchModel,
+    LaunchNode,
+    LaunchValue,
+    TextSubstitution,
+)
 from haros.parsing.python import parse
-
-LaunchModel = Any
 
 ###############################################################################
 # Constants
 ###############################################################################
 
 LAUNCH_ENTRY_POINT: Final[str] = 'generate_launch_description'
+
+UNKNOWN_TOKEN: Final[str] = '{?}'
 
 ###############################################################################
 # Interface
@@ -45,10 +56,15 @@ def declare_launch_argument_function(name, default_value=None, description=None)
     return f'DeclareLaunchArgument({arg!r}, default_value={value!r}, description={text!r})'
 
 
-def launch_configuration_function(name, default=None):
-    cfg = name.value if name.is_resolved else '?'
-    value = default.value if (default is not None and default.is_resolved) else '?'
-    return f'LaunchConfiguration({cfg!r}, default={value!r})'
+def launch_configuration_function(
+    name: DataFlowValue,
+    default: Optional[DataFlowValue] = None,
+) -> LaunchConfiguration:
+    cfg = name.value if name.is_resolved else UNKNOWN_TOKEN
+    value = None
+    if default is not None:
+        value = TextSubstitution(default.value) if default.is_resolved else LaunchValue()
+    return LaunchConfiguration(cfg, default_value=value)
 
 
 LAUNCH_SYMBOLS = {
@@ -75,3 +91,18 @@ def get_python_launch_model(path: Path) -> LaunchModel:
     symbols.update(LAUNCH_SYMBOLS)
     graph = from_ast(ast, symbols=symbols)
     return graph
+    # return launch_model_from_program_graph(path.name, graph)  # FIXME
+
+
+def launch_model_from_program_graph(name: str, graph: Any) -> LaunchModel:
+    subgraph, data = graph.subgraph_builder(LAUNCH_ENTRY_POINT).build()
+    # FIXME possible KeyError from `subgraph_builder`
+    for variant_value in data.return_values.possible_values():
+        if not variant_value.condition.is_true:
+            continue  # FIXME
+        if not variant_value.value.is_resolved:
+            continue  # FIXME
+        builder = LaunchModelBuilder(name)
+        builder.scope.set_unknown()
+        return builder.build()
+    return LaunchModel(name)  # FIXME

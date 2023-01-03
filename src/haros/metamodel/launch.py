@@ -5,9 +5,11 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final
+from typing import Any, Dict, Final, List, Optional
 
 from attrs import field, frozen
+
+from haros.metamodel.ros import RosName
 
 ###############################################################################
 # Constants
@@ -43,6 +45,13 @@ class TextSubstitution(LaunchValue):
 
 UNKNOWN: Final[LaunchValue] = LaunchValue()
 
+
+@frozen
+class LaunchConfiguration:
+    name: str
+    default_value: Optional[LaunchValue] = None
+
+
 @frozen
 class LaunchArgument:
     name: str
@@ -55,7 +64,7 @@ class LaunchArgument:
 @frozen
 class LaunchInclusion:
     file: LaunchValue = UNKNOWN
-    namespace: str = '/'
+    namespace: RosName = field(factory=RosName.global_namespace)
 
 
 @frozen
@@ -63,6 +72,13 @@ class LaunchNode:
     name: LaunchValue = UNKNOWN
     package: LaunchValue = UNKNOWN
     executable: LaunchValue = UNKNOWN
-    namespace: str = '/'
+    namespace: RosName = field(factory=RosName.global_namespace)
     parameters: Dict[str, LaunchValue] = field(factory=dict)
-    remaps: Dict[str, str] = field(factory=dict)
+    remaps: Dict[RosName, RosName] = field(factory=dict)
+
+
+@frozen
+class LaunchModel:
+    name: str
+    nodes: List[LaunchNode] = field(factory=list)
+    builder: Any = None  # FIXME

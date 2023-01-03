@@ -87,6 +87,10 @@ class RosName:
     def is_relative(self) -> bool:
         return not self.is_global and not self.is_private
 
+    @classmethod
+    def global_namespace(cls) -> 'RosName':
+        return cls('/')
+
     def join(self, other: 'RosName') -> 'RosName':
         """Uses `self` as a namespace to join with `other`."""
         if other.is_global:
