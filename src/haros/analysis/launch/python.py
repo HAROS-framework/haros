@@ -10,13 +10,15 @@ from typing import Any, Final, Optional
 from pathlib import Path
 
 #from haros.analysis.python import query
-from haros.analysis.python.dataflow import DataFlowValue
+from haros.analysis.python.dataflow import DataFlowValue, UnknownValue
 from haros.analysis.python.graph import from_ast
 from haros.errors import ParseError
 from haros.metamodel.builder.launch import LaunchModelBuilder
 from haros.metamodel.launch import (
     LaunchArgument,
     LaunchConfiguration,
+    LaunchDescription,
+    LaunchEntity,
     LaunchInclusion,
     LaunchModel,
     LaunchNode,
@@ -38,39 +40,88 @@ UNKNOWN_TOKEN: Final[str] = '{?}'
 ###############################################################################
 
 
-def launch_description_function(arg_list):
+def launch_description_function(arg_list: DataFlowValue) -> LaunchDescription:
     values = []
     if arg_list.is_resolved:
         for arg in arg_list.value:
-            if arg.is_resolved:
-                values.append(arg)
-            else:
-                values.append('?')
-    return f'launch.LaunchDescription({values!r})'
+            values.append(arg.value if arg.is_resolved else LaunchEntity())
+    return LaunchDescription(values)
 
 
-def declare_launch_argument_function(name, default_value=None, description=None):
-    arg = name.value if name.is_resolved else '?'
-    value = default_value.value if (default_value is not None and default_value.is_resolved) else '?'
-    text = description.value if (description is not None and description.is_resolved) else ''
-    return f'DeclareLaunchArgument({arg!r}, default_value={value!r}, description={text!r})'
+def declare_launch_argument_function(
+    name: DataFlowValue,
+    default_value: DataFlowValue = None,
+    description: DataFlowValue = None,
+) -> LaunchArgument:
+    _name = name.value if name.is_resolved else UNKNOWN_TOKEN
+    if default_value is not None and default_value.is_resolved:
+        value = default_value.value
+    else:
+        value = LaunchValue()
+    if description is not None and description.is_resolved:
+        _description = TextSubstitution(description.value)
+    else:
+        _description = TextSubstitution('')
+    return LaunchArgument(_name, default_value=value, description=_description)
 
 
 def launch_configuration_function(
     name: DataFlowValue,
     default: Optional[DataFlowValue] = None,
 ) -> LaunchConfiguration:
-    cfg = name.value if name.is_resolved else UNKNOWN_TOKEN
+    _name = name.value if name.is_resolved else UNKNOWN_TOKEN
     value = None
     if default is not None:
         value = TextSubstitution(default.value) if default.is_resolved else LaunchValue()
-    return LaunchConfiguration(cfg, default_value=value)
+    return LaunchConfiguration(_name, default_value=value)
+
+
+def include_launch_description_function(
+    source: DataFlowValue,
+    launch_arguments: Optional[DataFlowValue] = None,
+) -> LaunchInclusion:
+    return LaunchInclusion()
+
+
+def node_function(
+    package: DataFlowValue,
+    executable: DataFlowValue,
+    name: Optional[DataFlowValue] = None,
+    parameters: Optional[DataFlowValue] = None,
+    arguments: Optional[DataFlowValue] = None,
+    output: DataFlowValue = None,
+) -> LaunchNode:
+    _name = name.value if name and name.is_resolved else LaunchValue()
+    _package = package.value if package.is_resolved else LaunchValue()
+    _executable = executable.value if executable.is_resolved else LaunchValue()
+    return LaunchNode(name=_name, package=_package, executable=_executable)
+
+
+def get_package_share_directory_function(package: DataFlowValue):
+    if not package.is_resolved:
+        return UnknownValue()
+    return f'/usr/share/ros/{package.value}'
+
+
+def os_path_join_function(**args):
+    print(f'os.path.join({args})')
+    parts = []
+    for arg in args:
+        if arg.is_resolved:
+            parts.append(arg.value)
+        else:
+            parts.append(UNKNOWN_TOKEN)
+    return '/'.join(parts)
 
 
 LAUNCH_SYMBOLS = {
     'launch.LaunchDescription': launch_description_function,
     'launch.actions.DeclareLaunchArgument': declare_launch_argument_function,
+    'launch.actions.IncludeLaunchDescription': include_launch_description_function,
     'launch.substitutions.LaunchConfiguration': launch_configuration_function,
+    'launch_ros.actions.Node': node_function,
+    'ament_index_python.packages.get_package_share_directory': get_package_share_directory_function,
+    'os.path.join': os_path_join_function,
 }
 
 

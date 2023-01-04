@@ -565,7 +565,6 @@ class DataScope:
             if import_base:
                 full_name = f'{import_base}.{imported_name.name}'
                 print(f'Lookup symbol: {full_name}')
-                print(f'Symbols: {self._symbols}')
                 if full_name in self._symbols:
                     raw_value = self._symbols[full_name]
                     print('\n\n\n')
@@ -670,7 +669,7 @@ class DataScope:
         if literal.is_list and not literal.is_comprehension:
             values = list(self.value_from_expression(v) for v in literal.values)
             if all(v.is_resolved for v in values):
-                values = list(v.value for v in values)
+                # values = list(v.value for v in values)
                 return DataFlowValue(type=PythonType.ITERABLE, value=values)
             else:
                 return DataFlowValue(type=PythonType.ITERABLE, value=values)

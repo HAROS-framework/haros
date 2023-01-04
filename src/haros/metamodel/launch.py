@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Optional
+from typing import Any, Dict, Final, List, Optional, Tuple
 
 from attrs import field, frozen
 
@@ -47,34 +47,77 @@ UNKNOWN: Final[LaunchValue] = LaunchValue()
 
 
 @frozen
-class LaunchConfiguration:
-    name: str
-    default_value: Optional[LaunchValue] = None
+class LaunchEntity:
+    @property
+    def is_configuration(self) -> bool:
+        return False
+
+    @property
+    def is_argument(self) -> bool:
+        return False
+
+    @property
+    def is_inclusion(self) -> bool:
+        return False
+
+    @property
+    def is_node(self) -> bool:
+        return False
 
 
 @frozen
-class LaunchArgument:
+class LaunchConfiguration(LaunchEntity):
+    name: str
+    default_value: Optional[LaunchValue] = None
+
+    @property
+    def is_configuration(self) -> bool:
+        return True
+
+
+@frozen
+class LaunchArgument(LaunchEntity):
     name: str
     default_value: LaunchValue = UNKNOWN
+    description: LaunchValue = UNKNOWN
+
+    @property
+    def is_argument(self) -> bool:
+        return True
 
     def to_xml(self) -> str:
         return f'<arg name="{self.name}" default="{self.value}"/>'
 
 
 @frozen
-class LaunchInclusion:
+class LaunchInclusion(LaunchEntity):
     file: LaunchValue = UNKNOWN
     namespace: RosName = field(factory=RosName.global_namespace)
+    arguments: Dict[str, LaunchValue] = field(factory=dict)
+
+    @property
+    def is_inclusion(self) -> bool:
+        return True
 
 
 @frozen
-class LaunchNode:
+class LaunchNode(LaunchEntity):
     name: LaunchValue = UNKNOWN
     package: LaunchValue = UNKNOWN
     executable: LaunchValue = UNKNOWN
     namespace: RosName = field(factory=RosName.global_namespace)
     parameters: Dict[str, LaunchValue] = field(factory=dict)
     remaps: Dict[RosName, RosName] = field(factory=dict)
+    output: LaunchValue = UNKNOWN
+
+    @property
+    def is_node(self) -> bool:
+        return True
+
+
+@frozen
+class LaunchDescription:
+    entities: Tuple[LaunchEntity] = ()
 
 
 @frozen
