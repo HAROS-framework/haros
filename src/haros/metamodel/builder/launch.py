@@ -33,6 +33,11 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 @frozen
+class AnalysisSystemInterface:
+    packages: Dict[str, str] = field(factory=dict)
+
+
+@frozen
 class LaunchScope:
     args: Dict[str, LaunchValue] = field(factory=dict)
 
@@ -60,6 +65,7 @@ class LaunchScope:
 @define
 class LaunchModelBuilder:
     name: str
+    system: AnalysisSystemInterface = field(factory=AnalysisSystemInterface)
     nodes: List[LaunchNode] = field(factory=list)
     _scope_stack: List[LaunchScope] = field(factory=lambda: [LaunchScope()])
 

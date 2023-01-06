@@ -9,11 +9,14 @@ from typing import Any, Final, Optional
 
 from pathlib import Path
 
+from attrs import frozen
+
 #from haros.analysis.python import query
 from haros.analysis.python.dataflow import DataFlowValue, UnknownValue
 from haros.analysis.python.graph import from_ast
 from haros.errors import ParseError
-from haros.metamodel.builder.launch import LaunchModelBuilder
+from haros.metamodel.builder.launch import AnalysisSystemInterface, LaunchModelBuilder
+from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
     LaunchArgument,
     LaunchConfiguration,
@@ -38,6 +41,39 @@ UNKNOWN_TOKEN: Final[str] = '{?}'
 ###############################################################################
 # Interface
 ###############################################################################
+
+
+@frozen
+class PythonLaunchSystemInterface:
+    file_path: Path
+    system: AnalysisSystemInterface
+
+    def get_this_launch_file_dir(self) -> str:
+        return self.file_path.parent.as_posix()
+
+
+def python_launch_description_source_function(arg_list: DataFlowValue) -> LaunchValue:
+    if not arg_list.is_resolved:
+        return LaunchValue()
+    parts = []
+    for arg in arg_list.value:
+        if not arg.is_resolved:
+            return LaunchValue()
+        value = arg.value
+        if isinstance(value, VariantData):
+            if value.is_deterministic:
+                value = value.get()
+                if value.is_resolved:
+                    value = value.value
+                else:
+                    return LaunchValue()
+            else:
+                return LaunchValue()
+        if isinstance(value, LaunchConfiguration):
+            parts.append(f'$(var {value.name})')
+        else:
+            parts.append(value)
+    return TextSubstitution('/'.join(parts))  # FIXME
 
 
 def launch_description_function(arg_list: DataFlowValue) -> LaunchDescription:
@@ -80,6 +116,9 @@ def include_launch_description_function(
     source: DataFlowValue,
     launch_arguments: Optional[DataFlowValue] = None,
 ) -> LaunchInclusion:
+    if source.is_resolved:
+        if isinstance(source.value, LaunchValue):
+            return LaunchInclusion(file=source.value)
     return LaunchInclusion()
 
 
@@ -121,6 +160,7 @@ LAUNCH_SYMBOLS = {
     'launch.substitutions.LaunchConfiguration': launch_configuration_function,
     'launch_ros.actions.Node': node_function,
     'ament_index_python.packages.get_package_share_directory': get_package_share_directory_function,
+    'launch.launch_description_sources.PythonLaunchDescriptionSource': python_launch_description_source_function,
     'os.path.join': os_path_join_function,
 }
 
@@ -133,13 +173,15 @@ def get_python_launch_model(path: Path) -> LaunchModel:
         raise ValueError(f'not a valid launch file: {path}')
     code = path.read_text(encoding='utf-8')
     ast = parse(code)
-    #q = query(ast)
-    #return q.functions().named(LAUNCH_ENTRY_POINT)
+
+    system = PythonLaunchSystemInterface(path, None)
+
     symbols = {
         'mymodule.MY_CONSTANT': 44,
         'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
     }
     symbols.update(LAUNCH_SYMBOLS)
+    symbols['launch.substitutions.ThisLaunchFileDir'] = system.get_this_launch_file_dir
     graph = from_ast(ast, symbols=symbols)
     return graph
     # return launch_model_from_program_graph(path.name, graph)  # FIXME
