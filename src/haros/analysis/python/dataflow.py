@@ -808,7 +808,10 @@ class DataScope:
         assert isinstance(function, FunctionWrapper), f'not function wrapper: {repr(function)}'
         assert callable(function.call), f'not callable: {repr(function.call)}'
         if not call.arguments:
-            return DataFlowValue.of(function.call())
+            result: VariantData[DataFlowValue] = function.call()
+            if result.has_values and result.is_deterministic:
+                return result.get()
+            return DataFlowValue()
         args = []
         kwargs = {}
         for argument in call.arguments:
@@ -828,7 +831,7 @@ class DataScope:
                 elif argument.is_double_star:
                     # kwargs.update(arg)
                     return DataFlowValue()  # FIXME
-        result = function.call(*args, **kwargs)
+        result: VariantData[DataFlowValue] = function.call(*args, **kwargs)
         if result.has_values and result.is_deterministic:
             return result.get()
         return DataFlowValue()

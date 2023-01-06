@@ -60,15 +60,7 @@ def python_launch_description_source_function(arg_list: DataFlowValue) -> Launch
         if not arg.is_resolved:
             return LaunchValue()
         value = arg.value
-        if isinstance(value, VariantData):
-            if value.is_deterministic:
-                value = value.get()
-                if value.is_resolved:
-                    value = value.value
-                else:
-                    return LaunchValue()
-            else:
-                return LaunchValue()
+        assert not isinstance(value, VariantData), repr(value)
         if isinstance(value, LaunchConfiguration):
             parts.append(f'$(var {value.name})')
         else:
