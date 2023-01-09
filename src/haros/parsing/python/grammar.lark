@@ -234,7 +234,7 @@ _tuple_inner: test_or_star_expr (("," test_or_star_expr)+ [","] | ",")
 
 ?subscriptlist: subscript
               | subscript (("," subscript)+ [","] | ",") -> subscript_tuple
-?subscript: test | slice
+subscript: test | slice
 !slice: [test] ":" [test] [sliceop]
 ?sliceop: ":" [test]
 exprlist: (expr|star_expr)

@@ -1264,6 +1264,13 @@ class ToAst(Transformer):
         )
 
     @v_args(inline=True)
+    def subscript(self, subscript: Union[PythonExpression, PythonSlice]) -> PythonSubscript:
+        if isinstance(subscript, PythonSubscript):
+            return subscript
+        assert isinstance(subscript, PythonExpression), f'subscript: {subscript!r}'
+        return self._new_node(PythonKeyAccess, subscript)
+
+    @v_args(inline=True)
     def slice(
         self,
         start: Optional[PythonExpression],
