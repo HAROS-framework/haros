@@ -22,6 +22,7 @@ from haros.parsing.python.ast import (
     PythonFunctionCall,
     PythonFunctionDefStatement,
     PythonImportStatement,
+    PythonItemAccess,
     PythonLiteral,
     PythonOperator,
     PythonReference,
@@ -194,6 +195,7 @@ class PythonType(enum.Flag):
     MAPPING = enum.auto()
     OBJECT = enum.auto()
     NUMBER = INT | FLOAT | COMPLEX
+    PRIMITIVE = NONE | BOOL | NUMBER
     ATOMIC = NONE | BOOL | NUMBER | STRING
     DEFINITIONS = FUNCTION | CLASS | EXCEPTION
     OBJECTS = STRING | ITERABLE | MAPPING | OBJECT
@@ -261,7 +263,7 @@ class PythonType(enum.Flag):
 
     @property
     def can_have_attributes(self) -> bool:
-        return not self.can_be_number and not self.can_be_bool
+        return bool(self & ~PythonType.PRIMITIVE)
 
 
 ###############################################################################
@@ -329,20 +331,33 @@ class FunctionWrapper:
     call: Callable
 
 
-def builtin_function_wrapper(name: str, function: Callable) -> FunctionWrapper:
+def wrap_normal_function(function: Callable) -> Callable:
     # The purpose of this is just to make return values uniform.
     def wrapper(*args, **kwargs) -> VariantData[DataFlowValue]:
         for arg in args:
             if not arg.is_resolved:
-                return DataFlowValue()
+                print()
+                print(f'unresolved call to {function}({args}, {kwargs})')
+                return VariantData.with_base_value(DataFlowValue())
         for arg in kwargs.values():
             if not arg.is_resolved:
-                return DataFlowValue()
+                print()
+                print(f'unresolved call to {function}({args}, {kwargs})')
+                return VariantData.with_base_value(DataFlowValue())
         raw_args = [arg.value for arg in args]
         raw_kwargs = {key: arg.value for key, arg in kwargs.items()}
         raw_value = function(*raw_args, **raw_kwargs)
         return VariantData.with_base_value(DataFlowValue.of(raw_value))
-    return FunctionWrapper(name, '__builtins__', wrapper)
+    return wrapper
+
+
+def builtin_function_wrapper(name: str, function: Callable) -> FunctionWrapper:
+    return library_function_wrapper(name, '__builtins__', function)
+
+
+def library_function_wrapper(name: str, module: str, function: Callable) -> FunctionWrapper:
+    wrapper = wrap_normal_function(function)
+    return FunctionWrapper(name, module, wrapper)
 
 
 def custom_function_wrapper(name: str, module: str, function: Callable) -> FunctionWrapper:
@@ -575,7 +590,15 @@ class DataScope:
                     self.set_unknown(name, ast=statement, import_base=import_base)
             else:
                 import_base = imported_name.name
-                self.set_unknown(name, ast=statement, import_base=import_base)
+                print(f'Lookup symbol: {import_base}: {self._symbols.get(import_base)!r}')
+                if import_base in self._symbols:
+                    raw_value = self._symbols[import_base]
+                    print('\n\n\n')
+                    print(f'Setting symbol "{name}" with value: {raw_value}')
+                    value = DataFlowValue.of(raw_value)
+                    self.set(name, value, ast=statement, import_base=import_base)
+                else:
+                    self.set_unknown(name, ast=statement, import_base=import_base)
 
     def add_function_def(self, statement: PythonFunctionDefStatement, fun: FunctionWrapper = None):
         assert statement.is_statement and statement.is_function_def
@@ -624,7 +647,7 @@ class DataScope:
         if expression.is_reference:
             return self.value_from_reference(expression)
         if expression.is_item_access:
-            return DataFlowValue()
+            return self.value_from_item_access(expression)
         if expression.is_function_call:
             return self.value_from_function_call(expression)
         if expression.is_star_expression:
@@ -678,10 +701,13 @@ class DataScope:
 
     def value_from_reference(self, reference: PythonReference) -> DataFlowValue:
         if reference.object is not None:
-            obj = self.value_from_expression(reference.object)
+            obj: DataFlowValue = self.value_from_expression(reference.object)
             if not obj.type.can_have_attributes:
                 return DataFlowValue()
-            return DataFlowValue()
+            if not obj.is_resolved:
+                return DataFlowValue()
+            value = getattr(obj.value, reference.name)
+            return DataFlowValue.of(value)
         var = self.get(reference.name)
         if not var.has_values or not var.is_deterministic:
             return DataFlowValue()
@@ -779,7 +805,10 @@ class DataScope:
         if operator.is_arithmetic:
             if o == '+':
                 r = a.value + b.value
-                return DataFlowValue(type=PythonType.NUMBER, value=r)
+                if isinstance(r, str):
+                    return DataFlowValue(type=PythonType.STRING, value=r)
+                else:
+                    return DataFlowValue(type=PythonType.NUMBER, value=r)
             if o == '-':
                 r = a.value - b.value
                 return DataFlowValue(type=PythonType.NUMBER, value=r)
@@ -797,6 +826,34 @@ class DataScope:
                 return DataFlowValue(type=PythonType.NUMBER, value=r)
             return DataFlowValue(type=PythonType.NUMBER)
         return DataFlowValue()
+
+    def value_from_item_access(self, access: PythonItemAccess) -> DataFlowValue:
+        # object: PythonExpression
+        # key: PythonSubscript
+        print()
+        print(f'>> item access: {access}')
+        obj: DataFlowValue = self.value_from_expression(access.object)
+        if not obj.is_resolved or not obj.type.can_be_object:
+            print('    (object unresolved)')
+            return DataFlowValue()
+        if access.key.is_slice:
+            print('    (slice access)')
+            return DataFlowValue()
+        assert access.key.is_key
+        key: DataFlowValue = self.value_from_expression(access.key.expression)
+        if not key.is_resolved:
+            print('    (key unresolved)')
+            return DataFlowValue()
+        try:
+            value = obj.value[key.value]
+        except KeyError:
+            print('    (value unknown)')
+            print('    object:', obj.value)
+            print('    key:', key.value)
+            return DataFlowValue()
+        if isinstance(value, DataFlowValue):
+            return value
+        return DataFlowValue.of(value)
 
     def value_from_function_call(self, call: PythonFunctionCall) -> DataFlowValue:
         value = self.value_from_expression(call.function)
@@ -831,6 +888,7 @@ class DataScope:
                 elif argument.is_double_star:
                     # kwargs.update(arg)
                     return DataFlowValue()  # FIXME
+        print(f'\n>> function call: {function.function} (from {function.module})')
         result: VariantData[DataFlowValue] = function.call(*args, **kwargs)
         if result.has_values and result.is_deterministic:
             return result.get()

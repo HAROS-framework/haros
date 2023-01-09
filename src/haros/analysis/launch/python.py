@@ -5,14 +5,16 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional
+from typing import Any, Final, Optional, Mapping
 
+import os
 from pathlib import Path
+from types import SimpleNamespace
 
 from attrs import frozen
 
 #from haros.analysis.python import query
-from haros.analysis.python.dataflow import DataFlowValue, UnknownValue
+from haros.analysis.python.dataflow import DataFlowValue, library_function_wrapper, UnknownValue
 from haros.analysis.python.graph import from_ast
 from haros.errors import ParseError
 from haros.metamodel.builder.launch import AnalysisSystemInterface, LaunchModelBuilder
@@ -47,6 +49,10 @@ UNKNOWN_TOKEN: Final[str] = '{?}'
 class PythonLaunchSystemInterface:
     file_path: Path
     system: AnalysisSystemInterface
+
+    @property
+    def environment(self) -> Mapping[str, str]:
+        return self.system.environment
 
     def get_this_launch_file_dir(self) -> str:
         return self.file_path.parent.as_posix()
@@ -134,17 +140,6 @@ def get_package_share_directory_function(package: DataFlowValue):
     return f'/usr/share/ros/{package.value}'
 
 
-def os_path_join_function(**args):
-    print(f'os.path.join({args})')
-    parts = []
-    for arg in args:
-        if arg.is_resolved:
-            parts.append(arg.value)
-        else:
-            parts.append(UNKNOWN_TOKEN)
-    return '/'.join(parts)
-
-
 LAUNCH_SYMBOLS = {
     'launch.LaunchDescription': launch_description_function,
     'launch.actions.DeclareLaunchArgument': declare_launch_argument_function,
@@ -153,8 +148,26 @@ LAUNCH_SYMBOLS = {
     'launch_ros.actions.Node': node_function,
     'ament_index_python.packages.get_package_share_directory': get_package_share_directory_function,
     'launch.launch_description_sources.PythonLaunchDescriptionSource': python_launch_description_source_function,
-    'os.path.join': os_path_join_function,
 }
+
+
+def _prepare_builtin_symbols() -> Mapping[str, Any]:
+    symbols = {}
+    ns = SimpleNamespace()
+    ns.path = SimpleNamespace()
+    for key in dir(os.path):
+        if key.startswith('_'):
+            continue
+        value = getattr(os.path, key)
+        if callable(value):
+            value = library_function_wrapper(key, 'os.path', value)
+        setattr(ns.path, key, value)
+    ns.environ = {
+        'TURTLEBOT3_MODEL': 'hamburger',
+        'LDS_MODEL': 'LDS-01',
+    }
+    symbols['os'] = ns
+    return symbols
 
 
 def get_python_launch_model(path: Path) -> LaunchModel:
@@ -172,8 +185,17 @@ def get_python_launch_model(path: Path) -> LaunchModel:
         'mymodule.MY_CONSTANT': 44,
         'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
     }
+    symbols.update(_prepare_builtin_symbols())
     symbols.update(LAUNCH_SYMBOLS)
     symbols['launch.substitutions.ThisLaunchFileDir'] = system.get_this_launch_file_dir
+
+    # TODO include launch arguments
+    # TODO node name if not present
+    # TODO node output
+    # TODO node parameters
+    # TODO node remaps
+    # TODO node main arguments
+
     graph = from_ast(ast, symbols=symbols)
     return graph
     # return launch_model_from_program_graph(path.name, graph)  # FIXME

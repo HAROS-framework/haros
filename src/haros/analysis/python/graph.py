@@ -7,6 +7,8 @@
 
 from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, NewType, Optional, Set, Tuple
 
+from types import SimpleNamespace
+
 from attrs import define, field, frozen
 
 from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph
@@ -453,12 +455,20 @@ def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = Non
     if symbols:
         for key, value in symbols.items():
             name, import_base = _split_names(key)
-            assert bool(name), f'expected non-empty name: {full_name}'
-            assert bool(import_base), f'expected non-empty import base: {full_name}'
-            if callable(value):
-                builder.add_imported_function(name, import_base, value)
-            else:
+            if isinstance(value, SimpleNamespace):
+                # full module
+                if not name:
+                    assert bool(import_base), f'expected non-empty import base: {key}'
+                    name = import_base
+                    import_base = ''
                 builder.add_imported_symbol(name, import_base, value)
+            else:
+                assert bool(name), f'expected non-empty name: {key}'
+                assert bool(import_base), f'expected non-empty import base: {key}'
+                if callable(value):
+                    builder.add_imported_function(name, import_base, value)
+                else:
+                    builder.add_imported_symbol(name, import_base, value)
     for statement in module.statements:
         builder.add_statement(statement)
     builder.clean_up()
