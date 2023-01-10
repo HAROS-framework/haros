@@ -60,10 +60,12 @@ class PythonLaunchSystemInterface:
 
 def python_launch_description_source_function(arg_list: DataFlowValue) -> LaunchValue:
     if not arg_list.is_resolved:
+        print('\n\nCHECK 1\n\n')
         return LaunchValue()
     parts = []
     for arg in arg_list.value:
         if not arg.is_resolved:
+            print(f'\n\nCHECK 2: {arg_list.value}\n\n')
             return LaunchValue()
         value = arg.value
         assert not isinstance(value, VariantData), repr(value)

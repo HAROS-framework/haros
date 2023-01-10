@@ -265,6 +265,11 @@ class PythonType(enum.Flag):
     def can_have_attributes(self) -> bool:
         return bool(self & ~PythonType.PRIMITIVE)
 
+    @property
+    def can_have_items(self) -> bool:
+        mask = PythonType.STRING | PythonType.ITERABLE | PythonType.MAPPING | PythonType.OBJECT
+        return bool(self & mask)
+
 
 ###############################################################################
 # Data Structures
@@ -728,6 +733,10 @@ class DataScope:
                 value = library_function_wrapper(reference.name, str(type(obj.value)), value)
             return DataFlowValue.of(value)
         var = self.get(reference.name)
+        if reference.name in ('lidar_pkg_dir', 'LDS_LAUNCH_FILE'):
+            print()
+            print(f'>> reference to {reference.name}:')
+            print('  ', var)
         if not var.has_values or not var.is_deterministic:
             return DataFlowValue()
         assert var.has_base_value
@@ -850,7 +859,7 @@ class DataScope:
         # object: PythonExpression
         # key: PythonSubscript
         obj: DataFlowValue = self.value_from_expression(access.object)
-        if not obj.is_resolved or not obj.type.can_be_object:
+        if not obj.is_resolved or not obj.type.can_have_items:
             return DataFlowValue()
         if access.key.is_slice:
             return DataFlowValue()
@@ -899,7 +908,6 @@ class DataScope:
                 elif argument.is_double_star:
                     # kwargs.update(arg)
                     return DataFlowValue()  # FIXME
-        print(f'\n>> function call: {function.function} (from {function.module})')
         result: VariantData[DataFlowValue] = function.call(*args, **kwargs)
         if result.has_values and result.is_deterministic:
             return result.get()
