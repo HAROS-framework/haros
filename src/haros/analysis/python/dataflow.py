@@ -315,6 +315,18 @@ class DataFlowValue:
             return cls(PythonType.CLASS, raw_value)
         if isinstance(raw_value, FunctionWrapper) or callable(raw_value):
             return cls(PythonType.FUNCTION, raw_value)
+        if isinstance(raw_value, tuple):
+            return cls(PythonType.ITERABLE, raw_value)
+        if isinstance(raw_value, list):
+            return cls(PythonType.ITERABLE, raw_value)
+        if isinstance(raw_value, set):
+            return cls(PythonType.ITERABLE, raw_value)
+        if isinstance(raw_value, dict):
+            return cls(PythonType.MAPPING, raw_value)
+        d = {}
+        g = (type(d.items()), type(d.keys()), type(d.values()))
+        if isinstance(raw_value, g):
+            return cls(PythonType.ITERABLE, raw_value)
         return cls(PythonType.OBJECT, raw_value)
 
     def cast_to(self, type: PythonType) -> 'DataFlowValue':
@@ -347,7 +359,15 @@ def wrap_normal_function(function: Callable) -> Callable:
         raw_args = [arg.value for arg in args]
         raw_kwargs = {key: arg.value for key, arg in kwargs.items()}
         raw_value = function(*raw_args, **raw_kwargs)
-        return VariantData.with_base_value(DataFlowValue.of(raw_value))
+        if isinstance(raw_value, list):
+            value = [DataFlowValue.of(v) for v in raw_value]
+        elif isinstance(raw_value, tuple):
+            value = tuple(DataFlowValue.of(v) for v in raw_value)
+        elif isinstance(raw_value, dict):
+            value = {DataFlowValue.of(k): DataFlowValue.of(v) for k, v in raw_value.items()}
+        else:
+            value = DataFlowValue.of(raw_value)
+        return VariantData.with_base_value(value)
     return wrapper
 
 
@@ -564,8 +584,6 @@ class DataScope:
 
     def add_imported_symbol(self, name: str, module: str, value: Any):
         full_name = f'{module}.{name}' if module else name
-        print('\n\n')
-        print(f'Setting symbol "{full_name}" with value: {value}')
         self._symbols[full_name] = value
 
     def add_import(self, statement: PythonImportStatement):
@@ -575,26 +593,18 @@ class DataScope:
                 continue  # FIXME TODO
             name = imported_name.alias if imported_name.alias else imported_name.name
             import_base = imported_name.base.dotted_name
-            print('\n\n')
-            print(f'Import registry: "{name}" from "{import_base}"')
             if import_base:
                 full_name = f'{import_base}.{imported_name.name}'
-                print(f'Lookup symbol: {full_name}')
                 if full_name in self._symbols:
                     raw_value = self._symbols[full_name]
-                    print('\n\n\n')
-                    print(f'Setting symbol "{name}" with value: {raw_value}')
                     value = DataFlowValue.of(raw_value)
                     self.set(name, value, ast=statement, import_base=import_base)
                 else:
                     self.set_unknown(name, ast=statement, import_base=import_base)
             else:
                 import_base = imported_name.name
-                print(f'Lookup symbol: {import_base}: {self._symbols.get(import_base)!r}')
                 if import_base in self._symbols:
                     raw_value = self._symbols[import_base]
-                    print('\n\n\n')
-                    print(f'Setting symbol "{name}" with value: {raw_value}')
                     value = DataFlowValue.of(raw_value)
                     self.set(name, value, ast=statement, import_base=import_base)
                 else:
@@ -696,6 +706,13 @@ class DataScope:
                 return DataFlowValue(type=PythonType.ITERABLE, value=values)
             else:
                 return DataFlowValue(type=PythonType.ITERABLE, value=values)
+        if literal.is_dict and not literal.is_comprehension:
+            entries = dict(
+                (self.value_from_expression(e.key), self.value_from_expression(e.value))
+                for e in literal.entries
+            )
+            # if not all(key.is_resolved for key in entries.keys()):
+            return DataFlowValue(type=PythonType.MAPPING, value=entries)
         # TODO FIXME
         return DataFlowValue(type=PythonType.OBJECT)
 
@@ -707,6 +724,8 @@ class DataScope:
             if not obj.is_resolved:
                 return DataFlowValue()
             value = getattr(obj.value, reference.name)
+            if callable(value):
+                value = library_function_wrapper(reference.name, str(type(obj.value)), value)
             return DataFlowValue.of(value)
         var = self.get(reference.name)
         if not var.has_values or not var.is_deterministic:
@@ -830,26 +849,18 @@ class DataScope:
     def value_from_item_access(self, access: PythonItemAccess) -> DataFlowValue:
         # object: PythonExpression
         # key: PythonSubscript
-        print()
-        print(f'>> item access: {access}')
         obj: DataFlowValue = self.value_from_expression(access.object)
         if not obj.is_resolved or not obj.type.can_be_object:
-            print('    (object unresolved)')
             return DataFlowValue()
         if access.key.is_slice:
-            print('    (slice access)')
             return DataFlowValue()
         assert access.key.is_key
         key: DataFlowValue = self.value_from_expression(access.key.expression)
         if not key.is_resolved:
-            print('    (key unresolved)')
             return DataFlowValue()
         try:
             value = obj.value[key.value]
         except KeyError:
-            print('    (value unknown)')
-            print('    object:', obj.value)
-            print('    key:', key.value)
             return DataFlowValue()
         if isinstance(value, DataFlowValue):
             return value

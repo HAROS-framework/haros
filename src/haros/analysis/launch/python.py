@@ -108,26 +108,59 @@ def include_launch_description_function(
     source: DataFlowValue,
     launch_arguments: Optional[DataFlowValue] = None,
 ) -> LaunchInclusion:
+    _source = LaunchValue()
     if source.is_resolved:
         if isinstance(source.value, LaunchValue):
-            return LaunchInclusion(file=source.value)
-    return LaunchInclusion()
+            _source = source.value
+    _arguments = {}
+    if launch_arguments is not None:
+        if launch_arguments.is_resolved:
+            assert launch_arguments.type.can_be_iterable
+            for item in launch_arguments.value:
+                if isinstance(item, tuple):
+                    key: LaunchValue = _dataflow_to_launch_value(item[0])
+                    value: LaunchValue = _dataflow_to_launch_value(item[1])
+                elif item.is_resolved:
+                    assert item.type.can_be_iterable
+                    key: LaunchValue = _dataflow_to_launch_value(item.value[0])
+                    value: LaunchValue = _dataflow_to_launch_value(item.value[1])
+                else:
+                    continue  # FIXME
+                if not key.is_resolved:
+                    unknown = _arguments.get(key, [])
+                    unknown.append(value)
+                    _arguments[key] = unknown
+                else:
+                    _arguments[key] = value
+    return LaunchInclusion(file=_source, arguments=_arguments)
 
 
 def node_function(
-    package: DataFlowValue,
     executable: DataFlowValue,
+    package: Optional[DataFlowValue] = None,
     name: Optional[DataFlowValue] = None,
     parameters: Optional[DataFlowValue] = None,
     arguments: Optional[DataFlowValue] = None,
     output: Optional[DataFlowValue] = None,
 ) -> LaunchNode:
     # docs: https://github.com/ros2/launch_ros/blob/rolling/launch_ros/launch_ros/actions/node.py
+    # Node.__init__:
+    #   executable: SomeSubstitutionsType
+    #   package: Optional[SomeSubstitutionsType]
+    #   name: Optional[SomeSubstitutionsType]
+    #   namespace: Optional[SomeSubstitutionsType]
+    #   exec_name: Optional[SomeSubstitutionsType]
+    #   parameters: Optional[SomeParameters]
+    #   remappings: Optional[SomeRemapRules]
+    #   ros_arguments: Optional[Iterable[SomeSubstitutionsType]]
+    #   arguments: Optional[Iterable[SomeSubstitutionsType]]
+    #   **kwargs
     return LaunchNode(
         name=_dataflow_to_launch_value(name),
         package=_dataflow_to_launch_value(package),
         executable=_dataflow_to_launch_value(executable),
         output=_dataflow_to_launch_value(output, default='log'),
+        arguments=_dataflow_to_launch_list(arguments),
     )
 
 
@@ -186,6 +219,17 @@ def _dataflow_to_launch_value(
     return LaunchValue()
 
 
+def _dataflow_to_launch_list(arg_list: Optional[DataFlowValue]) -> List[LaunchValue]:
+    values = []
+    if arg_list is not None:
+        if arg_list.is_resolved:
+            for arg in arg_list.value:
+                values.append(_dataflow_to_launch_value(arg))
+        else:
+            values.append(LaunchValue())
+    return values
+
+
 def get_python_launch_model(path: Path) -> LaunchModel:
     if not path.is_file():
         raise ValueError(f'not a file: {path}')
@@ -206,10 +250,8 @@ def get_python_launch_model(path: Path) -> LaunchModel:
     symbols['launch.substitutions.ThisLaunchFileDir'] = system.get_this_launch_file_dir
 
     # TODO include launch arguments
-    # TODO node name if not present
     # TODO node parameters
     # TODO node remaps
-    # TODO node main arguments
 
     graph = from_ast(ast, symbols=symbols)
     return graph
