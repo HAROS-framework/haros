@@ -127,7 +127,7 @@ def node_function(
         name=_dataflow_to_launch_value(name),
         package=_dataflow_to_launch_value(package),
         executable=_dataflow_to_launch_value(executable),
-        output=_dataflow_to_launch_value(output),
+        output=_dataflow_to_launch_value(output, default='log'),
     )
 
 
@@ -173,9 +173,14 @@ def _dataflow_to_string(value: DataFlowValue) -> str:
     return UNKNOWN_TOKEN
 
 
-def _dataflow_to_launch_value(value: Optional[DataFlowValue]) -> Optional[LaunchValue]:
+def _dataflow_to_launch_value(
+    value: Optional[DataFlowValue],
+    default: Optional[str] = None,
+) -> Optional[LaunchValue]:
     if value is None:
-        return None
+        if default is None:
+            return None
+        return TextSubstitution(default)
     if value.is_resolved:
         return TextSubstitution(str(value.value))
     return LaunchValue()

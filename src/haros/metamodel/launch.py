@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Optional, Tuple
+from typing import Any, Dict, Final, Iterable, List, Optional, Tuple
 
 from attrs import field, frozen
 
@@ -109,6 +109,7 @@ class LaunchNode(LaunchEntity):
     parameters: Dict[str, LaunchValue] = field(factory=dict)
     remaps: Dict[RosName, RosName] = field(factory=dict)
     output: LaunchValue = UNKNOWN
+    arguments: Iterable[LaunchValue] = field(factory=tuple)
 
     @property
     def is_node(self) -> bool:
