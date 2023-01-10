@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional, Mapping
+from typing import Any, Final, List, Optional, Mapping
 
 import os
 from pathlib import Path
@@ -87,27 +87,21 @@ def declare_launch_argument_function(
     default_value: DataFlowValue = None,
     description: DataFlowValue = None,
 ) -> LaunchArgument:
-    _name = name.value if name.is_resolved else UNKNOWN_TOKEN
-    if default_value is not None and default_value.is_resolved:
-        value = default_value.value
-    else:
-        value = LaunchValue()
-    if description is not None and description.is_resolved:
-        _description = TextSubstitution(description.value)
-    else:
-        _description = TextSubstitution('')
-    return LaunchArgument(_name, default_value=value, description=_description)
+    return LaunchArgument(
+        _dataflow_to_string(name),
+        default_value=_dataflow_to_launch_value(default_value),
+        description=_dataflow_to_launch_value(description),
+    )
 
 
 def launch_configuration_function(
     name: DataFlowValue,
     default: Optional[DataFlowValue] = None,
 ) -> LaunchConfiguration:
-    _name = name.value if name.is_resolved else UNKNOWN_TOKEN
-    value = None
-    if default is not None:
-        value = TextSubstitution(default.value) if default.is_resolved else LaunchValue()
-    return LaunchConfiguration(_name, default_value=value)
+    return LaunchConfiguration(
+        _dataflow_to_string(name),
+        default_value=_dataflow_to_launch_value(default),
+    )
 
 
 def include_launch_description_function(
@@ -126,12 +120,15 @@ def node_function(
     name: Optional[DataFlowValue] = None,
     parameters: Optional[DataFlowValue] = None,
     arguments: Optional[DataFlowValue] = None,
-    output: DataFlowValue = None,
+    output: Optional[DataFlowValue] = None,
 ) -> LaunchNode:
-    _name = name.value if name and name.is_resolved else LaunchValue()
-    _package = package.value if package.is_resolved else LaunchValue()
-    _executable = executable.value if executable.is_resolved else LaunchValue()
-    return LaunchNode(name=_name, package=_package, executable=_executable)
+    # docs: https://github.com/ros2/launch_ros/blob/rolling/launch_ros/launch_ros/actions/node.py
+    return LaunchNode(
+        name=_dataflow_to_launch_value(name),
+        package=_dataflow_to_launch_value(package),
+        executable=_dataflow_to_launch_value(executable),
+        output=_dataflow_to_launch_value(output),
+    )
 
 
 def get_package_share_directory_function(package: DataFlowValue):
@@ -170,6 +167,20 @@ def _prepare_builtin_symbols() -> Mapping[str, Any]:
     return symbols
 
 
+def _dataflow_to_string(value: DataFlowValue) -> str:
+    if value.is_resolved:
+        return str(value.value)
+    return UNKNOWN_TOKEN
+
+
+def _dataflow_to_launch_value(value: Optional[DataFlowValue]) -> Optional[LaunchValue]:
+    if value is None:
+        return None
+    if value.is_resolved:
+        return TextSubstitution(str(value.value))
+    return LaunchValue()
+
+
 def get_python_launch_model(path: Path) -> LaunchModel:
     if not path.is_file():
         raise ValueError(f'not a file: {path}')
@@ -191,7 +202,6 @@ def get_python_launch_model(path: Path) -> LaunchModel:
 
     # TODO include launch arguments
     # TODO node name if not present
-    # TODO node output
     # TODO node parameters
     # TODO node remaps
     # TODO node main arguments

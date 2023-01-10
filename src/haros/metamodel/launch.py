@@ -102,7 +102,7 @@ class LaunchInclusion(LaunchEntity):
 
 @frozen
 class LaunchNode(LaunchEntity):
-    name: LaunchValue = UNKNOWN
+    name: Optional[LaunchValue] = None
     package: LaunchValue = UNKNOWN
     executable: LaunchValue = UNKNOWN
     namespace: RosName = field(factory=RosName.global_namespace)
