@@ -262,6 +262,7 @@ def launch_model_from_program_graph(name: str, graph: Any) -> LaunchModel:
     subgraph, data = graph.subgraph_builder(LAUNCH_ENTRY_POINT).build()
     # FIXME possible KeyError from `subgraph_builder`
     for variant_value in data.return_values.possible_values():
+        # variant_value: VariantData[DataFlowValue]
         if not variant_value.condition.is_true:
             continue  # FIXME
         if not variant_value.value.is_resolved:
