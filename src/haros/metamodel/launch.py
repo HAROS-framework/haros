@@ -27,6 +27,14 @@ class LaunchValue:
     def is_resolved(self) -> bool:
         return False
 
+    @property
+    def is_text(self) -> bool:
+        return False
+
+    @property
+    def is_configuration(self) -> bool:
+        return False
+
     def __str__(self) -> str:
         return '{?}'
 
@@ -39,8 +47,27 @@ class TextSubstitution(LaunchValue):
     def is_resolved(self) -> bool:
         return True
 
+    @property
+    def is_text(self) -> bool:
+        return True
+
     def __str__(self) -> str:
         return self.value
+
+
+@frozen
+class LaunchConfiguration(LaunchValue):
+    name: str
+    default_value: Optional[LaunchValue] = None
+
+    @property
+    def is_resolved(self) -> bool:
+        # return self.default_value is not None and self.default_value.is_resolved
+        return False
+
+    @property
+    def is_configuration(self) -> bool:
+        return True
 
 
 UNKNOWN: Final[LaunchValue] = LaunchValue()
@@ -48,10 +75,6 @@ UNKNOWN: Final[LaunchValue] = LaunchValue()
 
 @frozen
 class LaunchEntity:
-    @property
-    def is_configuration(self) -> bool:
-        return False
-
     @property
     def is_argument(self) -> bool:
         return False
@@ -63,16 +86,6 @@ class LaunchEntity:
     @property
     def is_node(self) -> bool:
         return False
-
-
-@frozen
-class LaunchConfiguration(LaunchEntity):
-    name: str
-    default_value: Optional[LaunchValue] = None
-
-    @property
-    def is_configuration(self) -> bool:
-        return True
 
 
 @frozen

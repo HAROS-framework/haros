@@ -17,7 +17,7 @@ from attrs import frozen
 from haros.analysis.python.dataflow import DataFlowValue, library_function_wrapper, UnknownValue
 from haros.analysis.python.graph import from_ast
 from haros.errors import ParseError
-from haros.metamodel.builder.launch import AnalysisSystemInterface, LaunchModelBuilder
+from haros.metamodel.builder.launch import AnalysisSystemInterface, model_from_description
 from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
     LaunchArgument,
@@ -215,6 +215,8 @@ def _dataflow_to_launch_value(
             return None
         return TextSubstitution(default)
     if value.is_resolved:
+        if isinstance(value.value, LaunchValue):
+            return value.value
         return TextSubstitution(str(value.value))
     return LaunchValue()
 
@@ -270,12 +272,5 @@ def launch_model_from_program_graph(name: str, graph: Any) -> LaunchModel:
         launch_description = variant_value.value
         if not isinstance(launch_description, LaunchDescription):
             continue  # FIXME
-        _build_from_launch_description(launch_description)
+        return model_from_description(name, launch_description)
     return LaunchModel(name)  # FIXME
-
-
-def _build_from_launch_description(name: str, description: LaunchDescription) -> LaunchModel:
-    builder = LaunchModelBuilder(name)
-    for entity in description.entities:
-        pass
-    return builder.build()
