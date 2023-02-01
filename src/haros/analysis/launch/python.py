@@ -267,7 +267,15 @@ def launch_model_from_program_graph(name: str, graph: Any) -> LaunchModel:
             continue  # FIXME
         if not variant_value.value.is_resolved:
             continue  # FIXME
-        builder = LaunchModelBuilder(name)
-        builder.scope.set_unknown()
-        return builder.build()
+        launch_description = variant_value.value
+        if not isinstance(launch_description, LaunchDescription):
+            continue  # FIXME
+        _build_from_launch_description(launch_description)
     return LaunchModel(name)  # FIXME
+
+
+def _build_from_launch_description(name: str, description: LaunchDescription) -> LaunchModel:
+    builder = LaunchModelBuilder(name)
+    for entity in description.entities:
+        pass
+    return builder.build()
