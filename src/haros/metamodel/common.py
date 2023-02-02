@@ -56,6 +56,14 @@ class SourceCodeDependencies:
     runtime: Set[str] = field(factory=set)
 
 
+@frozen
+class SourceCodeLocation:
+    file: str
+    line: int = 0
+    column: int = 0
+    expression: Any = None
+
+
 ###############################################################################
 # Data Analysis
 ###############################################################################
