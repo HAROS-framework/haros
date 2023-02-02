@@ -58,10 +58,21 @@ class SourceCodeDependencies:
 
 @frozen
 class SourceCodeLocation:
-    file: str
+    file: Optional[str] = None
+    package: Optional[str] = None
     line: int = 0
     column: int = 0
-    expression: Any = None
+    language: Optional[str] = None
+
+
+@frozen
+class TrackedCode:
+    snippet: Any
+    location: SourceCodeLocation
+
+    @classmethod
+    def unknown(cls) -> 'TrackedCode':
+        return cls(None, SourceCodeLocation())
 
 
 ###############################################################################

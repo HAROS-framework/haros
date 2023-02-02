@@ -17,7 +17,7 @@ from haros.metamodel.launch import (
     LaunchInclusion,
     LaunchModel,
     LaunchNode,
-    LaunchValue,
+    LaunchSubstitution,
     TextSubstitution,
 )
 from haros.metamodel.ros import RosName
@@ -31,6 +31,16 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 # Interface
 ###############################################################################
+
+
+@frozen
+class LaunchValue:
+    @property
+    def is_resolved(self) -> bool:
+        return False
+
+    def __str__(self) -> str:
+        return '{?}'
 
 
 @frozen
