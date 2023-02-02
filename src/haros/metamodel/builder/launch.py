@@ -7,6 +7,7 @@
 
 from typing import Dict, Final, List, Optional
 
+from enum import Enum
 import logging
 
 from attrs import define, field, frozen
@@ -34,13 +35,70 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 @frozen
+class UnknownValue:
+    def __str__(self) -> str:
+        return '(?)'
+
+
+UNKNOWN_TOKEN: Final[UnknownValue] = UnknownValue()
+
+
+class LaunchValueType(Enum):
+    BOOL = 'bool'
+    INT = 'int'
+    DOUBLE = 'double'
+    STRING = 'string'
+    YAML = 'yaml'
+    AUTO = 'auto'
+    OBJECT = 'object'
+
+
+@frozen
 class LaunchValue:
+    type: LaunchValueType = field(default=LaunchValueType.STRING)
+    value: Any = field(default=UNKNOWN_TOKEN)
+
     @property
     def is_resolved(self) -> bool:
-        return False
+        return not isinstance(self.value, UnknownValue)
+
+    @classmethod
+    def type_bool(cls, value: str) -> 'LaunchValue':
+        # TODO validate values
+        return cls(type=LaunchValueType.BOOL, value)
+
+    @classmethod
+    def type_int(cls, value: str) -> 'LaunchValue':
+        # TODO validate values
+        return cls(type=LaunchValueType.INT, value)
+
+    @classmethod
+    def type_double(cls, value: str) -> 'LaunchValue':
+        # TODO validate values
+        return cls(type=LaunchValueType.DOUBLE, value)
+
+    @classmethod
+    def type_string(cls, value: str) -> 'LaunchValue':
+        # TODO validate values
+        return cls(type=LaunchValueType.STRING, value)
+
+    @classmethod
+    def type_yaml(cls, value: str) -> 'LaunchValue':
+        # TODO validate values
+        return cls(type=LaunchValueType.YAML, value)
+
+    @classmethod
+    def type_auto(cls, value: str) -> 'LaunchValue':
+        # TODO validate values
+        return cls(type=LaunchValueType.AUTO, value)
+
+    @classmethod
+    def type_object(cls, value: str) -> 'LaunchValue':
+        # TODO validate values
+        return cls(type=LaunchValueType.OBJECT, value)
 
     def __str__(self) -> str:
-        return '{?}'
+        return str(self.value)
 
 
 @frozen
@@ -61,20 +119,22 @@ class LaunchScope:
 
     def set(self, name: str, value: LaunchValue):
         # if name not in self.configs:
-        self.configs[name] = self.resolve(value)
+        self.configs[name] = value
 
     def set_unknown(self, name: str):
         return self.set(name, LaunchValue())
 
     def set_text(self, name: str, text: str):
-        return self.set(name, TextSubstitution(text))
+        return self.set(name, LaunchValue.type_string(text))
 
-    def resolve(self, value: LaunchValue) -> LaunchValue:
-        if value.is_configuration:
-            new_value = self.get(value.name)
-            if new_value.is_resolved:
-                return new_value
-        return value
+    def resolve(self, sub: Optional[LaunchSubstitution]) -> LaunchValue:
+        if sub is None or sub.is_unknown:
+            return LaunchValue()
+        if sub.is_text:
+            return LaunchValue.type_string(sub.value)
+        if sub.is_configuration:
+            return self.get(sub.name)
+        return LaunchValue()
 
     def duplicate(self) -> 'LaunchScope':
         # LaunchArgument is defined globally
@@ -106,7 +166,7 @@ class LaunchModelBuilder:
     def exit_group(self):
         self._scope_stack.pop()
 
-    def declare_argument(self, name: str, default_value: LaunchValue):
+    def declare_argument(self, name: str, default_value: Optional[LaunchSubstitution] = None):
         # NOTE: probably better to separate LaunchValue from LaunchSubstitution...
         self.root.args[name] = self.scope.resolve(default_value)
 
@@ -114,9 +174,7 @@ class LaunchModelBuilder:
 def model_from_description(name: str, description: LaunchDescription) -> LaunchModel:
     builder = LaunchModelBuilder(name)
     for entity in description.entities:
-        if entity.is_configuration:
-            pass
-        elif entity.is_argument:
+        if entity.is_argument:
             builder.declare_argument(entity.name, entity.default_value)
         elif entity.is_inclusion:
             pass
