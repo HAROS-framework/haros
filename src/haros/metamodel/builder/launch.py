@@ -105,6 +105,9 @@ class LaunchValue:
 class AnalysisSystemInterface:
     packages: Dict[str, str] = field(factory=dict)
 
+    def get_launch_description(self, path: str) -> LaunchDescription:
+        return None
+
 
 @frozen
 class LaunchScope:
@@ -166,9 +169,24 @@ class LaunchModelBuilder:
     def exit_group(self):
         self._scope_stack.pop()
 
-    def declare_argument(self, name: str, default_value: Optional[LaunchSubstitution] = None):
-        # NOTE: probably better to separate LaunchValue from LaunchSubstitution...
+    def declare_argument(self, arg: LaunchArgument):
+        name: str = arg.name
+        default_value: Optional[LaunchSubstitution] = arg.default_value
         self.root.args[name] = self.scope.resolve(default_value)
+
+    def include_launch(self, include: LaunchInclusion):
+        namespace: RosName = include.namespace
+        arguments: Dict[str, LaunchSubstitution] = include.arguments
+        # TODO
+        file: LaunchValue = self.scope.resolve(include.file)
+        if file.is_resolved:
+            description = self.system.get_launch_description(file.value)
+            if description is None:
+                return  # FIXME
+            model = model_from_description(file.value, description)
+            # FIXME pass arguments down
+        else:
+            return  # FIXME
 
 
 def model_from_description(name: str, description: LaunchDescription) -> LaunchModel:
@@ -177,7 +195,7 @@ def model_from_description(name: str, description: LaunchDescription) -> LaunchM
         if entity.is_argument:
             builder.declare_argument(entity.name, entity.default_value)
         elif entity.is_inclusion:
-            pass
+            builder.include_launch(entity)
         elif entity.is_node:
             pass
     return builder.build()
