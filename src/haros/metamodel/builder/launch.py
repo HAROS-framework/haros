@@ -193,13 +193,16 @@ class LaunchModelBuilder:
         package: LaunchValue = self.scope.resolve(node.package)
         executable: LaunchValue = self.scope.resolve(node.executable)
         # namespace: RosName = field(factory=RosName.global_namespace)
-        # parameters: Dict[str, LaunchSubstitution] = field(factory=dict)
         # remaps: Dict[RosName, RosName] = field(factory=dict)
-        # arguments: Iterable[LaunchSubstitution] = field(factory=tuple)
         for key, sub in node.parameters.items():
             value: LaunchValue = self.scope.resolve(sub)
         output: LaunchValue = self.scope.resolve(node.output)
         args: List[LaunchValue] = [self.scope.resolve(arg) for arg in node.arguments]
+        params: Dict[str, LaunchValue] = {}
+        for key, sub in node.parameters.items():
+            params[key] = self.scope.resolve(sub)
+        rosnode = self.system.get_ros_node(package, executable)  # FIXME
+        instance = RosNodeInstance(name, rosnode, args, params, output)  # FIXME
 
     def _get_node_name(self, name: Optional[LaunchSubstitution]) -> str:
         if name is None:
