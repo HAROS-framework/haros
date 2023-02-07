@@ -188,14 +188,33 @@ class LaunchModelBuilder:
         else:
             return  # FIXME
 
+    def launch_node(self, node: LaunchNode):
+        name: str = self._get_node_name(node.name)
+        package: LaunchValue = self.scope.resolve(node.package)
+        executable: LaunchValue = self.scope.resolve(node.executable)
+        # namespace: RosName = field(factory=RosName.global_namespace)
+        # parameters: Dict[str, LaunchSubstitution] = field(factory=dict)
+        # remaps: Dict[RosName, RosName] = field(factory=dict)
+        # arguments: Iterable[LaunchSubstitution] = field(factory=tuple)
+        for key, sub in node.parameters.items():
+            value: LaunchValue = self.scope.resolve(sub)
+        output: LaunchValue = self.scope.resolve(node.output)
+        args: List[LaunchValue] = [self.scope.resolve(arg) for arg in node.arguments]
+
+    def _get_node_name(self, name: Optional[LaunchSubstitution]) -> str:
+        if name is None:
+            return 'anonymous'  # FIXME
+        value: LaunchValue = self.scope.resolve(name)
+        return value.value if value.is_resolved else '$(?)'
+
 
 def model_from_description(name: str, description: LaunchDescription) -> LaunchModel:
     builder = LaunchModelBuilder(name)
     for entity in description.entities:
         if entity.is_argument:
-            builder.declare_argument(entity.name, entity.default_value)
+            builder.declare_argument(entity)
         elif entity.is_inclusion:
             builder.include_launch(entity)
         elif entity.is_node:
-            pass
+            builder.launch_node(entity)
     return builder.build()
