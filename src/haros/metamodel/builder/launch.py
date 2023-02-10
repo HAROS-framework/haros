@@ -5,13 +5,14 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, List, Optional
+from typing import Dict, Final, Iterable, List, Mapping, Optional
 
 from enum import Enum
 import logging
 
 from attrs import define, field, frozen
 
+from haros.internal.Interface import AnalysisSystemInterface
 from haros.metamodel.launch import (
     LaunchArgument,
     LaunchDescription,
@@ -99,14 +100,6 @@ class LaunchValue:
 
     def __str__(self) -> str:
         return str(self.value)
-
-
-@frozen
-class AnalysisSystemInterface:
-    packages: Dict[str, str] = field(factory=dict)
-
-    def get_launch_description(self, path: str) -> LaunchDescription:
-        return None
 
 
 @frozen
