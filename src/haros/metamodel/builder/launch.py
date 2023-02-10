@@ -21,7 +21,7 @@ from haros.metamodel.launch import (
     LaunchSubstitution,
     TextSubstitution,
 )
-from haros.metamodel.ros import RosName
+# from haros.metamodel.ros import RosName
 
 ###############################################################################
 # Constants
@@ -175,7 +175,10 @@ class LaunchModelBuilder:
         self.root.args[name] = self.scope.resolve(default_value)
 
     def include_launch(self, include: LaunchInclusion):
-        namespace: RosName = include.namespace
+        if include.namespace is None:
+            namespace: LaunchValue = LaunchValue.type_string('/')
+        else:
+            namespace: LaunchValue = self.scope.resolve(include.namespace)
         arguments: Dict[str, LaunchSubstitution] = include.arguments
         # TODO
         file: LaunchValue = self.scope.resolve(include.file)
@@ -192,8 +195,8 @@ class LaunchModelBuilder:
         name: str = self._get_node_name(node.name)
         package: LaunchValue = self.scope.resolve(node.package)
         executable: LaunchValue = self.scope.resolve(node.executable)
-        # namespace: RosName = field(factory=RosName.global_namespace)
-        # remaps: Dict[RosName, RosName] = field(factory=dict)
+        # namespace: Optional[LaunchSubstitution]
+        # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
         for key, sub in node.parameters.items():
             value: LaunchValue = self.scope.resolve(sub)
         output: LaunchValue = self.scope.resolve(node.output)

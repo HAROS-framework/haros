@@ -10,7 +10,6 @@ from typing import Any, Dict, Final, Iterable, List, Optional, Tuple
 from attrs import field, frozen
 
 from haros.metamodel.common import TrackedCode
-from haros.metamodel.ros import RosName
 
 ###############################################################################
 # Constants
@@ -119,7 +118,7 @@ class LaunchArgument(LaunchEntity):
 @frozen
 class LaunchInclusion(LaunchEntity):
     file: LaunchSubstitution
-    namespace: RosName = field(factory=RosName.global_namespace)
+    namespace: Optional[LaunchSubstitution] = None
     arguments: Dict[str, LaunchSubstitution] = field(factory=dict)
 
     @property
@@ -132,9 +131,9 @@ class LaunchNode(LaunchEntity):
     name: Optional[LaunchSubstitution] = None
     package: LaunchSubstitution = UNKNOWN_SUBSTITUTION
     executable: LaunchSubstitution = UNKNOWN_SUBSTITUTION
-    namespace: RosName = field(factory=RosName.global_namespace)
+    namespace: Optional[LaunchSubstitution] = None
     parameters: Dict[str, LaunchSubstitution] = field(factory=dict)
-    remaps: Dict[RosName, RosName] = field(factory=dict)
+    remaps: Dict[LaunchSubstitution, LaunchSubstitution] = field(factory=dict)
     output: LaunchSubstitution = UNKNOWN_SUBSTITUTION
     arguments: Iterable[LaunchSubstitution] = field(factory=tuple)
 
