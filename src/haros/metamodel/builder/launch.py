@@ -106,6 +106,7 @@ class LaunchValue:
 class LaunchScope:
     args: Dict[str, LaunchValue] = field(factory=dict)
     configs: Dict[str, LaunchValue] = field(factory=dict)
+    anonymous: Dict[str, str] = field(factory=dict)
 
     def get(self, name: str) -> LaunchValue:
         value = self.configs.get(name, self.args.get(name))
@@ -130,12 +131,32 @@ class LaunchScope:
             return LaunchValue.type_string(sub.value)
         if sub.is_configuration:
             return self.get(sub.name)
+        if sub.is_anon_name:
+            value = self.resolve(sub.name)
+            if value.is_resolved:
+                name = self.anonymous.get(value.value)
+                if name is None:
+                    name = self.compute_anon_name(value.value)
+                    self.anonymous[value.value] = name
+                return LaunchValue.type_string(name)
+            return value
         return LaunchValue()
 
     def duplicate(self) -> 'LaunchScope':
         # LaunchArgument is defined globally
         # LaunchConfiguration is scoped
         return LaunchScope(args=self.args, configs=dict(self.configs))
+
+    def compute_anon_name(self, name: str) -> str:
+        # as seen in the official distribution
+        import os
+        import random
+        import socket
+        import sys
+        name = f'{name}_{socket.gethostname()}_{os.getpid()}_{random.randint(0, sys.maxsize)}'
+        name = name.replace('.', '_')
+        name = name.replace('-', '_')
+        return name.replace(':', '_')
 
 
 @define

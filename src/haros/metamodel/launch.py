@@ -21,6 +21,10 @@ from haros.metamodel.common import TrackedCode
 ###############################################################################
 
 
+# For a full list of substitutions see
+# https://github.com/ros2/launch/tree/galactic/launch/launch/substitutions
+
+
 @frozen
 class LaunchSubstitution:
     @property
@@ -56,7 +60,19 @@ class LaunchSubstitution:
         return False
 
     @property
+    def is_command(self) -> bool:
+        return False
+
+    @property
+    def is_anon_name(self) -> bool:
+        return False
+
+    @property
     def is_concatenation(self) -> bool:
+        return False
+
+    @property
+    def is_path_join(self) -> bool:
         return False
 
     def __str__(self) -> str:
@@ -187,6 +203,36 @@ class LocalSubstitution(LaunchSubstitution):
 
 
 @frozen
+class CommandSubstitution(LaunchSubstitution):
+    command: str
+
+    @property
+    def is_command(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return f'$(cmd {self.command})'
+
+
+@frozen
+class AnonymousNameSubstitution(LaunchSubstitution):
+    """
+    Generates an anonymous id based on name.
+    Name itself is a unique identifier: multiple uses of anon with
+    the same parameter name will create the same "anonymized" name.
+    """
+
+    name: LaunchSubstitution
+
+    @property
+    def is_anon_name(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return f'$(anon {self.name})'
+
+
+@frozen
 class ConcatenationSubstitution(LaunchSubstitution):
     parts: Tuple[LaunchSubstitution]
 
@@ -196,6 +242,18 @@ class ConcatenationSubstitution(LaunchSubstitution):
 
     def __str__(self) -> str:
         return ''.join(self.parts)
+
+
+@frozen
+class PathJoinSubstitution(LaunchSubstitution):
+    parts: Tuple[LaunchSubstitution]
+
+    @property
+    def is_path_join(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return f'(join {" ".join(self.parts)})'
 
 
 ###############################################################################
