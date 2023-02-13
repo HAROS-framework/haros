@@ -32,7 +32,31 @@ class LaunchSubstitution:
         return False
 
     @property
+    def is_python_expression(self) -> bool:
+        return False
+
+    @property
     def is_configuration(self) -> bool:
+        return False
+
+    @property
+    def is_argument(self) -> bool:
+        return False
+
+    @property
+    def is_environment(self) -> bool:
+        return False
+
+    @property
+    def is_find_executable(self) -> bool:
+        return False
+
+    @property
+    def is_local(self) -> bool:
+        return False
+
+    @property
+    def is_concatenation(self) -> bool:
         return False
 
     def __str__(self) -> str:
@@ -74,6 +98,104 @@ class LaunchConfiguration(LaunchSubstitution):
 
     def __str__(self) -> str:
         return f'$(var {self.name} {self.default_value})'
+
+
+@frozen
+class LaunchArgumentSubstitution(LaunchSubstitution):
+    """
+        This substitution gets the value of a launch description argument,
+        as a string, by name.
+    """
+
+    name: str
+
+    @property
+    def is_argument(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return f'$(arg {self.name})'
+
+
+@frozen
+class PythonExpressionSubstitution(LaunchSubstitution):
+    """
+        This substitution will evaluate a python expression
+        and get the result as a string.
+    """
+
+    expression: str
+
+    @property
+    def is_python_expression(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return f'$(python {self.expression})'
+
+
+@frozen
+class EnvironmentSubstitution(LaunchSubstitution):
+    """
+        This substitution gets an environment variable value,
+        as a string, by name.
+    """
+
+    name: str
+
+    @property
+    def is_environment(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return f'$(env {self.name})'
+
+
+@frozen
+class FindExecutableSubstitution(LaunchSubstitution):
+    """
+        This substitution locates the full path to an executable
+        on the PATH if it exists.
+    """
+
+    name: str
+
+    @property
+    def is_find_executable(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return f'$(find {self.name})'
+
+
+@frozen
+class LocalSubstitution(LaunchSubstitution):
+    """
+        This substitution gets a "local" variable out of the context.
+        This is a mechanism that allows a "parent" action to pass
+        information to sub actions.
+    """
+
+    expression: str
+
+    @property
+    def is_local(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return f'$(local {self.expression})'
+
+
+@frozen
+class ConcatenationSubstitution(LaunchSubstitution):
+    parts: Tuple[LaunchSubstitution]
+
+    @property
+    def is_concatenation(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return ''.join(self.parts)
 
 
 ###############################################################################
