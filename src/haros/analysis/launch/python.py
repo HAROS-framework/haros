@@ -234,7 +234,7 @@ def _dataflow_to_launch_list(arg_list: Optional[DataFlowValue]) -> List[LaunchSu
     return values
 
 
-def get_python_launch_model(path: Path) -> LaunchModel:
+def get_python_launch_description(path: Path) -> LaunchDescription:
     if not path.is_file():
         raise ValueError(f'not a file: {path}')
     ext = path.suffix.lower()
@@ -262,7 +262,7 @@ def get_python_launch_model(path: Path) -> LaunchModel:
     # return launch_model_from_program_graph(path.name, graph)  # FIXME
 
 
-def launch_model_from_program_graph(name: str, graph: Any) -> LaunchModel:
+def launch_description_from_program_graph(graph: Any) -> LaunchDescription:
     subgraph, data = graph.subgraph_builder(LAUNCH_ENTRY_POINT).build()
     # FIXME possible KeyError from `subgraph_builder`
     for variant_value in data.return_values.possible_values():
@@ -274,5 +274,12 @@ def launch_model_from_program_graph(name: str, graph: Any) -> LaunchModel:
         launch_description = variant_value.value
         if not isinstance(launch_description, LaunchDescription):
             continue  # FIXME
+        return launch_description
+    return LaunchDescription()  # FIXME
+
+def launch_model_from_program_graph(name: str, graph: Any) -> LaunchModel:
+    try:
+        launch_description = launch_description_from_program_graph(graph)
         return model_from_description(name, launch_description)
-    return LaunchModel(name)  # FIXME
+    except Exception:  # FIXME
+        return LaunchModel(name)

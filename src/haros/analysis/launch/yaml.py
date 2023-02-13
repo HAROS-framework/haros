@@ -5,13 +5,12 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Tuple
+from typing import Final, Tuple
 
 from pathlib import Path
 
 from haros.errors import ParseError
-
-LaunchModel = Any
+from haros.metamodel.launch import LaunchDescription
 
 ###############################################################################
 # Constants
@@ -24,7 +23,7 @@ EXTENSIONS: Final[Tuple[str]] = ('.launch.yaml', '.launch.yml', '.yaml', '.yml',
 ###############################################################################
 
 
-def get_yaml_launch_model(path: Path) -> LaunchModel:
+def get_yaml_launch_description(path: Path) -> LaunchDescription:
     if not path.is_file():
         raise ValueError(f'not a file: {path}')
     ext = path.suffix.lower()

@@ -5,14 +5,14 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, List, Mapping, Optional
+from typing import Any, Dict, Final, Iterable, List, Mapping, Optional
 
 from enum import Enum
 import logging
 
 from attrs import define, field, frozen
 
-from haros.internal.Interface import AnalysisSystemInterface
+from haros.internal.interface import AnalysisSystemInterface
 from haros.metamodel.launch import (
     LaunchArgument,
     LaunchDescription,
@@ -66,37 +66,37 @@ class LaunchValue:
     @classmethod
     def type_bool(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.BOOL, value)
+        return cls(type=LaunchValueType.BOOL, value=value)
 
     @classmethod
     def type_int(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.INT, value)
+        return cls(type=LaunchValueType.INT, value=value)
 
     @classmethod
     def type_double(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.DOUBLE, value)
+        return cls(type=LaunchValueType.DOUBLE, value=value)
 
     @classmethod
     def type_string(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.STRING, value)
+        return cls(type=LaunchValueType.STRING, value=value)
 
     @classmethod
     def type_yaml(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.YAML, value)
+        return cls(type=LaunchValueType.YAML, value=value)
 
     @classmethod
     def type_auto(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.AUTO, value)
+        return cls(type=LaunchValueType.AUTO, value=value)
 
     @classmethod
     def type_object(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.OBJECT, value)
+        return cls(type=LaunchValueType.OBJECT, value=value)
 
     def __str__(self) -> str:
         return str(self.value)

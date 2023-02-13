@@ -5,24 +5,23 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, Tuple
+from typing import Callable, Final, Tuple
 
 from pathlib import Path
 
-from haros.analysis.launch.python import get_python_launch_model
-from haros.analysis.launch.xml import get_xml_launch_model
-from haros.analysis.launch.yaml import get_yaml_launch_model
-
-LaunchModel = Any
+from haros.analysis.launch.python import get_python_launch_description
+from haros.analysis.launch.xml import get_xml_launch_description
+from haros.analysis.launch.yaml import get_yaml_launch_description
+from haros.metamodel.launch import LaunchDescription
 
 ###############################################################################
 # Constants
 ###############################################################################
 
 PARSERS: Final[Tuple[Callable]] = (
-    get_python_launch_model,
-    get_xml_launch_model,
-    get_yaml_launch_model,
+    get_python_launch_description,
+    get_xml_launch_description,
+    get_yaml_launch_description,
 )
 
 ###############################################################################
@@ -30,7 +29,7 @@ PARSERS: Final[Tuple[Callable]] = (
 ###############################################################################
 
 
-def get_launch_model(path: Path) -> LaunchModel:
+def get_launch_description(path: Path) -> LaunchDescription:
     for parser in PARSERS:
         try:
             return parser(path)

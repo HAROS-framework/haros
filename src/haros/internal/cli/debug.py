@@ -15,7 +15,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from haros.analysis.launch import get_launch_model
+from haros.analysis.launch import get_launch_description
 from haros.analysis.python.graph import find_qualified_function_call
 from haros.internal.settings import Settings
 
@@ -50,7 +50,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
 
-    builder = get_launch_model(path)
+    builder = get_launch_description(path)
     graph, data = builder.build()
     print(graph.pretty())
     print('')
