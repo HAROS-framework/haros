@@ -119,8 +119,8 @@ class LaunchConfiguration(LaunchSubstitution):
 @frozen
 class LaunchArgumentSubstitution(LaunchSubstitution):
     """
-        This substitution gets the value of a launch description argument,
-        as a string, by name.
+    This substitution gets the value of a launch description argument,
+    as a string, by name.
     """
 
     name: str
@@ -136,8 +136,8 @@ class LaunchArgumentSubstitution(LaunchSubstitution):
 @frozen
 class PythonExpressionSubstitution(LaunchSubstitution):
     """
-        This substitution will evaluate a python expression
-        and get the result as a string.
+    This substitution will evaluate a python expression
+    and get the result as a string.
     """
 
     expression: str
@@ -153,8 +153,8 @@ class PythonExpressionSubstitution(LaunchSubstitution):
 @frozen
 class EnvironmentSubstitution(LaunchSubstitution):
     """
-        This substitution gets an environment variable value,
-        as a string, by name.
+    This substitution gets an environment variable value,
+    as a string, by name.
     """
 
     name: str
@@ -170,8 +170,8 @@ class EnvironmentSubstitution(LaunchSubstitution):
 @frozen
 class FindExecutableSubstitution(LaunchSubstitution):
     """
-        This substitution locates the full path to an executable
-        on the PATH if it exists.
+    This substitution locates the full path to an executable
+    on the PATH if it exists.
     """
 
     name: str
@@ -187,9 +187,9 @@ class FindExecutableSubstitution(LaunchSubstitution):
 @frozen
 class LocalSubstitution(LaunchSubstitution):
     """
-        This substitution gets a "local" variable out of the context.
-        This is a mechanism that allows a "parent" action to pass
-        information to sub actions.
+    This substitution gets a "local" variable out of the context.
+    This is a mechanism that allows a "parent" action to pass
+    information to sub actions.
     """
 
     expression: str
