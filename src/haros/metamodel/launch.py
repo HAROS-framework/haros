@@ -68,6 +68,14 @@ class LaunchSubstitution:
         return False
 
     @property
+    def is_this_file(self) -> bool:
+        return False
+
+    @property
+    def is_this_dir(self) -> bool:
+        return False
+
+    @property
     def is_concatenation(self) -> bool:
         return False
 
@@ -204,7 +212,28 @@ class LocalSubstitution(LaunchSubstitution):
 
 @frozen
 class CommandSubstitution(LaunchSubstitution):
-    command: str
+    """
+    Substitution that gets the output of a command as a string.
+    If the command is not found or fails a `SubstitutionFailure` error is raised.
+    Behavior on stderr output is configurable, see constructor.
+    """
+
+    """
+    command: command to be executed. The substitutions will be performed, and
+        `shlex.split` will be used on the result.
+    """
+    command: LaunchSubstitution
+
+    """
+    :on_stderr: specifies what to do when there is stderr output.
+    Can be one of:
+    - 'fail': raises `SubstitutionFailere` when stderr output is detected.
+    - 'ignore': `stderr` output is ignored.
+    - 'warn': The `stderr` output is ignored, but a warning is logged if detected.
+    - 'capture': The `stderr` output will be captured, together with stdout.
+    It can also be a substitution, that results in one of those four options.
+    """
+    # on_stderr: LaunchSubstitution  # TODO
 
     @property
     def is_command(self) -> bool:
@@ -230,6 +259,33 @@ class AnonymousNameSubstitution(LaunchSubstitution):
 
     def __str__(self) -> str:
         return f'$(anon {self.name})'
+
+
+@frozen
+class ThisLaunchFileSubstitution(LaunchSubstitution):
+    """Substitution that returns the absolute path to the current launch file."""
+
+    @property
+    def is_this_file(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return '$(this-launch-file)'
+
+
+@frozen
+class ThisDirectorySubstitution(LaunchSubstitution):
+    """
+    Substitution that returns the absolute path to the current launch file's
+    containing directory.
+    """
+
+    @property
+    def is_this_dir(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return '$(this-launch-file-dir)'
 
 
 @frozen

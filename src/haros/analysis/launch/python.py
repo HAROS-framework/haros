@@ -17,7 +17,7 @@ from attrs import frozen
 from haros.analysis.python.dataflow import DataFlowValue, library_function_wrapper, UnknownValue
 from haros.analysis.python.graph import from_ast
 from haros.errors import ParseError
-from haros.metamodel.builder.launch import AnalysisSystemInterface, model_from_description
+from haros.metamodel.builder.launch import model_from_description
 from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
     LaunchArgument,
@@ -29,6 +29,7 @@ from haros.metamodel.launch import (
     LaunchNode,
     LaunchSubstitution,
     TextSubstitution,
+    ThisDirectorySubstitution,
     UNKNOWN_SUBSTITUTION,
     UnknownSubstitution,
 )
@@ -47,19 +48,6 @@ UNKNOWN_TOKEN: Final[str] = '{?}'
 ###############################################################################
 
 
-@frozen
-class PythonLaunchSystemInterface:
-    file_path: Path
-    system: AnalysisSystemInterface
-
-    @property
-    def environment(self) -> Mapping[str, str]:
-        return self.system.environment
-
-    def get_this_launch_file_dir(self) -> str:
-        return self.file_path.parent.as_posix()
-
-
 def python_launch_description_source_function(arg_list: DataFlowValue) -> LaunchSubstitution:
     if not arg_list.is_resolved:
         return UNKNOWN_SUBSTITUTION
@@ -69,8 +57,8 @@ def python_launch_description_source_function(arg_list: DataFlowValue) -> Launch
             return UNKNOWN_SUBSTITUTION
         value = arg.value
         assert not isinstance(value, VariantData), repr(value)
-        if isinstance(value, LaunchConfiguration):
-            parts.append(f'$(var {value.name})')
+        if isinstance(value, LaunchSubstitution):
+            parts.append(str(value))
         else:
             parts.append(value)
     return TextSubstitution('/'.join(parts))  # FIXME
@@ -180,6 +168,7 @@ LAUNCH_SYMBOLS = {
     'launch_ros.actions.Node': node_function,
     'ament_index_python.packages.get_package_share_directory': get_package_share_directory_function,
     'launch.launch_description_sources.PythonLaunchDescriptionSource': python_launch_description_source_function,
+    'launch.substitutions.ThisLaunchFileDir': ThisDirectorySubstitution,
 }
 
 
@@ -243,7 +232,7 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
     code = path.read_text(encoding='utf-8')
     ast = parse(code)
 
-    system = PythonLaunchSystemInterface(path, None)
+    # system = PythonLaunchSystemInterface(path, None)
 
     symbols = {
         'mymodule.MY_CONSTANT': 44,
@@ -251,7 +240,6 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
     }
     symbols.update(_prepare_builtin_symbols())
     symbols.update(LAUNCH_SYMBOLS)
-    symbols['launch.substitutions.ThisLaunchFileDir'] = system.get_this_launch_file_dir
 
     # TODO include launch arguments
     # TODO node parameters
@@ -259,7 +247,7 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
 
     graph = from_ast(ast, symbols=symbols)
     return graph
-    # return launch_model_from_program_graph(path.name, graph)  # FIXME
+    # return launch_model_from_program_graph(path, graph)  # FIXME
 
 
 def launch_description_from_program_graph(graph: Any) -> LaunchDescription:
@@ -277,9 +265,9 @@ def launch_description_from_program_graph(graph: Any) -> LaunchDescription:
         return launch_description
     return LaunchDescription()  # FIXME
 
-def launch_model_from_program_graph(name: str, graph: Any) -> LaunchModel:
+def launch_model_from_program_graph(path: Path, graph: Any) -> LaunchModel:
     try:
         launch_description = launch_description_from_program_graph(graph)
-        return model_from_description(name, launch_description)
+        return model_from_description(path, launch_description)
     except Exception:  # FIXME
-        return LaunchModel(name)
+        return LaunchModel(path.name)

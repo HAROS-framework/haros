@@ -9,6 +9,7 @@ from typing import Any, Dict, Final, Iterable, List, Mapping, Optional
 
 from enum import Enum
 import logging
+from pathlib import Path
 
 from attrs import define, field, frozen
 
@@ -104,6 +105,7 @@ class LaunchValue:
 
 @frozen
 class LaunchScope:
+    file_path: Path
     args: Dict[str, LaunchValue] = field(factory=dict)
     configs: Dict[str, LaunchValue] = field(factory=dict)
     anonymous: Dict[str, str] = field(factory=dict)
@@ -140,6 +142,10 @@ class LaunchScope:
                     self.anonymous[value.value] = name
                 return LaunchValue.type_string(name)
             return value
+        if sub.is_this_file:
+            return LaunchValue.type_string(self.get_this_launch_file())
+        if sub.is_this_dir:
+            return LaunchValue.type_string(self.get_this_launch_file_dir())
         return LaunchValue()
 
     def duplicate(self) -> 'LaunchScope':
@@ -158,30 +164,45 @@ class LaunchScope:
         name = name.replace('-', '_')
         return name.replace(':', '_')
 
+    def get_this_launch_file(self) -> str:
+        return self.file_path.as_posix()
+
+    def get_this_launch_file_dir(self) -> str:
+        return self.file_path.parent.as_posix()
+
 
 @define
 class LaunchModelBuilder:
     name: str
     system: AnalysisSystemInterface = field(factory=AnalysisSystemInterface)
     nodes: List[LaunchNode] = field(factory=list)
-    _scope_stack: List[LaunchScope] = field(factory=lambda: [LaunchScope()])
+    scope_stack: List[LaunchScope] = field(factory=list)
+
+    @classmethod
+    def from_file_path(cls, file_path: Path) -> 'LaunchModelBuilder':
+        scopes = [LaunchScope(file_path)]
+        return cls(file_path.name, scope_stack=scopes)
 
     @property
     def scope(self) -> LaunchScope:
-        return self._scope_stack[-1]
+        return self.scope_stack[-1]
+
+    @scope.setter
+    def scope(self, scope: LaunchScope):
+        self.scope_stack[-1] = scope
 
     @property
     def root(self) -> LaunchScope:
-        return self._scope_stack[0]
+        return self.scope_stack[0]
 
     def build(self) -> LaunchModel:
         return LaunchModel(self.name, nodes=list(self.nodes))
 
     def enter_group(self):
-        self._scope_stack.append(self.scope.duplicate())
+        self.scope_stack.append(self.scope.duplicate())
 
     def exit_group(self):
-        self._scope_stack.pop()
+        self.scope_stack.pop()
 
     def declare_argument(self, arg: LaunchArgument):
         name: str = arg.name
@@ -228,8 +249,8 @@ class LaunchModelBuilder:
         return value.value if value.is_resolved else '$(?)'
 
 
-def model_from_description(name: str, description: LaunchDescription) -> LaunchModel:
-    builder = LaunchModelBuilder(name)
+def model_from_description(path: Path, description: LaunchDescription) -> LaunchModel:
+    builder = LaunchModelBuilder.from_file_path(path)
     for entity in description.entities:
         if entity.is_argument:
             builder.declare_argument(entity)
