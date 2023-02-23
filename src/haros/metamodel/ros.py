@@ -251,7 +251,7 @@ class NodeModel(RosFileSystemEntity):
 
 
 @frozen
-class RosNode(RosRuntimeEntity):
+class RosNodeModel(RosRuntimeEntity):
     pass
 
 

@@ -16,8 +16,9 @@ import logging
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_description
-from haros.analysis.python.graph import find_qualified_function_call
+from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.settings import Settings
+from haros.metamodel.builder.launch import model_from_description
 
 ###############################################################################
 # Constants
@@ -50,14 +51,23 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
 
-    builder = get_launch_description(path)
-    graph, data = builder.build()
-    print(graph.pretty())
-    print('')
-    print('Variables:')
-    print_variables(data.variables)
+    launch_description = get_launch_description(path)
+    try:
+        model = model_from_description(path, launch_description)
+        print('Launch Model:')
+        print(model)
+    except Exception as e:
+        logger.error(f'debug: unable to build launch model from "{path}"')
+        logger.error(str(e))
 
-    print_subgraphs(builder)
+    # builder = get_launch_description(path)
+    # graph, data = builder.build()
+    # print(graph.pretty())
+    # print('')
+    # print('Variables:')
+    # print_variables(data.variables)
+    #
+    # print_subgraphs(builder)
 
     # qualified_name = 'launch.LaunchDescription'
     # print(f'Find calls to: `{qualified_name}`')

@@ -14,6 +14,7 @@ from pathlib import Path
 
 from attrs import field, frozen
 
+from haros.errors import AnalysisError
 from haros.metamodel.launch import LaunchDescription
 
 ###############################################################################
@@ -69,7 +70,8 @@ class AnalysisSystemInterface:
         if description is None:
             # FIXME
             # description = parse_from_file(filepath)  # !!
-            self.launch_cache[filepath] = description
+            # self.launch_cache[filepath] = description
+            raise AnalysisError(f'unable to parse {path}')
         return description
 
     def read_text_file(self, filepath: PathType) -> str:

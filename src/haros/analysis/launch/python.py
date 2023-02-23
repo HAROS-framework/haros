@@ -7,6 +7,7 @@
 
 from typing import Any, Final, List, Optional, Mapping
 
+import logging
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,8 +17,6 @@ from attrs import frozen
 #from haros.analysis.python import query
 from haros.analysis.python.dataflow import DataFlowValue, library_function_wrapper, UnknownValue
 from haros.analysis.python.graph import from_ast
-from haros.errors import ParseError
-from haros.metamodel.builder.launch import model_from_description
 from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
     LaunchArgument,
@@ -25,7 +24,6 @@ from haros.metamodel.launch import (
     LaunchDescription,
     LaunchEntity,
     LaunchInclusion,
-    LaunchModel,
     LaunchNode,
     LaunchSubstitution,
     PathJoinSubstitution,
@@ -39,6 +37,8 @@ from haros.parsing.python import parse
 ###############################################################################
 # Constants
 ###############################################################################
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 LAUNCH_ENTRY_POINT: Final[str] = 'generate_launch_description'
 
@@ -247,9 +247,8 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
     # TODO node parameters
     # TODO node remaps
 
-    graph = from_ast(ast, symbols=symbols)
-    return graph
-    # return launch_model_from_program_graph(path, graph)  # FIXME
+    builder = from_ast(ast, symbols=symbols)
+    return launch_description_from_program_graph(builder)
 
 
 def launch_description_from_program_graph(graph: Any) -> LaunchDescription:
@@ -258,18 +257,15 @@ def launch_description_from_program_graph(graph: Any) -> LaunchDescription:
     for variant_value in data.return_values.possible_values():
         # variant_value: VariantData[DataFlowValue]
         if not variant_value.condition.is_true:
+            logger.error('variant_value is not true')
             continue  # FIXME
         if not variant_value.value.is_resolved:
+            logger.error('variant_value is not resolved')
             continue  # FIXME
-        launch_description = variant_value.value
+        launch_description = variant_value.value.value
         if not isinstance(launch_description, LaunchDescription):
+            logger.error(f'variant_value is not a LaunchDescription: {repr(launch_description)}')
             continue  # FIXME
         return launch_description
+    logger.error('unable to return a complete LaunchDescription')
     return LaunchDescription()  # FIXME
-
-def launch_model_from_program_graph(path: Path, graph: Any) -> LaunchModel:
-    try:
-        launch_description = launch_description_from_program_graph(graph)
-        return model_from_description(path, launch_description)
-    except Exception:  # FIXME
-        return LaunchModel(path.name)

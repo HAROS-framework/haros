@@ -10,6 +10,7 @@ from typing import Any, Dict, Final, Iterable, List, Optional, Tuple
 from attrs import field, frozen
 
 from haros.metamodel.common import TrackedCode
+from haros.metamodel.ros import RosNodeModel
 
 ###############################################################################
 # Constants
@@ -383,8 +384,12 @@ class LaunchDescription:
     entities: Tuple[LaunchEntity] = ()
 
 
+###############################################################################
+# ROS Launch Runtime
+###############################################################################
+
+
 @frozen
 class LaunchModel:
     name: str
-    nodes: List[LaunchNode] = field(factory=list)
-    builder: Any = None  # FIXME
+    nodes: List[RosNodeModel] = field(factory=list)

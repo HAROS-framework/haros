@@ -23,7 +23,7 @@ from haros.metamodel.launch import (
     LaunchSubstitution,
     TextSubstitution,
 )
-# from haros.metamodel.ros import RosName
+from haros.metamodel.ros import RosNodeModel
 
 ###############################################################################
 # Constants
@@ -175,7 +175,7 @@ class LaunchScope:
 class LaunchModelBuilder:
     name: str
     system: AnalysisSystemInterface = field(factory=AnalysisSystemInterface)
-    nodes: List[LaunchNode] = field(factory=list)
+    nodes: List[RosNodeModel] = field(factory=list)
     scope_stack: List[LaunchScope] = field(factory=list)
 
     @classmethod
@@ -215,15 +215,19 @@ class LaunchModelBuilder:
         else:
             namespace: LaunchValue = self.scope.resolve(include.namespace)
         arguments: Dict[str, LaunchSubstitution] = include.arguments
-        # TODO
         file: LaunchValue = self.scope.resolve(include.file)
         if file.is_resolved:
-            description = self.system.get_launch_description(file.value)
-            if description is None:
-                return  # FIXME
-            model = model_from_description(file.value, description)
+            try:
+                description = self.system.get_launch_description(file.value)
+            except AnalysisError as e:
+                logger.warning(str(e))
+                return
+            path: Path = Path(file.value)
             # FIXME pass arguments down
+            model = model_from_description(path, description)
+            self.nodes.extend(model.nodes)
         else:
+            logger.warning(f'unknown launch file inclusion')
             return  # FIXME
 
     def launch_node(self, node: LaunchNode):
@@ -239,8 +243,9 @@ class LaunchModelBuilder:
         params: Dict[str, LaunchValue] = {}
         for key, sub in node.parameters.items():
             params[key] = self.scope.resolve(sub)
-        rosnode = self.system.get_ros_node(package, executable)  # FIXME
-        instance = RosNodeInstance(name, rosnode, args, params, output)  # FIXME
+        fsnode = self.system.get_ros_node(package, executable)  # FIXME
+        rosnode = RosNodeModel(name, fsnode, args, params, output)  # FIXME
+        self.nodes.append(rosnode)
 
     def _get_node_name(self, name: Optional[LaunchSubstitution]) -> str:
         if name is None:
