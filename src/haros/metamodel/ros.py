@@ -250,6 +250,31 @@ class NodeModel(RosFileSystemEntity):
 ###############################################################################
 
 
+@frozen
+class RosNodeModel(RosRuntimeEntity):
+    pass
+
+
+@frozen
+class RosTopicModel(RosRuntimeEntity):
+    pass
+
+
+@frozen
+class RosServiceModel(RosRuntimeEntity):
+    pass
+
+
+@frozen
+class RosActionModel(RosRuntimeEntity):
+    pass
+
+
+@frozen
+class RosParameterModel(RosRuntimeEntity):
+    pass
+
+
 ###############################################################################
 # Metamodel Instance
 ###############################################################################
