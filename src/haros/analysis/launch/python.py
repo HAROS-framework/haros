@@ -28,6 +28,7 @@ from haros.metamodel.launch import (
     LaunchModel,
     LaunchNode,
     LaunchSubstitution,
+    PathJoinSubstitution,
     TextSubstitution,
     ThisDirectorySubstitution,
     UNKNOWN_SUBSTITUTION,
@@ -54,14 +55,15 @@ def python_launch_description_source_function(arg_list: DataFlowValue) -> Launch
     parts = []
     for arg in arg_list.value:
         if not arg.is_resolved:
-            return UNKNOWN_SUBSTITUTION
+            parts.append(UNKNOWN_SUBSTITUTION)
+            continue
         value = arg.value
         assert not isinstance(value, VariantData), repr(value)
         if isinstance(value, LaunchSubstitution):
-            parts.append(str(value))
-        else:
             parts.append(value)
-    return TextSubstitution('/'.join(parts))  # FIXME
+        else:
+            parts.append(TextSubstitution(str(value)))  # FIXME
+    return PathJoinSubstitution(tuple(parts))
 
 
 def launch_description_function(arg_list: DataFlowValue) -> LaunchDescription:
