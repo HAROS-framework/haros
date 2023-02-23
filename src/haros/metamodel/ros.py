@@ -251,7 +251,12 @@ class NodeModel(RosFileSystemEntity):
 
 
 @frozen
-class RosNodeModel(RosRuntimeEntity):
+class RosNode(RosRuntimeEntity):
+    pass
+
+
+@frozen
+class RosLinkModel(RosRuntimeEntity):
     pass
 
 
@@ -273,6 +278,11 @@ class RosActionModel(RosRuntimeEntity):
 @frozen
 class RosParameterModel(RosRuntimeEntity):
     pass
+
+
+@frozen
+class ComputationGraphModel(RosRuntimeEntity):
+    nodes: List[RosNodeModel] = field(factory=list)
 
 
 ###############################################################################
