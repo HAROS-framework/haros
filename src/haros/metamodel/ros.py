@@ -40,6 +40,50 @@ class Languages(enum.Enum):
 
 
 ###############################################################################
+# Base Classes
+###############################################################################
+
+
+@frozen
+class RosMetamodelEntity:
+    @property
+    def is_filesystem_entity(self) -> bool:
+        return False
+
+    @property
+    def is_source_entity(self) -> bool:
+        return False
+
+    @property
+    def is_runtime_entity(self) -> bool:
+        return False
+
+    def asdict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@frozen
+class RosFileSystemEntity(RosMetamodelEntity):
+    @property
+    def is_filesystem_entity(self) -> bool:
+        return True
+
+
+@frozen
+class RosSourceEntity(RosMetamodelEntity):
+    @property
+    def is_source_entity(self) -> bool:
+        return True
+
+
+@frozen
+class RosRuntimeEntity(RosMetamodelEntity):
+    @property
+    def is_runtime_entity(self) -> bool:
+        return True
+
+
+###############################################################################
 # ROS Source Entities
 ###############################################################################
 
@@ -120,7 +164,7 @@ class RosName:
 
 
 @frozen
-class RosAdvertiseCall:
+class RosAdvertiseCall(RosSourceEntity):
     # Parameters
     name: str
     namespace: str
@@ -132,7 +176,7 @@ class RosAdvertiseCall:
 
 
 @frozen
-class FileModel:
+class FileModel(RosFileSystemEntity):
     # Parameters
     package: str = field(validator=matches_re(RE_NAME))
     path: str  # relative path within package (e.g. 'src/code.cpp')
@@ -163,7 +207,7 @@ class FileModel:
 
 
 @frozen
-class PackageModel:
+class PackageModel(RosFileSystemEntity):
     # Parameters
     name: str = field(validator=matches_re(RE_NAME))
     # Defaults
@@ -184,7 +228,7 @@ class PackageModel:
 
 
 @frozen
-class NodeModel:
+class NodeModel(RosFileSystemEntity):
     # Parameters
     package: str = field(validator=matches_re(RE_NAME))
     name: str = field(validator=matches_re(RE_NAME))
@@ -199,9 +243,6 @@ class NodeModel:
     @property
     def uid(self) -> str:
         return f'{self.package}/{self.name}'
-
-    def asdict(self) -> Dict[str, Any]:
-        return asdict(self)
 
 
 ###############################################################################
