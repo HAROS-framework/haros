@@ -76,8 +76,8 @@ def launch_description_function(arg_list: DataFlowValue) -> LaunchDescription:
 
 def declare_launch_argument_function(
     name: DataFlowValue,
-    default_value: DataFlowValue = None,
-    description: DataFlowValue = None,
+    default_value: Optional[DataFlowValue] = None,
+    description: Optional[DataFlowValue] = None,
 ) -> LaunchArgument:
     return LaunchArgument(
         _dataflow_to_string(name),

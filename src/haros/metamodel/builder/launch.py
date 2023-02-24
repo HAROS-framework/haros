@@ -14,6 +14,7 @@ from pathlib import Path
 from attrs import define, field, frozen
 
 from haros.internal.interface import AnalysisSystemInterface
+from haros.metamodel.common import SolverResult
 from haros.metamodel.launch import (
     LaunchArgument,
     LaunchDescription,
@@ -23,7 +24,7 @@ from haros.metamodel.launch import (
     LaunchSubstitution,
     TextSubstitution,
 )
-from haros.metamodel.ros import RosNodeModel
+from haros.metamodel.ros import RosName, RosNodeModel
 
 ###############################################################################
 # Constants
@@ -34,15 +35,6 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 # Interface
 ###############################################################################
-
-
-@frozen
-class UnknownValue:
-    def __str__(self) -> str:
-        return '(?)'
-
-
-UNKNOWN_TOKEN: Final[UnknownValue] = UnknownValue()
 
 
 class LaunchValueType(Enum):
@@ -56,48 +48,45 @@ class LaunchValueType(Enum):
 
 
 @frozen
-class LaunchValue:
-    type: LaunchValueType = field(default=LaunchValueType.STRING)
-    value: Any = field(default=UNKNOWN_TOKEN)
-
-    @property
-    def is_resolved(self) -> bool:
-        return not isinstance(self.value, UnknownValue)
+class LaunchValue(SolverResult[LaunchValueType]):
+    @classmethod
+    def unknown(cls) -> 'LaunchValue':
+        return cls(LaunchValueType.STRING)
 
     @classmethod
     def type_bool(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.BOOL, value=value)
+        return cls(LaunchValueType.BOOL, value=value)
 
     @classmethod
     def type_int(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.INT, value=value)
+        return cls(LaunchValueType.INT, value=value)
 
     @classmethod
     def type_double(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.DOUBLE, value=value)
+        return cls(LaunchValueType.DOUBLE, value=value)
 
     @classmethod
     def type_string(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.STRING, value=value)
+        return cls(LaunchValueType.STRING, value=value)
 
     @classmethod
     def type_yaml(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.YAML, value=value)
+        return cls(LaunchValueType.YAML, value=value)
 
     @classmethod
     def type_auto(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.AUTO, value=value)
+        return cls(LaunchValueType.AUTO, value=value)
 
     @classmethod
     def type_object(cls, value: str) -> 'LaunchValue':
         # TODO validate values
-        return cls(type=LaunchValueType.OBJECT, value=value)
+        return cls(LaunchValueType.OBJECT, value=value)
 
     def __str__(self) -> str:
         return str(self.value)
@@ -113,7 +102,7 @@ class LaunchScope:
     def get(self, name: str) -> LaunchValue:
         value = self.configs.get(name, self.args.get(name))
         if value is None:
-            return LaunchValue()  # FIXME maybe raise error
+            return LaunchValue.unknown()  # FIXME maybe raise error
         return value
 
     def set(self, name: str, value: LaunchValue):
@@ -121,14 +110,14 @@ class LaunchScope:
         self.configs[name] = value
 
     def set_unknown(self, name: str):
-        return self.set(name, LaunchValue())
+        return self.set(name, LaunchValue.unknown())
 
     def set_text(self, name: str, text: str):
         return self.set(name, LaunchValue.type_string(text))
 
     def resolve(self, sub: Optional[LaunchSubstitution]) -> LaunchValue:
         if sub is None or sub.is_unknown:
-            return LaunchValue()
+            return LaunchValue.unknown()
         if sub.is_text:
             return LaunchValue.type_string(sub.value)
         if sub.is_configuration:
@@ -146,7 +135,7 @@ class LaunchScope:
             return LaunchValue.type_string(self.get_this_launch_file())
         if sub.is_this_dir:
             return LaunchValue.type_string(self.get_this_launch_file_dir())
-        return LaunchValue()
+        return LaunchValue.unknown()
 
     def duplicate(self) -> 'LaunchScope':
         # LaunchArgument is defined globally
@@ -243,8 +232,11 @@ class LaunchModelBuilder:
         params: Dict[str, LaunchValue] = {}
         for key, sub in node.parameters.items():
             params[key] = self.scope.resolve(sub)
-        fsnode = self.system.get_ros_node(package, executable)  # FIXME
-        rosnode = RosNodeModel(name, fsnode, args, params, output)  # FIXME
+        fsnode = self.system.get_node_model(package, executable)  # FIXME
+        if fsnode is None:
+            logger.warning(f'unable to find node: {package}/{executable}')
+        node_id = fsnode.uid if fsnode is not None else '?'
+        rosnode = RosNodeModel(RosName(name), node_id, args, params, output)
         self.nodes.append(rosnode)
 
     def _get_node_name(self, name: Optional[LaunchSubstitution]) -> str:

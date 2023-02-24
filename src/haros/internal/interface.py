@@ -16,6 +16,7 @@ from attrs import field, frozen
 
 from haros.errors import AnalysisError
 from haros.metamodel.launch import LaunchDescription
+from haros.metamodel.ros import NodeModel, ProjectModel, uid_node
 
 ###############################################################################
 # Constants
@@ -35,6 +36,7 @@ class AnalysisSystemInterface:
     workspace: Optional[str] = None
     packages: Mapping[str, str] = field(factory=dict)
     executables: Mapping[str, Iterable[str]] = field(factory=dict)
+    model: Optional[ProjectModel] = None
     launch_cache: Mapping[str, LaunchDescription] = field(factory=dict)
 
     def get_environment_var(self, name: str) -> Optional[str]:
@@ -59,6 +61,15 @@ class AnalysisSystemInterface:
                 self.pkg_paths[name] = str(d)
                 return str(d)
         return None
+
+    def get_node_model(self, package: str, executable: str) -> Optional[NodeModel]:
+        executables = self.executables.get(package)
+        if executables is None or executable not in executables:
+            return None
+        if self.model is None:
+            return None
+        uid = uid_node(package, executable)
+        return self.model.nodes.get(uid)
 
     def get_launch_description(self, path: PathType) -> LaunchDescription:
         filepath = str(filepath)

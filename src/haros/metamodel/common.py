@@ -5,10 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Generic, List, Mapping, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, Final, Generic, List, Mapping, Optional, Set, Tuple, TypeVar
 
 from collections import defaultdict
-from enum import Enum
 
 from attrs import asdict, define, field, frozen
 
@@ -82,18 +81,17 @@ class TrackedCode:
 T = TypeVar('T')
 
 
-class VariableType(Enum):
-    BOOL = 'bool'
-    INT = 'int'
-    DOUBLE = 'double'
-    STRING = 'string'
-    YAML = 'yaml'
-    AUTO = 'auto'
-    OBJECT = 'object'
+@frozen
+class UnknownValue:
+    def __str__(self) -> str:
+        return '$(?)'
+
+
+UNKNOWN_TOKEN: Final[UnknownValue] = UnknownValue()
 
 
 @frozen
-class UnknownValue:
+class UnusedUnknownValue:
     operator: str
     arguments: Tuple[Any]
 
@@ -101,7 +99,7 @@ class UnknownValue:
         return asdict(self)
 
     @classmethod
-    def deserialize(cls, data: Mapping[str, Any]) -> 'UnknownValue':
+    def deserialize(cls, data: Mapping[str, Any]) -> 'UnusedUnknownValue':
         if not isinstance(data, dict):
             raise TypeError(f'expected a Mapping, got {data!r}')
         return cls(data['operator'], tuple(data['arguments']))
@@ -114,8 +112,8 @@ class UnknownValue:
 
 @frozen
 class SolverResult(Generic[T]):
-    type: VariableType
-    value: Union[T, UnknownValue]
+    type: T
+    value: Any = field(default=UNKNOWN_TOKEN)
 
     @property
     def is_resolved(self) -> bool:
@@ -133,7 +131,7 @@ class SolverResult(Generic[T]):
             value = UnknownValue.deserialize(value)
         except (TypeError, KeyError):
             pass
-        return cls(data['type'], value)
+        return cls(data['type'], value=value)
 
     def __str__(self) -> str:
         return str(self.value)

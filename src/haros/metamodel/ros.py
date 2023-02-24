@@ -242,7 +242,7 @@ class NodeModel(RosFileSystemEntity):
 
     @property
     def uid(self) -> str:
-        return f'{self.package}/{self.name}'
+        return uid_node(self.package, self.name)
 
 
 ###############################################################################
@@ -252,7 +252,11 @@ class NodeModel(RosFileSystemEntity):
 
 @frozen
 class RosNodeModel(RosRuntimeEntity):
-    pass
+    rosname: RosName
+    node: str
+    arguments: List[str] = field(factory=list)
+    parameters: Dict[str, Any] = field(factory=dict)
+    output: str = 'log'
 
 
 @frozen
@@ -310,3 +314,6 @@ class ProjectModel:
 
 def uid_file(package: str, relative_path: str) -> str:
     return f'{package}/{relative_path}'
+
+def uid_node(package: str, executable: str) -> str:
+    return f'{package}/{executable}'

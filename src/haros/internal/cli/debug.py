@@ -52,13 +52,9 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         return 1
 
     launch_description = get_launch_description(path)
-    try:
-        model = model_from_description(path, launch_description)
-        print('Launch Model:')
-        print(model)
-    except Exception as e:
-        logger.error(f'debug: unable to build launch model from "{path}"')
-        logger.error(str(e))
+    model = model_from_description(path, launch_description)
+    print('Launch Model:')
+    print(model)
 
     # builder = get_launch_description(path)
     # graph, data = builder.build()

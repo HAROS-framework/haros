@@ -11,7 +11,7 @@ import enum
 
 from attrs import define, evolve, field, frozen
 
-from haros.metamodel.common import VariantData
+from haros.metamodel.common import SolverResult, UnknownValue, VariantData
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
 from haros.parsing.python.ast import (
     PythonAssignmentStatement,
@@ -277,62 +277,54 @@ class PythonType(enum.Flag):
 
 
 @frozen
-class UnknownValue:
-    def __str__(self) -> str:
-        return '(?)'
-
-
-UNKNOWN_TOKEN: Final[UnknownValue] = UnknownValue()
-
-
-@frozen
 class UnknownObject(UnknownValue):
     attributes: Dict[str, Any] = field(factory=dict)
     keys: Dict[Any, Any] = field(factory=dict)
 
 
 @frozen
-class DataFlowValue:
-    type: PythonType = field(default=PythonType.ANY)
-    value: Any = field(default=UNKNOWN_TOKEN)
-
-    @property
-    def is_resolved(self) -> bool:
-        return not isinstance(self.value, UnknownValue)
+class DataFlowValue(SolverResult[PythonType]):
+    @classmethod
+    def unknown(cls) -> 'DataFlowValue':
+        return cls(PythonType.ANY)
 
     @classmethod
     def of(cls, raw_value: Any) -> 'DataFlowValue':
         if raw_value is None:
-            return cls(PythonType.NONE, None)
+            return cls(PythonType.NONE, value=None)
         if isinstance(raw_value, bool):
-            return cls(PythonType.BOOL, raw_value)
+            return cls(PythonType.BOOL, value=raw_value)
         if isinstance(raw_value, int):
-            return cls(PythonType.INT, raw_value)
+            return cls(PythonType.INT, value=raw_value)
         if isinstance(raw_value, float):
-            return cls(PythonType.FLOAT, raw_value)
+            return cls(PythonType.FLOAT, value=raw_value)
         if isinstance(raw_value, complex):
-            return cls(PythonType.COMPLEX, raw_value)
+            return cls(PythonType.COMPLEX, value=raw_value)
         if isinstance(raw_value, str):
-            return cls(PythonType.STRING, raw_value)
+            return cls(PythonType.STRING, value=raw_value)
         if isinstance(raw_value, BaseException):
-            return cls(PythonType.EXCEPTION, raw_value)
+            return cls(PythonType.EXCEPTION, value=raw_value)
         if isinstance(raw_value, type):
-            return cls(PythonType.CLASS, raw_value)
+            return cls(PythonType.CLASS, value=raw_value)
         if isinstance(raw_value, FunctionWrapper) or callable(raw_value):
-            return cls(PythonType.FUNCTION, raw_value)
+            return cls(PythonType.FUNCTION, value=raw_value)
         if isinstance(raw_value, tuple):
-            return cls(PythonType.ITERABLE, raw_value)
+            return cls(PythonType.ITERABLE, value=raw_value)
         if isinstance(raw_value, list):
-            return cls(PythonType.ITERABLE, raw_value)
+            return cls(PythonType.ITERABLE, value=raw_value)
         if isinstance(raw_value, set):
-            return cls(PythonType.ITERABLE, raw_value)
+            return cls(PythonType.ITERABLE, value=raw_value)
         if isinstance(raw_value, dict):
-            return cls(PythonType.MAPPING, raw_value)
+            return cls(PythonType.MAPPING, value=raw_value)
         d = {}
         g = (type(d.items()), type(d.keys()), type(d.values()))
         if isinstance(raw_value, g):
-            return cls(PythonType.ITERABLE, raw_value)
-        return cls(PythonType.OBJECT, raw_value)
+            return cls(PythonType.ITERABLE, value=raw_value)
+        return cls(PythonType.OBJECT, value=raw_value)
+
+    @classmethod
+    def const_none(cls) -> 'DataFlowValue':
+        return cls(PythonType.NONE, value=None)
 
     def cast_to(self, type: PythonType) -> 'DataFlowValue':
         return evolve(self, type=type)
@@ -355,12 +347,12 @@ def wrap_normal_function(function: Callable) -> Callable:
             if not arg.is_resolved:
                 print()
                 print(f'unresolved call to {function}({args}, {kwargs})')
-                return VariantData.with_base_value(DataFlowValue())
+                return VariantData.with_base_value(DataFlowValue.unknown())
         for arg in kwargs.values():
             if not arg.is_resolved:
                 print()
                 print(f'unresolved call to {function}({args}, {kwargs})')
-                return VariantData.with_base_value(DataFlowValue())
+                return VariantData.with_base_value(DataFlowValue.unknown())
         raw_args = [arg.value for arg in args]
         raw_kwargs = {key: arg.value for key, arg in kwargs.items()}
         raw_value = function(*raw_args, **raw_kwargs)
@@ -460,7 +452,7 @@ class Definition:
         raw_value = __builtins__.get(name)
         assert callable(raw_value),  f'expected function, got: {raw_value!r}'
         wrapper = builtin_function_wrapper(name, raw_value)
-        value = DataFlowValue(type=PythonType.FUNCTION, value=wrapper)
+        value = DataFlowValue(PythonType.FUNCTION, value=wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
@@ -468,7 +460,7 @@ class Definition:
         #value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
-        value = DataFlowValue(type=PythonType.CLASS, value=raw_value)
+        value = DataFlowValue(PythonType.CLASS, value=raw_value)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
@@ -477,7 +469,7 @@ class Definition:
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
         assert issubclass(raw_value, BaseException), f'expected exception, got: {raw_value!r}'
-        value = DataFlowValue(type=PythonType.EXCEPTION, value=raw_value)
+        value = DataFlowValue(PythonType.EXCEPTION, value=raw_value)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
@@ -504,7 +496,7 @@ class Definition:
 
 
 def _default_return_value() -> VariantData[DataFlowValue]:
-    return VariantData.with_base_value(DataFlowValue(type=PythonType.NONE, value=None))
+    return VariantData.with_base_value(DataFlowValue.const_none())
 
 
 @define
@@ -556,7 +548,7 @@ class DataScope:
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
-        value = DataFlowValue(type=type, value=raw_value)
+        value = DataFlowValue(type, value=raw_value)
         return self.set(name, value, ast=ast, import_base=import_base)
 
     def set_unknown(
@@ -566,7 +558,7 @@ class DataScope:
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
-        value = DataFlowValue(type=type)
+        value = DataFlowValue(type)
         return self.set(name, value, ast=ast, import_base=import_base)
 
     def define(self, name: str, definition: Definition):
@@ -643,7 +635,7 @@ class DataScope:
 
     def add_return_value(self, expression: Optional[PythonExpression] = None):
         if expression is None:
-            value = DataFlowValue(type=PythonType.NONE, value=None)
+            value = DataFlowValue.const_none()
         else:
             value = self.value_from_expression(expression)
         self.return_values.set(value, self.condition)
@@ -666,68 +658,68 @@ class DataScope:
         if expression.is_function_call:
             return self.value_from_function_call(expression)
         if expression.is_star_expression:
-            return DataFlowValue(type=PythonType.OBJECT)
+            return DataFlowValue(PythonType.OBJECT)
         if expression.is_generator:
-            return DataFlowValue(type=PythonType.OBJECT)
+            return DataFlowValue(PythonType.OBJECT)
         if expression.is_operator:
             return self.value_from_operator(expression)
         if expression.is_conditional:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         if expression.is_lambda:
-            return DataFlowValue(type=PythonType.FUNCTION)
+            return DataFlowValue(PythonType.FUNCTION)
         if expression.is_assignment:
             # Python >= 3.8
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         if expression.is_yield:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         if expression.is_await:
-            return DataFlowValue()
-        return DataFlowValue()
+            return DataFlowValue.unknown()
+        return DataFlowValue.unknown()
 
     def value_from_literal(self, literal: PythonLiteral) -> DataFlowValue:
         assert literal.is_expression and literal.is_literal
         if literal.is_none:
-            return DataFlowValue(type=PythonType.OBJECT, value=None)
+            return DataFlowValue(PythonType.OBJECT, value=None)
         if literal.is_bool:
-            return DataFlowValue(type=PythonType.BOOL, value=literal.value)
+            return DataFlowValue(PythonType.BOOL, value=literal.value)
         if literal.is_number:
             if literal.is_int:
-                return DataFlowValue(type=PythonType.INT, value=literal.value)
+                return DataFlowValue(PythonType.INT, value=literal.value)
             if literal.is_float:
-                return DataFlowValue(type=PythonType.FLOAT, value=literal.value)
+                return DataFlowValue(PythonType.FLOAT, value=literal.value)
             if literal.is_complex:
-                return DataFlowValue(type=PythonType.COMPLEX, value=literal.value)
+                return DataFlowValue(PythonType.COMPLEX, value=literal.value)
         if literal.is_string:
-            return DataFlowValue(type=PythonType.STRING, value=literal.value)
+            return DataFlowValue(PythonType.STRING, value=literal.value)
         if literal.is_tuple and not literal.is_comprehension:
             values = tuple(self.value_from_expression(v) for v in literal.values)
             if all(v.is_resolved for v in values):
                 values = tuple(v.value for v in values)
-                return DataFlowValue(type=PythonType.ITERABLE, value=values)
+                return DataFlowValue(PythonType.ITERABLE, value=values)
         if literal.is_list and not literal.is_comprehension:
             values = list(self.value_from_expression(v) for v in literal.values)
             if all(v.is_resolved for v in values):
                 # values = list(v.value for v in values)
-                return DataFlowValue(type=PythonType.ITERABLE, value=values)
+                return DataFlowValue(PythonType.ITERABLE, value=values)
             else:
-                return DataFlowValue(type=PythonType.ITERABLE, value=values)
+                return DataFlowValue(PythonType.ITERABLE, value=values)
         if literal.is_dict and not literal.is_comprehension:
             entries = dict(
                 (self.value_from_expression(e.key), self.value_from_expression(e.value))
                 for e in literal.entries
             )
             # if not all(key.is_resolved for key in entries.keys()):
-            return DataFlowValue(type=PythonType.MAPPING, value=entries)
+            return DataFlowValue(PythonType.MAPPING, value=entries)
         # TODO FIXME
-        return DataFlowValue(type=PythonType.OBJECT)
+        return DataFlowValue(PythonType.OBJECT)
 
     def value_from_reference(self, reference: PythonReference) -> DataFlowValue:
         if reference.object is not None:
             obj: DataFlowValue = self.value_from_expression(reference.object)
             if not obj.type.can_have_attributes:
-                return DataFlowValue()
+                return DataFlowValue.unknown()
             if not obj.is_resolved:
-                return DataFlowValue()
+                return DataFlowValue.unknown()
             value = getattr(obj.value, reference.name)
             if callable(value):
                 value = library_function_wrapper(reference.name, str(type(obj.value)), value)
@@ -738,7 +730,7 @@ class DataScope:
             print(f'>> reference to {reference.name}:')
             print('  ', var)
         if not var.has_values or not var.is_deterministic:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         assert var.has_base_value
         definition = var.get()
         return definition.value
@@ -749,7 +741,7 @@ class DataScope:
             return self.value_from_unary_operator(operator)
         if operator.is_binary:
             return self.value_from_binary_operator(operator)
-        return DataFlowValue()
+        return DataFlowValue.unknown()
 
     def value_from_unary_operator(self, operator: PythonUnaryOperator) -> DataFlowValue:
         assert operator.is_unary
@@ -758,28 +750,28 @@ class DataScope:
             if not value.type.can_be_int:
                 raise DataFlowError.type_check('INT', value.type.name, value)
             if not value.is_resolved:
-                return DataFlowValue(type=PythonType.INT)
+                return DataFlowValue(PythonType.INT)
             r = ~value.value
-            return DataFlowValue(type=PythonType.INT, value=r)
+            return DataFlowValue(PythonType.INT, value=r)
         if operator.is_arithmetic:
             if not value.type.can_be_number:
                 raise DataFlowError.type_check('NUMBER', value.type.name, value)
             if not value.is_resolved:
-                return DataFlowValue(type=PythonType.NUMBER)
+                return DataFlowValue(PythonType.NUMBER)
             if operator.operator == '+':
                 r = +value.value
             elif operator.operator == '-':
                 r = -value.value
             else:
-                return DataFlowValue(type=PythonType.NUMBER)
+                return DataFlowValue(PythonType.NUMBER)
             # TODO FIXME refine return type
-            return DataFlowValue(type=PythonType.NUMBER, value=r)
+            return DataFlowValue(PythonType.NUMBER, value=r)
         if operator.is_logic:
             if not value.is_resolved:
-                return DataFlowValue(type=PythonType.BOOL)
+                return DataFlowValue(PythonType.BOOL)
             r = not value.value
-            return DataFlowValue(type=PythonType.BOOL, value=r)
-        return DataFlowValue()
+            return DataFlowValue(PythonType.BOOL, value=r)
+        return DataFlowValue.unknown()
 
     def value_from_binary_operator(self, operator: PythonBinaryOperator) -> DataFlowValue:
         assert operator.is_binary
@@ -787,90 +779,90 @@ class DataScope:
         b = self.value_from_expression(operator.operand2)
         o = operator.operator
         if not a.is_resolved:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         if not b.is_resolved:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         if operator.is_logic:
             if o == 'and':
                 r = a.value and b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == 'or':
                 r = a.value or b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
-            return DataFlowValue(type=PythonType.BOOL)
+                return DataFlowValue(PythonType.BOOL, value=r)
+            return DataFlowValue(PythonType.BOOL)
         if operator.is_comparison:
             if o == '==':
                 r = a.value == b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == '!=':
                 r = a.value != b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == '<':
                 r = a.value < b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == '<=':
                 r = a.value <= b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == '>':
                 r = a.value > b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == '>=':
                 r = a.value >= b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == 'in':
                 r = a.value in b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == 'not in':
                 r = a.value not in b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == 'is':
                 r = a.value is b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
+                return DataFlowValue(PythonType.BOOL, value=r)
             if o == 'is not':
                 r = a.value is not b.value
-                return DataFlowValue(type=PythonType.BOOL, value=r)
-            return DataFlowValue(type=PythonType.BOOL)
+                return DataFlowValue(PythonType.BOOL, value=r)
+            return DataFlowValue(PythonType.BOOL)
         if operator.is_arithmetic:
             if o == '+':
                 r = a.value + b.value
                 if isinstance(r, str):
-                    return DataFlowValue(type=PythonType.STRING, value=r)
+                    return DataFlowValue(PythonType.STRING, value=r)
                 else:
-                    return DataFlowValue(type=PythonType.NUMBER, value=r)
+                    return DataFlowValue(PythonType.NUMBER, value=r)
             if o == '-':
                 r = a.value - b.value
-                return DataFlowValue(type=PythonType.NUMBER, value=r)
+                return DataFlowValue(PythonType.NUMBER, value=r)
             if o == '*':
                 r = a.value * b.value
-                return DataFlowValue(type=PythonType.NUMBER, value=r)
+                return DataFlowValue(PythonType.NUMBER, value=r)
             if o == '/':
                 r = a.value / b.value
-                return DataFlowValue(type=PythonType.NUMBER, value=r)
+                return DataFlowValue(PythonType.NUMBER, value=r)
             if o == '//':
                 r = a.value // b.value
-                return DataFlowValue(type=PythonType.INT, value=r)
+                return DataFlowValue(PythonType.INT, value=r)
             if o == '**':
                 r = a.value ** b.value
-                return DataFlowValue(type=PythonType.NUMBER, value=r)
-            return DataFlowValue(type=PythonType.NUMBER)
-        return DataFlowValue()
+                return DataFlowValue(PythonType.NUMBER, value=r)
+            return DataFlowValue(PythonType.NUMBER)
+        return DataFlowValue.unknown()
 
     def value_from_item_access(self, access: PythonItemAccess) -> DataFlowValue:
         # object: PythonExpression
         # key: PythonSubscript
         obj: DataFlowValue = self.value_from_expression(access.object)
         if not obj.is_resolved or not obj.type.can_have_items:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         if access.key.is_slice:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         assert access.key.is_key
         key: DataFlowValue = self.value_from_expression(access.key.expression)
         if not key.is_resolved:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         try:
             value = obj.value[key.value]
         except KeyError:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         if isinstance(value, DataFlowValue):
             return value
         return DataFlowValue.of(value)
@@ -878,9 +870,9 @@ class DataScope:
     def value_from_function_call(self, call: PythonFunctionCall) -> DataFlowValue:
         value = self.value_from_expression(call.function)
         if not value.is_resolved:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         if not value.type.can_be_function:
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         function = value.value
         assert isinstance(function, FunctionWrapper), f'not function wrapper: {repr(function)}'
         assert callable(function.call), f'not callable: {repr(function.call)}'
@@ -888,7 +880,7 @@ class DataScope:
             result: VariantData[DataFlowValue] = function.call()
             if result.has_values and result.is_deterministic:
                 return result.get()
-            return DataFlowValue()
+            return DataFlowValue.unknown()
         args = []
         kwargs = {}
         for argument in call.arguments:
@@ -907,8 +899,8 @@ class DataScope:
                     args.append(arg)
                 elif argument.is_double_star:
                     # kwargs.update(arg)
-                    return DataFlowValue()  # FIXME
+                    return DataFlowValue.unknown()  # FIXME
         result: VariantData[DataFlowValue] = function.call(*args, **kwargs)
         if result.has_values and result.is_deterministic:
             return result.get()
-        return DataFlowValue()
+        return DataFlowValue.unknown()
