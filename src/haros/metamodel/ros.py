@@ -12,7 +12,12 @@ import enum
 from attrs import asdict, field, frozen
 from attrs.validators import matches_re
 
-from haros.metamodel.common import DevelopmentMetadata, SourceCodeDependencies, SourceCodeMetadata
+from haros.metamodel.common import (
+    DevelopmentMetadata,
+    SolverResult,
+    SourceCodeDependencies,
+    SourceCodeMetadata,
+)
 
 ###############################################################################
 # Constants
@@ -37,6 +42,17 @@ class Languages(enum.Enum):
     ROSMSG = 'ROS Message'
     ROSSRV = 'ROS Service'
     ROSACTION = 'ROS Action'
+
+
+@enum.unique
+class RosLaunchValueType(enum.Enum):
+    BOOL = 'bool'
+    INT = 'int'
+    DOUBLE = 'double'
+    STRING = 'string'
+    YAML = 'yaml'
+    AUTO = 'auto'
+    OBJECT = 'object'
 
 
 ###############################################################################
@@ -246,17 +262,67 @@ class NodeModel(RosFileSystemEntity):
 
 
 ###############################################################################
+# ROS Runtime Analysis
+###############################################################################
+
+
+@frozen
+class RosLaunchValue(SolverResult[RosLaunchValueType]):
+    @classmethod
+    def unknown(cls) -> 'RosLaunchValue':
+        return cls(RosLaunchValueType.STRING)
+
+    @classmethod
+    def type_bool(cls, value: str) -> 'RosLaunchValue':
+        # TODO validate values
+        return cls(RosLaunchValueType.BOOL, value=value)
+
+    @classmethod
+    def type_int(cls, value: str) -> 'RosLaunchValue':
+        # TODO validate values
+        return cls(RosLaunchValueType.INT, value=value)
+
+    @classmethod
+    def type_double(cls, value: str) -> 'RosLaunchValue':
+        # TODO validate values
+        return cls(RosLaunchValueType.DOUBLE, value=value)
+
+    @classmethod
+    def type_string(cls, value: str) -> 'RosLaunchValue':
+        # TODO validate values
+        return cls(RosLaunchValueType.STRING, value=value)
+
+    @classmethod
+    def type_yaml(cls, value: str) -> 'RosLaunchValue':
+        # TODO validate values
+        return cls(RosLaunchValueType.YAML, value=value)
+
+    @classmethod
+    def type_auto(cls, value: str) -> 'RosLaunchValue':
+        # TODO validate values
+        return cls(RosLaunchValueType.AUTO, value=value)
+
+    @classmethod
+    def type_object(cls, value: str) -> 'RosLaunchValue':
+        # TODO validate values
+        return cls(RosLaunchValueType.OBJECT, value=value)
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
+###############################################################################
 # ROS Runtime Objects
 ###############################################################################
 
 
 @frozen
 class RosNodeModel(RosRuntimeEntity):
-    rosname: RosName
-    node: str
-    arguments: List[str] = field(factory=list)
-    parameters: Dict[str, Any] = field(factory=dict)
-    output: str = 'log'
+    rosname: RosLaunchValue
+    node: RosLaunchValue
+    arguments: List[RosLaunchValue] = field(factory=list)
+    parameters: Dict[RosLaunchValue, RosLaunchValue] = field(factory=dict)
+    output: RosLaunchValue = RosLaunchValue.type_string('log')
 
 
 @frozen

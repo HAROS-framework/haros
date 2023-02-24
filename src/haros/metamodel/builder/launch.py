@@ -7,7 +7,6 @@
 
 from typing import Any, Dict, Final, Iterable, List, Mapping, Optional
 
-from enum import Enum
 import logging
 from pathlib import Path
 
@@ -24,7 +23,7 @@ from haros.metamodel.launch import (
     LaunchSubstitution,
     TextSubstitution,
 )
-from haros.metamodel.ros import RosName, RosNodeModel
+from haros.metamodel.ros import RosLaunchValue, RosNodeModel
 
 ###############################################################################
 # Constants
@@ -37,89 +36,34 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-class LaunchValueType(Enum):
-    BOOL = 'bool'
-    INT = 'int'
-    DOUBLE = 'double'
-    STRING = 'string'
-    YAML = 'yaml'
-    AUTO = 'auto'
-    OBJECT = 'object'
-
-
-@frozen
-class LaunchValue(SolverResult[LaunchValueType]):
-    @classmethod
-    def unknown(cls) -> 'LaunchValue':
-        return cls(LaunchValueType.STRING)
-
-    @classmethod
-    def type_bool(cls, value: str) -> 'LaunchValue':
-        # TODO validate values
-        return cls(LaunchValueType.BOOL, value=value)
-
-    @classmethod
-    def type_int(cls, value: str) -> 'LaunchValue':
-        # TODO validate values
-        return cls(LaunchValueType.INT, value=value)
-
-    @classmethod
-    def type_double(cls, value: str) -> 'LaunchValue':
-        # TODO validate values
-        return cls(LaunchValueType.DOUBLE, value=value)
-
-    @classmethod
-    def type_string(cls, value: str) -> 'LaunchValue':
-        # TODO validate values
-        return cls(LaunchValueType.STRING, value=value)
-
-    @classmethod
-    def type_yaml(cls, value: str) -> 'LaunchValue':
-        # TODO validate values
-        return cls(LaunchValueType.YAML, value=value)
-
-    @classmethod
-    def type_auto(cls, value: str) -> 'LaunchValue':
-        # TODO validate values
-        return cls(LaunchValueType.AUTO, value=value)
-
-    @classmethod
-    def type_object(cls, value: str) -> 'LaunchValue':
-        # TODO validate values
-        return cls(LaunchValueType.OBJECT, value=value)
-
-    def __str__(self) -> str:
-        return str(self.value)
-
-
 @frozen
 class LaunchScope:
     file_path: Path
-    args: Dict[str, LaunchValue] = field(factory=dict)
-    configs: Dict[str, LaunchValue] = field(factory=dict)
+    args: Dict[str, RosLaunchValue] = field(factory=dict)
+    configs: Dict[str, RosLaunchValue] = field(factory=dict)
     anonymous: Dict[str, str] = field(factory=dict)
 
-    def get(self, name: str) -> LaunchValue:
+    def get(self, name: str) -> RosLaunchValue:
         value = self.configs.get(name, self.args.get(name))
         if value is None:
-            return LaunchValue.unknown()  # FIXME maybe raise error
+            return RosLaunchValue.unknown()  # FIXME maybe raise error
         return value
 
-    def set(self, name: str, value: LaunchValue):
+    def set(self, name: str, value: RosLaunchValue):
         # if name not in self.configs:
         self.configs[name] = value
 
     def set_unknown(self, name: str):
-        return self.set(name, LaunchValue.unknown())
+        return self.set(name, RosLaunchValue.unknown())
 
     def set_text(self, name: str, text: str):
-        return self.set(name, LaunchValue.type_string(text))
+        return self.set(name, RosLaunchValue.type_string(text))
 
-    def resolve(self, sub: Optional[LaunchSubstitution]) -> LaunchValue:
+    def resolve(self, sub: Optional[LaunchSubstitution]) -> RosLaunchValue:
         if sub is None or sub.is_unknown:
-            return LaunchValue.unknown()
+            return RosLaunchValue.unknown()
         if sub.is_text:
-            return LaunchValue.type_string(sub.value)
+            return RosLaunchValue.type_string(sub.value)
         if sub.is_configuration:
             return self.get(sub.name)
         if sub.is_anon_name:
@@ -129,13 +73,13 @@ class LaunchScope:
                 if name is None:
                     name = self.compute_anon_name(value.value)
                     self.anonymous[value.value] = name
-                return LaunchValue.type_string(name)
+                return RosLaunchValue.type_string(name)
             return value
         if sub.is_this_file:
-            return LaunchValue.type_string(self.get_this_launch_file())
+            return RosLaunchValue.type_string(self.get_this_launch_file())
         if sub.is_this_dir:
-            return LaunchValue.type_string(self.get_this_launch_file_dir())
-        return LaunchValue.unknown()
+            return RosLaunchValue.type_string(self.get_this_launch_file_dir())
+        return RosLaunchValue.unknown()
 
     def duplicate(self) -> 'LaunchScope':
         # LaunchArgument is defined globally
@@ -200,11 +144,11 @@ class LaunchModelBuilder:
 
     def include_launch(self, include: LaunchInclusion):
         if include.namespace is None:
-            namespace: LaunchValue = LaunchValue.type_string('/')
+            namespace: RosLaunchValue = RosLaunchValue.type_string('/')
         else:
-            namespace: LaunchValue = self.scope.resolve(include.namespace)
+            namespace: RosLaunchValue = self.scope.resolve(include.namespace)
         arguments: Dict[str, LaunchSubstitution] = include.arguments
-        file: LaunchValue = self.scope.resolve(include.file)
+        file: RosLaunchValue = self.scope.resolve(include.file)
         if file.is_resolved:
             try:
                 description = self.system.get_launch_description(file.value)
@@ -221,28 +165,31 @@ class LaunchModelBuilder:
 
     def launch_node(self, node: LaunchNode):
         name: str = self._get_node_name(node.name)
-        package: LaunchValue = self.scope.resolve(node.package)
-        executable: LaunchValue = self.scope.resolve(node.executable)
+        package: RosLaunchValue = self.scope.resolve(node.package)
+        executable: RosLaunchValue = self.scope.resolve(node.executable)
         # namespace: Optional[LaunchSubstitution]
         # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
         for key, sub in node.parameters.items():
-            value: LaunchValue = self.scope.resolve(sub)
-        output: LaunchValue = self.scope.resolve(node.output)
-        args: List[LaunchValue] = [self.scope.resolve(arg) for arg in node.arguments]
-        params: Dict[str, LaunchValue] = {}
+            value: RosLaunchValue = self.scope.resolve(sub)
+        output: RosLaunchValue = self.scope.resolve(node.output)
+        args: List[RosLaunchValue] = [self.scope.resolve(arg) for arg in node.arguments]
+        params: Dict[str, RosLaunchValue] = {}
         for key, sub in node.parameters.items():
             params[key] = self.scope.resolve(sub)
         fsnode = self.system.get_node_model(package, executable)  # FIXME
         if fsnode is None:
             logger.warning(f'unable to find node: {package}/{executable}')
-        node_id = fsnode.uid if fsnode is not None else '?'
-        rosnode = RosNodeModel(RosName(name), node_id, args, params, output)
+            node_id = RosLaunchValue.unknown()
+        else:
+            node_id = RosLaunchValue.type_string(fsnode.uid)
+        rosname = RosLaunchValue.type_string(name)
+        rosnode = RosNodeModel(rosname, node_id, args, params, output)
         self.nodes.append(rosnode)
 
     def _get_node_name(self, name: Optional[LaunchSubstitution]) -> str:
         if name is None:
             return 'anonymous'  # FIXME
-        value: LaunchValue = self.scope.resolve(name)
+        value: RosLaunchValue = self.scope.resolve(name)
         return value.value if value.is_resolved else '$(?)'
 
 
