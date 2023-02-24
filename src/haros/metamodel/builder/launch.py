@@ -65,7 +65,12 @@ class LaunchScope:
         if sub.is_text:
             return RosLaunchValue.type_string(sub.value)
         if sub.is_configuration:
-            return self.get(sub.name)
+            name = sub.name
+            value = self.configs.get(name, self.args.get(name))
+            if value is None:
+                value = self.resolve(sub.default_value)
+                self.set(name, value)
+            return value
         if sub.is_anon_name:
             value = self.resolve(sub.name)
             if value.is_resolved:
@@ -172,6 +177,7 @@ class LaunchModelBuilder:
         for key, sub in node.parameters.items():
             value: RosLaunchValue = self.scope.resolve(sub)
         output: RosLaunchValue = self.scope.resolve(node.output)
+        print(f'\n\nNODE ARGUMENTS:\n{node.arguments}\n\n')
         args: List[RosLaunchValue] = [self.scope.resolve(arg) for arg in node.arguments]
         params: Dict[str, RosLaunchValue] = {}
         for key, sub in node.parameters.items():

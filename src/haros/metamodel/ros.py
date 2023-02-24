@@ -322,6 +322,7 @@ class RosNodeModel(RosRuntimeEntity):
     node: RosLaunchValue
     arguments: List[RosLaunchValue] = field(factory=list)
     parameters: Dict[RosLaunchValue, RosLaunchValue] = field(factory=dict)
+    remappings: Dict[RosLaunchValue, RosLaunchValue] = field(factory=dict)
     output: RosLaunchValue = RosLaunchValue.type_string('log')
 
 
