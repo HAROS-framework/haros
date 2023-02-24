@@ -12,6 +12,7 @@ from pathlib import Path
 
 from attrs import define, field, frozen
 
+from haros.errors import AnalysisError
 from haros.internal.interface import AnalysisSystemInterface
 from haros.metamodel.common import SolverResult
 from haros.metamodel.launch import (
@@ -84,6 +85,22 @@ class LaunchScope:
             return RosLaunchValue.type_string(self.get_this_launch_file())
         if sub.is_this_dir:
             return RosLaunchValue.type_string(self.get_this_launch_file_dir())
+        if sub.is_concatenation:
+            parts = []
+            for part in sub.parts:
+                value = self.resolve(part)
+                if not value.is_resolved:
+                    return RosLaunchValue.unknown()
+                parts.append(value)
+            return RosLaunchValue.type_string(''.join(map(str, parts)))
+        if sub.is_path_join:
+            path = Path()
+            for part in sub.parts:
+                value = self.resolve(part)
+                if not value.is_resolved:
+                    return RosLaunchValue.unknown()
+                path = path / str(value)
+            return RosLaunchValue.type_string(path.as_posix())
         return RosLaunchValue.unknown()
 
     def duplicate(self) -> 'LaunchScope':
@@ -117,9 +134,13 @@ class LaunchModelBuilder:
     scope_stack: List[LaunchScope] = field(factory=list)
 
     @classmethod
-    def from_file_path(cls, file_path: Path) -> 'LaunchModelBuilder':
+    def from_file_path(
+        cls,
+        file_path: Path,
+        system: AnalysisSystemInterface,
+    ) -> 'LaunchModelBuilder':
         scopes = [LaunchScope(file_path)]
-        return cls(file_path.name, scope_stack=scopes)
+        return cls(file_path.name, system=system, scope_stack=scopes)
 
     @property
     def scope(self) -> LaunchScope:
@@ -154,15 +175,17 @@ class LaunchModelBuilder:
             namespace: RosLaunchValue = self.scope.resolve(include.namespace)
         arguments: Dict[str, LaunchSubstitution] = include.arguments
         file: RosLaunchValue = self.scope.resolve(include.file)
+        print(f'included launch file: {include.file}')
         if file.is_resolved:
             try:
                 description = self.system.get_launch_description(file.value)
+                logger.info(f'parsed included launch file: {file.value}')
             except AnalysisError as e:
                 logger.warning(str(e))
                 return
             path: Path = Path(file.value)
             # FIXME pass arguments down
-            model = model_from_description(path, description)
+            model = model_from_description(path, description, self.system)
             self.nodes.extend(model.nodes)
         else:
             logger.warning(f'unknown launch file inclusion')
@@ -177,7 +200,6 @@ class LaunchModelBuilder:
         for key, sub in node.parameters.items():
             value: RosLaunchValue = self.scope.resolve(sub)
         output: RosLaunchValue = self.scope.resolve(node.output)
-        print(f'\n\nNODE ARGUMENTS:\n{node.arguments}\n\n')
         args: List[RosLaunchValue] = [self.scope.resolve(arg) for arg in node.arguments]
         params: Dict[str, RosLaunchValue] = {}
         for key, sub in node.parameters.items():
@@ -199,8 +221,13 @@ class LaunchModelBuilder:
         return value.value if value.is_resolved else '$(?)'
 
 
-def model_from_description(path: Path, description: LaunchDescription) -> LaunchModel:
-    builder = LaunchModelBuilder.from_file_path(path)
+def model_from_description(
+    path: Path,
+    description: LaunchDescription,
+    system: AnalysisSystemInterface,
+) -> LaunchModel:
+    logger.info(f'model_from_description({path})')
+    builder = LaunchModelBuilder.from_file_path(path, system)
     for entity in description.entities:
         if entity.is_argument:
             builder.declare_argument(entity)

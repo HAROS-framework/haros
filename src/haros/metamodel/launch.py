@@ -298,7 +298,7 @@ class ConcatenationSubstitution(LaunchSubstitution):
         return True
 
     def __str__(self) -> str:
-        return ''.join(self.parts)
+        return ''.join(map(str, self.parts))
 
 
 @frozen
@@ -310,7 +310,7 @@ class PathJoinSubstitution(LaunchSubstitution):
         return True
 
     def __str__(self) -> str:
-        return f'(join {" ".join(self.parts)})'
+        return f'$(join {" ".join(map(str, self.parts))})'
 
 
 ###############################################################################

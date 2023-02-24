@@ -19,6 +19,7 @@ from haros.analysis.launch import get_launch_description
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.settings import Settings
 from haros.metamodel.builder.launch import model_from_description
+from haros.metamodel.ros import FileModel, NodeModel, PackageModel, ProjectModel
 
 ###############################################################################
 # Constants
@@ -51,8 +52,13 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
 
+    system = AnalysisSystemInterface(
+        model=debugging_model(),
+        parse_launch_description=get_launch_description,
+    )
+
     launch_description = get_launch_description(path)
-    model = model_from_description(path, launch_description)
+    model = model_from_description(path, launch_description, system)
     print('Launch Model:')
     print(model)
 
@@ -79,6 +85,25 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 ###############################################################################
 # Helper Functions
 ###############################################################################
+
+
+def debugging_model() -> ProjectModel:
+    project = ProjectModel('debug')
+
+    package = PackageModel('turtlebot3_bringup')
+    project.packages[package.uid] = package
+    file = FileModel('turtlebot3_bringup', 'launch/robot.launch.py')
+    project.files[file.uid] = file
+    package.files.append(file.uid)
+    file = FileModel('turtlebot3_bringup', 'launch/turtlebot3_state_publisher.launch.py')
+    project.files[file.uid] = file
+    package.files.append(file.uid)
+
+    package = PackageModel('turtlebot3_node')
+    project.packages[package.uid] = package
+    node = NodeModel('turtlebot3_node', 'turtlebot3_ros')
+    project.nodes[node.uid] = node
+    return project
 
 
 def print_subgraphs(builder):

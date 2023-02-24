@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Iterable, Mapping, Optional, Union
+from typing import Callable, Iterable, Mapping, Optional, Union
 
 from errno import EACCES
 import logging
@@ -25,6 +25,15 @@ from haros.metamodel.ros import NodeModel, ProjectModel, uid_node
 PathType = Union[str, Path]
 
 ###############################################################################
+# Helper Functions
+###############################################################################
+
+
+def fail_to_parse_launch_file(path: PathType) -> LaunchDescription:
+    raise AnalysisError('no launch file parser has been provided')
+
+
+###############################################################################
 # Interface
 ###############################################################################
 
@@ -38,6 +47,7 @@ class AnalysisSystemInterface:
     executables: Mapping[str, Iterable[str]] = field(factory=dict)
     model: Optional[ProjectModel] = None
     launch_cache: Mapping[str, LaunchDescription] = field(factory=dict)
+    parse_launch_description: Callable = fail_to_parse_launch_file
 
     def get_environment_var(self, name: str) -> Optional[str]:
         value: Optional[str] = self.environment.get(name)
@@ -63,15 +73,15 @@ class AnalysisSystemInterface:
         return None
 
     def get_node_model(self, package: str, executable: str) -> Optional[NodeModel]:
-        executables = self.executables.get(package)
-        if executables is None or executable not in executables:
-            return None
+        # executables = self.executables.get(package)
+        # if executables is None or executable not in executables:
+        #     return None
         if self.model is None:
             return None
         uid = uid_node(package, executable)
         return self.model.nodes.get(uid)
 
-    def get_launch_description(self, path: PathType) -> LaunchDescription:
+    def get_launch_description(self, filepath: PathType) -> LaunchDescription:
         filepath = str(filepath)
         if self.strict:
             safe_dir = self._safe_root()
@@ -79,10 +89,8 @@ class AnalysisSystemInterface:
                 raise ValueError(filepath)
         description = self.launch_cache.get(filepath)
         if description is None:
-            # FIXME
-            # description = parse_from_file(filepath)  # !!
-            # self.launch_cache[filepath] = description
-            raise AnalysisError(f'unable to parse {path}')
+            description = self.parse_launch_description(Path(filepath))  # !!
+            self.launch_cache[filepath] = description
         return description
 
     def read_text_file(self, filepath: PathType) -> str:

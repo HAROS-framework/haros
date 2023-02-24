@@ -19,6 +19,7 @@ from haros.analysis.python.dataflow import DataFlowValue, library_function_wrapp
 from haros.analysis.python.graph import from_ast
 from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
+    ConcatenationSubstitution,
     LaunchArgument,
     LaunchConfiguration,
     LaunchDescription,
@@ -63,7 +64,7 @@ def python_launch_description_source_function(arg_list: DataFlowValue) -> Launch
             parts.append(value)
         else:
             parts.append(TextSubstitution(str(value)))  # FIXME
-    return PathJoinSubstitution(tuple(parts))
+    return ConcatenationSubstitution(tuple(parts))
 
 
 def launch_description_function(arg_list: DataFlowValue) -> LaunchDescription:
