@@ -203,10 +203,12 @@ class LaunchModelBuilder:
         for key, sub in node.parameters.items():
             value: RosLaunchValue = self.scope.resolve(sub)
         output: RosLaunchValue = self.scope.resolve(node.output)
-        args: List[RosLaunchValue] = [self.scope.resolve(arg) for arg in node.arguments]
-        params: Dict[str, RosLaunchValue] = {}
+        args: RosLaunchValue = RosLaunchValue.type_list([
+            self.scope.resolve(arg) for arg in node.arguments
+        ])
+        params: RosLaunchValue = RosLaunchValue.type_mapping({})
         for key, sub in node.parameters.items():
-            params[key] = self.scope.resolve(sub)
+            params.value[key] = self.scope.resolve(sub)
         node_id = uid_node(str(package), str(executable))
         if package.is_resolved and executable.is_resolved:
             fsnode = self.system.get_node_model(package, executable)  # FIXME

@@ -118,33 +118,41 @@ def print_ros_node(node):
     print('ROS node:', node.rosname)
     print('  node:', node.node)
     print('  output:', node.output)
-    if node.arguments:
-        print('  arguments:')
-        print_list_of_values(node.arguments, indent=4)
+    print_dynamic_collection('arguments', node.arguments)
+    print_dynamic_collection('parameters', node.parameters)
+    print_dynamic_collection('remappings', node.remappings)
+
+
+def print_dynamic_collection(name, result):
+    if result.is_resolved:
+        if result.type.can_be_list:
+            print(f'  {name}:')
+            print_list_of_values(result.value, indent=4)
+        elif result.type.can_be_mapping:
+            print(f'  {name}:')
+            print_mapping(result.value, indent=4)
+        else:
+            print(f'  {name}: {result.value}')
     else:
-        print('  arguments: []')
-    if node.parameters:
-        print('  parameters:')
-        print_mapping(node.parameters, indent=4)
-    else:
-        print('  parameters: {}')
-    if node.remappings:
-        print('  remappings:')
-        print_mapping(node.remappings, indent=4)
-    else:
-        print('  remappings: {}')
+        print(f'  {name}: {result.value}')
 
 
 def print_list_of_values(values, indent=0):
     ws = ' ' * indent
-    for value in values:
-        print(f'{ws}{value}')
+    if values:
+        for value in values:
+            print(f'{ws}{value}')
+    else:
+        print(f'{ws}[]')
 
 
 def print_mapping(mapping, indent=0):
     ws = ' ' * indent
-    for key, value in mapping.items():
-        print(f'{ws}{key}: {value}')
+    if mapping:
+        for key, value in mapping.items():
+            print(f'{ws}{key}: {value}')
+    else:
+        print(f'{ws}{{}}')
 
 
 def print_subgraphs(builder):

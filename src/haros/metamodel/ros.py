@@ -7,7 +7,7 @@
 
 from typing import Any, Dict, Final, List
 
-import enum
+from enum import auto, Enum, Flag, unique
 
 from attrs import asdict, field, frozen
 from attrs.validators import matches_re
@@ -27,8 +27,8 @@ from haros.metamodel.common import (
 RE_NAME: Final = r'(^[a-zA-Z][a-zA-Z0-9_]*$)'
 
 
-@enum.unique
-class Languages(enum.Enum):
+@unique
+class Languages(Enum):
     TEXT = 'Text'
     BINARY = 'Binary'
     XML = 'XML'
@@ -44,15 +44,54 @@ class Languages(enum.Enum):
     ROSACTION = 'ROS Action'
 
 
-@enum.unique
-class RosLaunchValueType(enum.Enum):
-    BOOL = 'bool'
-    INT = 'int'
-    DOUBLE = 'double'
-    STRING = 'string'
-    YAML = 'yaml'
-    AUTO = 'auto'
-    OBJECT = 'object'
+class RosLaunchValueType(Flag):
+    BOOL = auto()
+    INT = auto()
+    DOUBLE = auto()
+    STRING = auto()
+    LIST = auto()
+    MAPPING = auto()
+    NUMBER = INT | DOUBLE
+    PRIMITIVE = BOOL | NUMBER
+    ATOMIC = PRIMITIVE | STRING
+    ANY = ATOMIC | LIST | MAPPING
+
+    @property
+    def can_be_bool(self) -> bool:
+        return bool(self & RosLaunchValueType.BOOL)
+
+    @property
+    def can_be_int(self) -> bool:
+        return bool(self & RosLaunchValueType.INT)
+
+    @property
+    def can_be_double(self) -> bool:
+        return bool(self & RosLaunchValueType.DOUBLE)
+
+    @property
+    def can_be_number(self) -> bool:
+        return bool(self & RosLaunchValueType.NUMBER)
+
+    @property
+    def can_be_string(self) -> bool:
+        return bool(self & RosLaunchValueType.STRING)
+
+    @property
+    def can_be_atomic(self) -> bool:
+        return bool(self & RosLaunchValueType.ATOMIC)
+
+    @property
+    def can_be_list(self) -> bool:
+        return bool(self & RosLaunchValueType.LIST)
+
+    @property
+    def can_be_mapping(self) -> bool:
+        return bool(self & RosLaunchValueType.MAPPING)
+
+    @property
+    def can_have_items(self) -> bool:
+        mask = RosLaunchValueType.STRING | RosLaunchValueType.LIST | RosLaunchValueType.MAPPING
+        return bool(self & mask)
 
 
 ###############################################################################
@@ -273,6 +312,14 @@ class RosLaunchValue(SolverResult[RosLaunchValueType]):
         return cls(RosLaunchValueType.STRING)
 
     @classmethod
+    def unknown_list(cls) -> 'RosLaunchValue':
+        return cls(RosLaunchValueType.LIST)
+
+    @classmethod
+    def unknown_mapping(cls) -> 'RosLaunchValue':
+        return cls(RosLaunchValueType.MAPPING)
+
+    @classmethod
     def type_bool(cls, value: str) -> 'RosLaunchValue':
         # TODO validate values
         return cls(RosLaunchValueType.BOOL, value=value)
@@ -293,19 +340,14 @@ class RosLaunchValue(SolverResult[RosLaunchValueType]):
         return cls(RosLaunchValueType.STRING, value=value)
 
     @classmethod
-    def type_yaml(cls, value: str) -> 'RosLaunchValue':
+    def type_list(cls, value: str) -> 'RosLaunchValue':
         # TODO validate values
-        return cls(RosLaunchValueType.YAML, value=value)
+        return cls(RosLaunchValueType.LIST, value=value)
 
     @classmethod
-    def type_auto(cls, value: str) -> 'RosLaunchValue':
+    def type_mapping(cls, value: str) -> 'RosLaunchValue':
         # TODO validate values
-        return cls(RosLaunchValueType.AUTO, value=value)
-
-    @classmethod
-    def type_object(cls, value: str) -> 'RosLaunchValue':
-        # TODO validate values
-        return cls(RosLaunchValueType.OBJECT, value=value)
+        return cls(RosLaunchValueType.MAPPING, value=value)
 
     def __str__(self) -> str:
         return str(self.value)
@@ -320,9 +362,9 @@ class RosLaunchValue(SolverResult[RosLaunchValueType]):
 class RosNodeModel(RosRuntimeEntity):
     rosname: RosLaunchValue
     node: RosLaunchValue
-    arguments: List[RosLaunchValue] = field(factory=list)
-    parameters: Dict[RosLaunchValue, RosLaunchValue] = field(factory=dict)
-    remappings: Dict[RosLaunchValue, RosLaunchValue] = field(factory=dict)
+    arguments: RosLaunchValue = field(factory=RosLaunchValue.unknown_list)
+    parameters: RosLaunchValue = field(factory=RosLaunchValue.unknown_mapping)
+    remappings: RosLaunchValue = field(factory=RosLaunchValue.unknown_mapping)
     output: RosLaunchValue = RosLaunchValue.type_string('log')
 
 
