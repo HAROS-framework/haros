@@ -17,6 +17,7 @@ from attrs import frozen
 #from haros.analysis.python import query
 from haros.analysis.python.dataflow import DataFlowValue, library_function_wrapper, UnknownValue
 from haros.analysis.python.graph import from_ast
+from haros.errors import WrongFileTypeError
 from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
@@ -228,10 +229,10 @@ def _dataflow_to_launch_list(arg_list: Optional[DataFlowValue]) -> List[LaunchSu
 
 def get_python_launch_description(path: Path) -> LaunchDescription:
     if not path.is_file():
-        raise ValueError(f'not a file: {path}')
+        raise FileNotFoundError(f'not a file: {path}')
     ext = path.suffix.lower()
     if ext != '.py':
-        raise ValueError(f'not a valid launch file: {path}')
+        raise WrongFileTypeError(f'not a valid launch file: {path}')
     code = path.read_text(encoding='utf-8')
     ast = parse(code)
 
@@ -253,8 +254,7 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
 
 
 def launch_description_from_program_graph(graph: Any) -> LaunchDescription:
-    subgraph, data = graph.subgraph_builder(LAUNCH_ENTRY_POINT).build()
-    # FIXME possible KeyError from `subgraph_builder`
+    subgraph, data = graph.subgraph_builder(LAUNCH_ENTRY_POINT).build()  # !!
     for variant_value in data.return_values.possible_values():
         # variant_value: VariantData[DataFlowValue]
         if not variant_value.condition.is_true:

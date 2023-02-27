@@ -60,7 +60,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     launch_description = get_launch_description(path)
     model = model_from_description(path, launch_description, system)
     print('Launch Model:')
-    print(model)
+    print_launch_model(model)
 
     # builder = get_launch_description(path)
     # graph, data = builder.build()
@@ -104,6 +104,47 @@ def debugging_model() -> ProjectModel:
     node = NodeModel('turtlebot3_node', 'turtlebot3_ros')
     project.nodes[node.uid] = node
     return project
+
+
+def print_launch_model(model):
+    print('LaunchModel:', model.name)
+    for node in model.nodes:
+        print_ros_node(node)
+    if not model.nodes:
+        print('<there are no nodes>')
+
+
+def print_ros_node(node):
+    print('ROS node:', node.rosname)
+    print('  node:', node.node)
+    print('  output:', node.output)
+    if node.arguments:
+        print('  arguments:')
+        print_list_of_values(node.arguments, indent=4)
+    else:
+        print('  arguments: []')
+    if node.parameters:
+        print('  parameters:')
+        print_mapping(node.parameters, indent=4)
+    else:
+        print('  parameters: {}')
+    if node.remappings:
+        print('  remappings:')
+        print_mapping(node.remappings, indent=4)
+    else:
+        print('  remappings: {}')
+
+
+def print_list_of_values(values, indent=0):
+    ws = ' ' * indent
+    for value in values:
+        print(f'{ws}{value}')
+
+
+def print_mapping(mapping, indent=0):
+    ws = ' ' * indent
+    for key, value in mapping.items():
+        print(f'{ws}{key}: {value}')
 
 
 def print_subgraphs(builder):

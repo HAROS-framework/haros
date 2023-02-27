@@ -233,7 +233,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def expr_stmt(self, expression: PythonExpression):
         return self._new_node(
-            PythonExpression,
+            PythonExpressionStatement,
             expression,
             line=expression.line,
             column=expression.column,

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from attrs import define, field, frozen
 
-from haros.errors import AnalysisError
+from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
 from haros.metamodel.common import SolverResult
 from haros.metamodel.launch import (
@@ -24,7 +24,7 @@ from haros.metamodel.launch import (
     LaunchSubstitution,
     TextSubstitution,
 )
-from haros.metamodel.ros import RosLaunchValue, RosNodeModel
+from haros.metamodel.ros import RosLaunchValue, RosNodeModel, uid_node
 
 ###############################################################################
 # Constants
@@ -180,7 +180,10 @@ class LaunchModelBuilder:
             try:
                 description = self.system.get_launch_description(file.value)
                 logger.info(f'parsed included launch file: {file.value}')
-            except AnalysisError as e:
+            except FileNotFoundError as e:
+                logger.warning(str(e))
+                return
+            except (AnalysisError, ParseError) as e:
                 logger.warning(str(e))
                 return
             path: Path = Path(file.value)
@@ -204,14 +207,20 @@ class LaunchModelBuilder:
         params: Dict[str, RosLaunchValue] = {}
         for key, sub in node.parameters.items():
             params[key] = self.scope.resolve(sub)
-        fsnode = self.system.get_node_model(package, executable)  # FIXME
-        if fsnode is None:
-            logger.warning(f'unable to find node: {package}/{executable}')
-            node_id = RosLaunchValue.unknown()
-        else:
-            node_id = RosLaunchValue.type_string(fsnode.uid)
+        node_id = uid_node(str(package), str(executable))
+        if package.is_resolved and executable.is_resolved:
+            fsnode = self.system.get_node_model(package, executable)  # FIXME
+            if fsnode is None:
+                logger.warning(f'unable to find node: {package}/{executable}')
+            # TODO add ROS client library calls
         rosname = RosLaunchValue.type_string(name)
-        rosnode = RosNodeModel(rosname, node_id, args, params, output)
+        rosnode = RosNodeModel(
+            rosname,
+            RosLaunchValue.type_string(node_id),
+            arguments=args,
+            parameters=params,
+            output=output,
+        )
         self.nodes.append(rosnode)
 
     def _get_node_name(self, name: Optional[LaunchSubstitution]) -> str:

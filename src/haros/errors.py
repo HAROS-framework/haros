@@ -19,6 +19,10 @@ class ParseError(HarosError):
     """Errors related to parsing code."""
 
 
+class WrongFileTypeError(ParseError):
+    """The provided file is not in the expected language/extension/format."""
+
+
 ###############################################################################
 # Analysis Errors
 ###############################################################################

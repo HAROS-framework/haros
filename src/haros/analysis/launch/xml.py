@@ -9,7 +9,7 @@ from typing import Final, Tuple
 
 from pathlib import Path
 
-from haros.errors import ParseError
+from haros.errors import WrongFileTypeError
 from haros.metamodel.launch import LaunchDescription
 
 ###############################################################################
@@ -25,10 +25,10 @@ EXTENSIONS: Final[Tuple[str]] = ('.launch.xml', '.xml', '.launch')
 
 def get_xml_launch_description(path: Path) -> LaunchDescription:
     if not path.is_file():
-        raise ValueError(f'not a file: {path}')
+        raise FileNotFoundError(f'not a file: {path}')
     ext = path.suffix.lower()
     if ext not in EXTENSIONS:
-        raise ValueError(f'not a valid launch file: {path}')
+        raise WrongFileTypeError(f'not a valid launch file: {path}')
     return parse_file(path)
 
 

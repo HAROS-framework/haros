@@ -19,6 +19,7 @@ from haros.analysis.python.dataflow import (
     PythonType,
 )
 from haros.analysis.python.logic import to_condition
+from haros.errors import AnalysisError
 from haros.metamodel.common import VariantData
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
@@ -319,7 +320,10 @@ class ProgramGraphBuilder:
         return g, self.data
 
     def subgraph_builder(self, name: str):
-        statement = self.nested_graphs[name]
+        try:
+            statement = self.nested_graphs[name]
+        except KeyError:
+            raise AnalysisError(f'subgraph "{name}" does not exist')
         assert statement.is_function_def or statement.is_class_def, repr(statement)
         asynchronous = False if not statement.is_function_def else statement.asynchronous
         builder = ProgramGraphBuilder.from_scratch(name=name, asynchronous=asynchronous)
