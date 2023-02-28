@@ -91,26 +91,6 @@ UNKNOWN_TOKEN: Final[UnknownValue] = UnknownValue()
 
 
 @frozen
-class UnusedUnknownValue:
-    operator: str
-    arguments: Tuple[Any]
-
-    def serialize(self) -> Mapping[str, Any]:
-        return asdict(self)
-
-    @classmethod
-    def deserialize(cls, data: Mapping[str, Any]) -> 'UnusedUnknownValue':
-        if not isinstance(data, dict):
-            raise TypeError(f'expected a Mapping, got {data!r}')
-        return cls(data['operator'], tuple(data['arguments']))
-
-    def __str__(self) -> str:
-        if not self.arguments:
-            return f'$({self.operator})'
-        return f'$({self.operator} {" ".join(map(str, self.arguments))})'
-
-
-@frozen
 class SolverResult(Generic[T]):
     type: T
     value: Any = field(default=UNKNOWN_TOKEN)
