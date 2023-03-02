@@ -195,11 +195,10 @@ class PythonType(enum.Flag):
     MAPPING = enum.auto()
     OBJECT = enum.auto()
     NUMBER = INT | FLOAT | COMPLEX
-    PRIMITIVE = NONE | BOOL | NUMBER
-    ATOMIC = NONE | BOOL | NUMBER | STRING
+    PRIMITIVE = NONE | BOOL | NUMBER | STRING
     DEFINITIONS = FUNCTION | CLASS | EXCEPTION
     OBJECTS = STRING | ITERABLE | MAPPING | OBJECT
-    ANY = ATOMIC | DEFINITIONS | OBJECT
+    ANY = PRIMITIVE | DEFINITIONS | OBJECT
 
     @property
     def can_be_bool(self) -> bool:
@@ -226,8 +225,8 @@ class PythonType(enum.Flag):
         return bool(self & PythonType.STRING)
 
     @property
-    def can_be_atomic(self) -> bool:
-        return bool(self & PythonType.ATOMIC)
+    def can_be_primitive(self) -> bool:
+        return bool(self & PythonType.PRIMITIVE)
 
     @property
     def can_be_function(self) -> bool:

@@ -52,9 +52,8 @@ class RosLaunchValueType(Flag):
     LIST = auto()
     MAPPING = auto()
     NUMBER = INT | DOUBLE
-    PRIMITIVE = BOOL | NUMBER
-    ATOMIC = PRIMITIVE | STRING
-    ANY = ATOMIC | LIST | MAPPING
+    PRIMITIVE = BOOL | NUMBER | STRING
+    ANY = PRIMITIVE | LIST | MAPPING
 
     @property
     def can_be_bool(self) -> bool:
@@ -77,8 +76,8 @@ class RosLaunchValueType(Flag):
         return bool(self & RosLaunchValueType.STRING)
 
     @property
-    def can_be_atomic(self) -> bool:
-        return bool(self & RosLaunchValueType.ATOMIC)
+    def can_be_primitive(self) -> bool:
+        return bool(self & RosLaunchValueType.PRIMITIVE)
 
     @property
     def can_be_list(self) -> bool:
