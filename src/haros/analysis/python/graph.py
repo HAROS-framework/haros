@@ -13,7 +13,7 @@ from attrs import define, field, frozen
 
 from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph
 from haros.analysis.python.dataflow import (
-    DataFlowValue,
+    PythonResult,
     DataScope,
     FunctionWrapper,
     PythonType,
@@ -394,8 +394,8 @@ class ProgramGraphBuilder:
         # retains the current data scope (where the def appears) to act as globals
         global_vars = self.data
         # FIXME what to do if `len(function.decorators) > 0`?
-        def cb(*args, **kwargs) -> VariantData[DataFlowValue]:
-            # args and kwargs should be DataFlowValue
+        def cb(*args, **kwargs) -> VariantData[PythonResult]:
+            # args and kwargs should be PythonResult
             builder = ProgramGraphBuilder.from_scratch(
                 name=function.name,
                 asynchronous=function.asynchronous,

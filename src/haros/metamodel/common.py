@@ -5,11 +5,11 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Generic, List, Mapping, Optional, Set, Tuple, TypeVar
+from typing import Any, Dict, Final, Generic, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar
 
 from collections import defaultdict
 
-from attrs import asdict, define, field, frozen
+from attrs import asdict, define, evolve, field, frozen
 
 from haros.metamodel.logic import TRUE, LogicValue
 
@@ -79,42 +79,104 @@ class TrackedCode:
 ###############################################################################
 
 T = TypeVar('T')
+V = TypeVar('V')
+K = TypeVar('K')
 
 
 @frozen
-class UnknownValue:
+class Result(Generic[T, V]):
+    source: Optional[TrackedCode]
+    type: T
+
+    @property
+    def is_resolved(self) -> bool:
+        return False
+
+    @property
+    def is_traceable(self) -> bool:
+        return self.source is not None
+
+    def cast_to(self, new_type: T) -> 'Result':
+        return evolve(self, type=new_type)
+
+    def pretty(self) -> str:
+        return f'[{self.type}] {str(self)}'
+
+    # def serialize(self) -> Mapping[str, Any]:
+    #     return asdict(self)
+
+    # @classmethod
+    # def deserialize(cls, data: Mapping[str, Any]) -> 'SolverResult':
+    #     if not isinstance(data, dict):
+    #         raise TypeError(f'expected a Mapping, got {data!r}')
+    #     value = data['value']
+    #     try:
+    #         value = UnknownValue.deserialize(value)
+    #     except (TypeError, KeyError):
+    #         pass
+    #     return cls(data['type'], value=value)
+
     def __str__(self) -> str:
         return '$(?)'
 
 
-UNKNOWN_TOKEN: Final[UnknownValue] = UnknownValue()
-
-
 @frozen
-class SolverResult(Generic[T]):
-    type: T
-    value: Any = field(default=UNKNOWN_TOKEN)
+class Resolved(Result[T, V]):
+    value: V
 
     @property
     def is_resolved(self) -> bool:
-        return not isinstance(self.value, UnknownValue)
-
-    def serialize(self) -> Mapping[str, Any]:
-        return asdict(self)
-
-    @classmethod
-    def deserialize(cls, data: Mapping[str, Any]) -> 'SolverResult':
-        if not isinstance(data, dict):
-            raise TypeError(f'expected a Mapping, got {data!r}')
-        value = data['value']
-        try:
-            value = UnknownValue.deserialize(value)
-        except (TypeError, KeyError):
-            pass
-        return cls(data['type'], value=value)
+        return True
 
     def __str__(self) -> str:
         return str(self.value)
+
+
+@frozen
+class UnresolvedInt(Result[T, int]):
+    min_value: Optional[int] = None
+    max_value: Optional[int] = None
+
+    def __str__(self) -> str:
+        return '$(? int)'
+
+
+@frozen
+class UnresolvedFloat(Result[T, float]):
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+
+    def __str__(self) -> str:
+        return '$(? float)'
+
+
+@frozen
+class UnresolvedString(Result[T, str]):
+    parts: List[Optional[str]] = field(factory=list)
+
+    def __str__(self) -> str:
+        if not self.parts or (len(self.parts) == 1 and self.parts[0] is None):
+            return '$(? str)'
+        f = lambda s: '$(?)' if s is None else s
+        return ''.join(map(f, self.parts))
+
+
+@frozen
+class UnresolvedIterable(Result[T, Iterable[V]]):
+    parts: List[Result[T, V]] = field(factory=list)
+
+    def __str__(self) -> str:
+        if not self.parts:
+            return '$(? list)'
+        return str(list(map(str, self.parts)))
+
+
+@frozen
+class UnresolvedMapping(Result[T, Mapping[K, V]]):
+    known: Dict[K, Result[T, V]] = field(factory=dict)
+
+    def __str__(self) -> str:
+        return f'$(? map {self.known})'
 
 
 ###############################################################################

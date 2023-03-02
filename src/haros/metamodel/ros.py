@@ -14,9 +14,15 @@ from attrs.validators import matches_re
 
 from haros.metamodel.common import (
     DevelopmentMetadata,
-    SolverResult,
+    K,
+    Resolved,
+    Result,
     SourceCodeDependencies,
     SourceCodeMetadata,
+    TrackedCode,
+    UnresolvedIterable,
+    UnresolvedMapping,
+    V,
 )
 
 ###############################################################################
@@ -44,7 +50,7 @@ class Languages(Enum):
     ROSACTION = 'ROS Action'
 
 
-class RosLaunchValueType(Flag):
+class RosLaunchResultType(Flag):
     BOOL = auto()
     INT = auto()
     DOUBLE = auto()
@@ -57,39 +63,39 @@ class RosLaunchValueType(Flag):
 
     @property
     def can_be_bool(self) -> bool:
-        return bool(self & RosLaunchValueType.BOOL)
+        return bool(self & RosLaunchResultType.BOOL)
 
     @property
     def can_be_int(self) -> bool:
-        return bool(self & RosLaunchValueType.INT)
+        return bool(self & RosLaunchResultType.INT)
 
     @property
     def can_be_double(self) -> bool:
-        return bool(self & RosLaunchValueType.DOUBLE)
+        return bool(self & RosLaunchResultType.DOUBLE)
 
     @property
     def can_be_number(self) -> bool:
-        return bool(self & RosLaunchValueType.NUMBER)
+        return bool(self & RosLaunchResultType.NUMBER)
 
     @property
     def can_be_string(self) -> bool:
-        return bool(self & RosLaunchValueType.STRING)
+        return bool(self & RosLaunchResultType.STRING)
 
     @property
     def can_be_primitive(self) -> bool:
-        return bool(self & RosLaunchValueType.PRIMITIVE)
+        return bool(self & RosLaunchResultType.PRIMITIVE)
 
     @property
     def can_be_list(self) -> bool:
-        return bool(self & RosLaunchValueType.LIST)
+        return bool(self & RosLaunchResultType.LIST)
 
     @property
     def can_be_mapping(self) -> bool:
-        return bool(self & RosLaunchValueType.MAPPING)
+        return bool(self & RosLaunchResultType.MAPPING)
 
     @property
     def can_have_items(self) -> bool:
-        mask = RosLaunchValueType.STRING | RosLaunchValueType.LIST | RosLaunchValueType.MAPPING
+        mask = RosLaunchResultType.STRING | RosLaunchResultType.LIST | RosLaunchResultType.MAPPING
         return bool(self & mask)
 
 
@@ -304,52 +310,51 @@ class NodeModel(RosFileSystemEntity):
 ###############################################################################
 
 
-@frozen
-class RosLaunchValue(SolverResult[RosLaunchValueType]):
-    @classmethod
-    def unknown(cls) -> 'RosLaunchValue':
-        return cls(RosLaunchValueType.STRING)
+RosLaunchResult = Result[RosLaunchResultType, V]
+UnresolvedRosLaunchList = UnresolvedIterable[RosLaunchResultType, V]
+UnresolvedRosLaunchMapping = UnresolvedMapping[RosLaunchResultType, K, V]
 
-    @classmethod
-    def unknown_list(cls) -> 'RosLaunchValue':
-        return cls(RosLaunchValueType.LIST)
+def unknown_value(
+    type: RosLaunchResultType = RosLaunchResultType.STRING,
+    source: Optional[TrackedCode] = None,
+) -> RosLaunchResult:
+    return Result(source, type)
 
-    @classmethod
-    def unknown_mapping(cls) -> 'RosLaunchValue':
-        return cls(RosLaunchValueType.MAPPING)
+def unknown_list(source: Optional[TrackedCode] = None) -> UnresolvedRosLaunchList:
+    return UnresolvedIterable(source, RosLaunchResultType.LIST)
 
-    @classmethod
-    def type_bool(cls, value: str) -> 'RosLaunchValue':
-        # TODO validate values
-        return cls(RosLaunchValueType.BOOL, value=value)
+def unknown_mapping(source: Optional[TrackedCode] = None) -> UnresolvedRosLaunchMapping:
+    return UnresolvedMapping(source, RosLaunchResultType.MAPPING)
 
-    @classmethod
-    def type_int(cls, value: str) -> 'RosLaunchValue':
-        # TODO validate values
-        return cls(RosLaunchValueType.INT, value=value)
+def const_bool(value: str, source: Optional[TrackedCode] = None) -> RosLaunchResult[bool]:
+    # TODO validate values
+    return Resolved(source, RosLaunchResultType.BOOL, value)
 
-    @classmethod
-    def type_double(cls, value: str) -> 'RosLaunchValue':
-        # TODO validate values
-        return cls(RosLaunchValueType.DOUBLE, value=value)
+def const_int(value: str, source: Optional[TrackedCode] = None) -> RosLaunchResult[int]:
+    # TODO validate values
+    return Resolved(source, RosLaunchResultType.INT, value)
 
-    @classmethod
-    def type_string(cls, value: str) -> 'RosLaunchValue':
-        # TODO validate values
-        return cls(RosLaunchValueType.STRING, value=value)
+def const_double(value: str, source: Optional[TrackedCode] = None) -> RosLaunchResult[float]:
+    # TODO validate values
+    return Resolved(source, RosLaunchResultType.DOUBLE, value)
 
-    @classmethod
-    def type_list(cls, value: str) -> 'RosLaunchValue':
-        # TODO validate values
-        return cls(RosLaunchValueType.LIST, value=value)
+def const_string(value: str, source: Optional[TrackedCode] = None) -> RosLaunchResult[str]:
+    # TODO validate values
+    return Resolved(source, RosLaunchResultType.STRING, value)
 
-    @classmethod
-    def type_mapping(cls, value: str) -> 'RosLaunchValue':
-        # TODO validate values
-        return cls(RosLaunchValueType.MAPPING, value=value)
+def const_list(
+    value: str,
+    source: Optional[TrackedCode] = None,
+) -> RosLaunchResult[Iterable[RosLaunchResult]]:
+    # TODO validate values
+    return Resolved(source, RosLaunchResultType.LIST, value)
 
-    def __str__(self) -> str:
-        return str(self.value)
+def const_mapping(
+    value: str,
+    source: Optional[TrackedCode] = None,
+) -> RosLaunchResult[Mapping[str, RosLaunchResult]]:
+    # TODO validate values
+    return Resolved(source, RosLaunchResultType.MAPPING, value)
 
 
 ###############################################################################
@@ -359,12 +364,12 @@ class RosLaunchValue(SolverResult[RosLaunchValueType]):
 
 @frozen
 class RosNodeModel(RosRuntimeEntity):
-    rosname: RosLaunchValue
-    node: RosLaunchValue
-    arguments: RosLaunchValue = field(factory=RosLaunchValue.unknown_list)
-    parameters: RosLaunchValue = field(factory=RosLaunchValue.unknown_mapping)
-    remappings: RosLaunchValue = field(factory=RosLaunchValue.unknown_mapping)
-    output: RosLaunchValue = RosLaunchValue.type_string('log')
+    rosname: RosLaunchResult
+    node: RosLaunchResult
+    arguments: RosLaunchResult = field(factory=unknown_list)
+    parameters: RosLaunchResult = field(factory=unknown_mapping)
+    remappings: RosLaunchResult = field(factory=unknown_mapping)
+    output: RosLaunchResult = const_string('log')
 
 
 @frozen

@@ -15,7 +15,7 @@ from types import SimpleNamespace
 from attrs import frozen
 
 #from haros.analysis.python import query
-from haros.analysis.python.dataflow import DataFlowValue, library_function_wrapper, UnknownValue
+from haros.analysis.python.dataflow import PythonResult, library_function_wrapper, UnknownValue
 from haros.analysis.python.graph import from_ast
 from haros.errors import WrongFileTypeError
 from haros.metamodel.common import VariantData
@@ -51,7 +51,7 @@ UNKNOWN_TOKEN: Final[str] = '{?}'
 ###############################################################################
 
 
-def python_launch_description_source_function(arg_list: DataFlowValue) -> LaunchSubstitution:
+def python_launch_description_source_function(arg_list: PythonResult) -> LaunchSubstitution:
     if not arg_list.is_resolved:
         return UNKNOWN_SUBSTITUTION
     parts = []
@@ -68,7 +68,7 @@ def python_launch_description_source_function(arg_list: DataFlowValue) -> Launch
     return ConcatenationSubstitution(tuple(parts))
 
 
-def launch_description_function(arg_list: DataFlowValue) -> LaunchDescription:
+def launch_description_function(arg_list: PythonResult) -> LaunchDescription:
     values = []
     if arg_list.is_resolved:
         for arg in arg_list.value:
@@ -77,9 +77,9 @@ def launch_description_function(arg_list: DataFlowValue) -> LaunchDescription:
 
 
 def declare_launch_argument_function(
-    name: DataFlowValue,
-    default_value: Optional[DataFlowValue] = None,
-    description: Optional[DataFlowValue] = None,
+    name: PythonResult,
+    default_value: Optional[PythonResult] = None,
+    description: Optional[PythonResult] = None,
 ) -> LaunchArgument:
     return LaunchArgument(
         _dataflow_to_string(name),
@@ -89,8 +89,8 @@ def declare_launch_argument_function(
 
 
 def launch_configuration_function(
-    name: DataFlowValue,
-    default: Optional[DataFlowValue] = None,
+    name: PythonResult,
+    default: Optional[PythonResult] = None,
 ) -> LaunchConfiguration:
     return LaunchConfiguration(
         _dataflow_to_string(name),
@@ -99,8 +99,8 @@ def launch_configuration_function(
 
 
 def include_launch_description_function(
-    source: DataFlowValue,
-    launch_arguments: Optional[DataFlowValue] = None,
+    source: PythonResult,
+    launch_arguments: Optional[PythonResult] = None,
 ) -> LaunchInclusion:
     _source = UNKNOWN_SUBSTITUTION
     if source.is_resolved:
@@ -130,12 +130,12 @@ def include_launch_description_function(
 
 
 def node_function(
-    executable: DataFlowValue,
-    package: Optional[DataFlowValue] = None,
-    name: Optional[DataFlowValue] = None,
-    parameters: Optional[DataFlowValue] = None,
-    arguments: Optional[DataFlowValue] = None,
-    output: Optional[DataFlowValue] = None,
+    executable: PythonResult,
+    package: Optional[PythonResult] = None,
+    name: Optional[PythonResult] = None,
+    parameters: Optional[PythonResult] = None,
+    arguments: Optional[PythonResult] = None,
+    output: Optional[PythonResult] = None,
 ) -> LaunchNode:
     # docs: https://github.com/ros2/launch_ros/blob/rolling/launch_ros/launch_ros/actions/node.py
     # Node.__init__:
@@ -158,7 +158,7 @@ def node_function(
     )
 
 
-def get_package_share_directory_function(package: DataFlowValue):
+def get_package_share_directory_function(package: PythonResult):
     if not package.is_resolved:
         return UnknownValue()
     return f'/usr/share/ros/{package.value}'
@@ -195,14 +195,14 @@ def _prepare_builtin_symbols() -> Mapping[str, Any]:
     return symbols
 
 
-def _dataflow_to_string(value: DataFlowValue) -> str:
+def _dataflow_to_string(value: PythonResult) -> str:
     if value.is_resolved:
         return str(value.value)
     return UNKNOWN_TOKEN
 
 
 def _dataflow_to_launch_value(
-    value: Optional[DataFlowValue],
+    value: Optional[PythonResult],
     default: Optional[str] = None,
 ) -> Optional[LaunchSubstitution]:
     if value is None:
@@ -216,7 +216,7 @@ def _dataflow_to_launch_value(
     return UNKNOWN_SUBSTITUTION
 
 
-def _dataflow_to_launch_list(arg_list: Optional[DataFlowValue]) -> List[LaunchSubstitution]:
+def _dataflow_to_launch_list(arg_list: Optional[PythonResult]) -> List[LaunchSubstitution]:
     values = []
     if arg_list is not None:
         if arg_list.is_resolved:
@@ -256,7 +256,7 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
 def launch_description_from_program_graph(graph: Any) -> LaunchDescription:
     subgraph, data = graph.subgraph_builder(LAUNCH_ENTRY_POINT).build()  # !!
     for variant_value in data.return_values.possible_values():
-        # variant_value: VariantData[DataFlowValue]
+        # variant_value: VariantData[PythonResult]
         if not variant_value.condition.is_true:
             logger.error('variant_value is not true')
             continue  # FIXME
