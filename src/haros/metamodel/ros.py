@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List
+from typing import Any, Dict, Final, Iterable, List, Mapping, Optional
 
 from enum import auto, Enum, Flag, unique
 

@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Generic, Iterable, List, Mapping, Optional, Set, Tuple, TypeVar
+from typing import Any, Dict, Generic, Iterable, List, Mapping, Optional, Set, TypeVar
 
 from collections import defaultdict
 

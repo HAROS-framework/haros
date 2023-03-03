@@ -15,7 +15,11 @@ from types import SimpleNamespace
 from attrs import frozen
 
 #from haros.analysis.python import query
-from haros.analysis.python.dataflow import PythonResult, library_function_wrapper, UnknownValue
+from haros.analysis.python.dataflow import (
+    library_function_wrapper,
+    PythonResult,
+    UnresolvedPythonString,
+)
 from haros.analysis.python.graph import from_ast
 from haros.errors import WrongFileTypeError
 from haros.metamodel.common import VariantData
@@ -32,7 +36,6 @@ from haros.metamodel.launch import (
     TextSubstitution,
     ThisDirectorySubstitution,
     UNKNOWN_SUBSTITUTION,
-    UnknownSubstitution,
 )
 from haros.parsing.python import parse
 
@@ -160,7 +163,7 @@ def node_function(
 
 def get_package_share_directory_function(package: PythonResult):
     if not package.is_resolved:
-        return UnknownValue()
+        return UnresolvedPythonString()
     return f'/usr/share/ros/{package.value}'
 
 

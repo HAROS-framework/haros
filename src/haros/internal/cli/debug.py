@@ -134,7 +134,7 @@ def print_dynamic_collection(name, result):
         else:
             print(f'  {name}: {result.value}')
     else:
-        print(f'  {name}: {result.value}')
+        print(f'  {name}: {result}')
 
 
 def print_list_of_values(values, indent=0):

@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Final, List, Optional, Tuple
 
 import enum
 
