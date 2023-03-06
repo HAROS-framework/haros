@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, List, Mapping, Optional
+from typing import Dict, Final, Iterable, List, Mapping, Optional
 
 import logging
 from pathlib import Path
@@ -20,6 +20,7 @@ from haros.metamodel.launch import (
     LaunchInclusion,
     LaunchModel,
     LaunchNode,
+    LaunchNodeParameterItem,
     LaunchSubstitution,
 )
 from haros.metamodel.ros import (
@@ -29,7 +30,11 @@ from haros.metamodel.ros import (
     RosLaunchResult,
     RosNodeModel,
     uid_node,
+    unknown_list,
+    unknown_mapping,
     unknown_value,
+    UnresolvedRosLaunchList,
+    UnresolvedRosLaunchMapping,
 )
 
 ###############################################################################
@@ -210,21 +215,7 @@ class LaunchModelBuilder:
         args: RosLaunchResult = const_list([
             self.scope.resolve(arg) for arg in node.arguments
         ])
-        params: RosLaunchResult = const_mapping({})
-        for item in node.parameters:
-            if isinstance(item, dict):
-                for key, sub in item.items():
-                    k: RosLaunchResult = self.scope.resolve(key)
-                    if not k.is_resolved:
-                        continue
-                    params.value[k.value] = self.scope.resolve(sub)
-            else:
-                assert isinstance(item, LaunchSubstitution), f'expected LaunchSubstitution: {item!r}'
-                path: RosLaunchResult = self.scope.resolve(item)
-                if not path.is_resolved:
-                    logger.warning('unable to resolve parameter file path')
-                    continue
-                logger.warning(f'unable to load parameter file: {path}')
+        params: RosLaunchResult = self.parameters_from_list(node.parameters)
         node_id = uid_node(str(package), str(executable))
         if package.is_resolved and executable.is_resolved:
             fsnode = self.system.get_node_model(package, executable)  # FIXME
@@ -240,6 +231,36 @@ class LaunchModelBuilder:
             output=output,
         )
         self.nodes.append(rosnode)
+
+    def parameters_from_list(self, parameters: Iterable[LaunchNodeParameterItem]) -> RosLaunchResult:
+        result: RosLaunchResult = const_mapping({})
+        param_dict: Dict[str, RosLaunchResult] = result.value
+        for item in parameters:
+            if isinstance(item, LaunchSubstitution):
+                path: RosLaunchResult = self.scope.resolve(item)
+                if path.is_resolved:  # FIXME
+                    # self.system.read_yaml_file(path.value)
+                    logger.warning(f'unable to load parameter file: {path}')
+                    param_dict[str(path)] = const_mapping({'TODO': const_string('FIXME')})
+                else:
+                    logger.warning('unable to resolve parameter file path')
+                    result = unknown_mapping()
+                    param_dict = result.known
+                    continue
+            elif isinstance(item, dict):
+                for key, sub in item.items():
+                    name: RosLaunchResult = self.scope.resolve(key)
+                    if not name.is_resolved:
+                        # break the whole dict analysis
+                        logger.warning('unable to resolve parameter name')
+                        result = unknown_mapping()
+                        param_dict = result.known
+                        break
+                    # TODO how to handle nested dicts and non-string values?
+                    param_dict[name.value] = self.scope.resolve(sub)
+            else:
+                assert False, f'unexpected launch node parameter: {item!r}'
+        return result
 
     def _get_node_name(self, name: Optional[LaunchSubstitution]) -> str:
         if name is None:
