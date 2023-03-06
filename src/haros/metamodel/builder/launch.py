@@ -206,15 +206,25 @@ class LaunchModelBuilder:
         executable: RosLaunchResult = self.scope.resolve(node.executable)
         # namespace: Optional[LaunchSubstitution]
         # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
-        for key, sub in node.parameters.items():
-            value: RosLaunchResult = self.scope.resolve(sub)
         output: RosLaunchResult = self.scope.resolve(node.output)
         args: RosLaunchResult = const_list([
             self.scope.resolve(arg) for arg in node.arguments
         ])
         params: RosLaunchResult = const_mapping({})
-        for key, sub in node.parameters.items():
-            params.value[key] = self.scope.resolve(sub)
+        for item in node.parameters:
+            if isinstance(item, dict):
+                for key, sub in item.items():
+                    k: RosLaunchResult = self.scope.resolve(key)
+                    if not k.is_resolved:
+                        continue
+                    params.value[k.value] = self.scope.resolve(sub)
+            else:
+                assert isinstance(item, LaunchSubstitution), f'expected LaunchSubstitution: {item!r}'
+                path: RosLaunchResult = self.scope.resolve(item)
+                if not path.is_resolved:
+                    logger.warning('unable to resolve parameter file path')
+                    continue
+                logger.warning(f'unable to load parameter file: {path}')
         node_id = uid_node(str(package), str(executable))
         if package.is_resolved and executable.is_resolved:
             fsnode = self.system.get_node_model(package, executable)  # FIXME

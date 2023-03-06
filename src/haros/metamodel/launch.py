@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Final, Iterable, List, Optional, Tuple, Union
 
 from attrs import field, frozen
 
@@ -13,14 +13,8 @@ from haros.metamodel.common import TrackedCode
 from haros.metamodel.ros import RosNodeModel
 
 ###############################################################################
-# Constants
-###############################################################################
-
-
-###############################################################################
 # ROS Launch Substitutions
 ###############################################################################
-
 
 # For a full list of substitutions see
 # https://github.com/ros2/launch/tree/galactic/launch/launch/substitutions
@@ -363,13 +357,55 @@ class LaunchInclusion(LaunchEntity):
         return True
 
 
+LaunchNodeParameterDict = Dict[LaunchSubstitution, LaunchSubstitution]
+LaunchNodeParameterItem = Union[LaunchSubstitution, LaunchNodeParameterDict]
+
+
 @frozen
 class LaunchNode(LaunchEntity):
+    """
+    From `launch_ros.actions.Node` documentation:
+
+    «If the name is not given (or is None) then no name is passed to
+    the node on creation. The default name specified within the
+    code of the node is used instead.»
+
+    «The namespace can either be absolute (i.e. starts with /) or relative.
+    If absolute, then nothing else is considered and this is passed
+    directly to the node to set the namespace.
+    If relative, the namespace in the 'ros_namespace' LaunchConfiguration
+    will be prepended to the given relative node namespace.
+    If no namespace is given, then the default namespace `/` is assumed.»
+
+    «The parameters are passed as a list, with each element either a yaml
+    file that contains parameter rules (string or pathlib.Path to the full
+    path of the file), or a dictionary that specifies parameter rules.
+    Keys of the dictionary can be strings or an iterable of Substitutions
+    that will be expanded to a string.
+    Values in the dictionary can be strings, integers, floats, or tuples
+    of Substitutions that will be expanded to a string.
+    Additionally, values in the dictionary can be lists of the
+    aforementioned types, or another dictionary with the same properties.
+    A yaml file with the resulting parameters from the dictionary will be
+    written to a temporary file, the path to which will be passed to the node.»
+
+    «Multiple parameter dictionaries/files can be passed: each file path
+    will be passed in, in order, to the node (where the last definition of
+    a parameter takes effect). However, fully qualified node names override
+    wildcards even when specified earlier.
+    If `namespace` is not specified, dictionaries are prefixed by a
+    wildcard namespace (`/**`) and other specific parameter declarations
+    may overwrite it.»
+
+    «Using `ros_arguments` is equivalent to using `arguments` with a
+    prepended '--ros-args' item.»
+    """
+
     name: Optional[LaunchSubstitution] = None
     package: LaunchSubstitution = UNKNOWN_SUBSTITUTION
     executable: LaunchSubstitution = UNKNOWN_SUBSTITUTION
     namespace: Optional[LaunchSubstitution] = None
-    parameters: Dict[str, LaunchSubstitution] = field(factory=dict)
+    parameters: Iterable[LaunchNodeParameterItem] = field(factory=list)
     remaps: Dict[LaunchSubstitution, LaunchSubstitution] = field(factory=dict)
     output: LaunchSubstitution = UNKNOWN_SUBSTITUTION
     arguments: Iterable[LaunchSubstitution] = field(factory=tuple)
