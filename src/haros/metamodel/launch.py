@@ -235,7 +235,7 @@ class CommandSubstitution(LaunchSubstitution):
     command: command to be executed. The substitutions will be performed, and
         `shlex.split` will be used on the result.
     """
-    command: LaunchSubstitution
+    command: LaunchSubstitutionResult
 
     """
     :on_stderr: specifies what to do when there is stderr output.
@@ -303,7 +303,7 @@ class ThisDirectorySubstitution(LaunchSubstitution):
 
 @frozen
 class ConcatenationSubstitution(LaunchSubstitution):
-    parts: Tuple[LaunchSubstitution]
+    parts: Tuple[LaunchSubstitutionResult]
 
     @property
     def is_concatenation(self) -> bool:
@@ -315,7 +315,7 @@ class ConcatenationSubstitution(LaunchSubstitution):
 
 @frozen
 class PathJoinSubstitution(LaunchSubstitution):
-    parts: Tuple[LaunchSubstitution]
+    parts: Tuple[LaunchSubstitutionResult]
 
     @property
     def is_path_join(self) -> bool:
@@ -435,7 +435,7 @@ class LaunchNode(LaunchEntity):
 
 @frozen
 class LaunchDescription:
-    entities: Tuple[LaunchEntity] = ()
+    entities: Tuple[LaunchEntity] = ()  # FIXME should be Result
 
 
 ###############################################################################

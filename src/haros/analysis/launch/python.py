@@ -22,7 +22,7 @@ from haros.analysis.python.dataflow import (
 )
 from haros.analysis.python.graph import from_ast
 from haros.errors import WrongFileTypeError
-from haros.metamodel.common import VariantData
+from haros.metamodel.common import Result, VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
     const_substitution,
@@ -35,11 +35,9 @@ from haros.metamodel.launch import (
     LaunchNode,
     LaunchSubstitution,
     LaunchSubstitutionResult,
-    ListSubstitution,
     PathJoinSubstitution,
     TextSubstitution,
     ThisDirectorySubstitution,
-    UNKNOWN_SUBSTITUTION,
     unknown_substitution,
 )
 from haros.parsing.python import parse
@@ -61,18 +59,20 @@ UNKNOWN_TOKEN: Final[str] = '{?}'
 
 def python_launch_description_source_function(arg_list: PythonResult) -> LaunchSubstitution:
     if not arg_list.is_resolved:
-        return UNKNOWN_SUBSTITUTION
+        return unknown_substitution(source=arg_list.source)
     parts = []
     for arg in arg_list.value:
         if not arg.is_resolved:
-            parts.append(UNKNOWN_SUBSTITUTION)
+            parts.append(unknown_substitution(source=arg.source))
             continue
         value = arg.value
         assert not isinstance(value, VariantData), repr(value)
-        if isinstance(value, LaunchSubstitution):
+        if isinstance(value, Result):
             parts.append(value)
+        elif isinstance(value, LaunchSubstitution):
+            parts.append(const_substitution(value, source=arg.source))
         else:
-            parts.append(TextSubstitution(str(value)))  # FIXME
+            parts.append(const_text(str(value), source=arg.source))  # FIXME
     return ConcatenationSubstitution(tuple(parts))
 
 
@@ -80,7 +80,7 @@ def launch_description_function(arg_list: PythonResult) -> LaunchDescription:
     values = []
     if arg_list.is_resolved:
         for arg in arg_list.value:
-            values.append(arg.value if arg.is_resolved else LaunchEntity())
+            values.append(arg.value if arg.is_resolved else LaunchEntity())  # FIXME should be Result
     return LaunchDescription(values)
 
 

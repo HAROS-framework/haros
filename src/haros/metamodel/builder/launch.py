@@ -14,6 +14,7 @@ from attrs import define, field, frozen
 
 from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
+from haros.metamodel.common import TrackedCode
 from haros.metamodel.launch import (
     LaunchArgument,
     LaunchDescription,
@@ -77,9 +78,15 @@ class LaunchScope:
             return unknown_value()
         if not result.is_resolved:
             return unknown_value(source=result.source)
-        sub: LaunchSubstitution = result.value
+        return self.substitute(result.value, source=result.source)
+
+    def substitute(
+        self,
+        sub: LaunchSubstitution,
+        source: Optional[TrackedCode] = None,
+    ) -> RosLaunchResult:
         if sub.is_text:
-            return const_string(sub.value, source=result.source)
+            return const_string(sub.value, source=source)
         if sub.is_configuration:
             name = sub.name
             value = self.configs.get(name, self.args.get(name))
@@ -94,29 +101,29 @@ class LaunchScope:
                 if name is None:
                     name = self.compute_anon_name(value.value)
                     self.anonymous[value.value] = name
-                return const_string(name, source=result.source)
+                return const_string(name, source=source)
             return value
         if sub.is_this_file:
-            return const_string(self.get_this_launch_file(), source=result.source)
+            return const_string(self.get_this_launch_file(), source=source)
         if sub.is_this_dir:
-            return const_string(self.get_this_launch_file_dir(), source=result.source)
+            return const_string(self.get_this_launch_file_dir(), source=source)
         if sub.is_concatenation:
             parts = []
             for part in sub.parts:
                 value = self.resolve(part)
                 if not value.is_resolved:
-                    return unknown_value(source=result.source)
+                    return unknown_value(source=source)
                 parts.append(value)
-            return const_string(''.join(map(str, parts)), source=result.source)
+            return const_string(''.join(map(str, parts)), source=source)
         if sub.is_path_join:
             path = Path()
             for part in sub.parts:
                 value = self.resolve(part)
                 if not value.is_resolved:
-                    return unknown_value(source=result.source)
+                    return unknown_value(source=source)
                 path = path / str(value)
-            return const_string(path.as_posix(), source=result.source)
-        return unknown_value(source=result.source)
+            return const_string(path.as_posix(), source=source)
+        return unknown_value(source=source)
 
     def duplicate(self) -> 'LaunchScope':
         # LaunchArgument is defined globally
