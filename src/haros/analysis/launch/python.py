@@ -25,6 +25,8 @@ from haros.errors import WrongFileTypeError
 from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
+    const_substitution,
+    const_text,
     LaunchArgument,
     LaunchConfiguration,
     LaunchDescription,
@@ -32,10 +34,13 @@ from haros.metamodel.launch import (
     LaunchInclusion,
     LaunchNode,
     LaunchSubstitution,
+    LaunchSubstitutionResult,
+    ListSubstitution,
     PathJoinSubstitution,
     TextSubstitution,
     ThisDirectorySubstitution,
     UNKNOWN_SUBSTITUTION,
+    unknown_substitution,
 )
 from haros.parsing.python import parse
 
@@ -86,8 +91,8 @@ def declare_launch_argument_function(
 ) -> LaunchArgument:
     return LaunchArgument(
         _dataflow_to_string(name),
-        default_value=_dataflow_to_launch_value(default_value),
-        description=_dataflow_to_launch_value(description),
+        default_value=_dataflow_to_launch_substitution(default_value),
+        description=_dataflow_to_launch_substitution(description),
     )
 
 
@@ -97,7 +102,7 @@ def launch_configuration_function(
 ) -> LaunchConfiguration:
     return LaunchConfiguration(
         _dataflow_to_string(name),
-        default_value=_dataflow_to_launch_value(default),
+        default_value=_dataflow_to_launch_substitution(default),
     )
 
 
@@ -105,25 +110,25 @@ def include_launch_description_function(
     source: PythonResult,
     launch_arguments: Optional[PythonResult] = None,
 ) -> LaunchInclusion:
-    _source = UNKNOWN_SUBSTITUTION
+    _source: LaunchSubstitutionResult = unknown_substitution(source=source.source)
     if source.is_resolved:
         if isinstance(source.value, LaunchSubstitution):
-            _source = source.value
+            _source = const_substitution(source.value, source=source.source)
     _arguments = {}
     if launch_arguments is not None:
         if launch_arguments.is_resolved:
             assert launch_arguments.type.can_be_iterable
             for item in launch_arguments.value:
                 if isinstance(item, tuple):
-                    key: LaunchSubstitution = _dataflow_to_launch_value(item[0])
-                    value: LaunchSubstitution = _dataflow_to_launch_value(item[1])
+                    key: LaunchSubstitutionResult = _dataflow_to_launch_substitution(item[0])
+                    value: LaunchSubstitutionResult = _dataflow_to_launch_substitution(item[1])
                 elif item.is_resolved:
                     assert item.type.can_be_iterable
-                    key: LaunchSubstitution = _dataflow_to_launch_value(item.value[0])
-                    value: LaunchSubstitution = _dataflow_to_launch_value(item.value[1])
+                    key: LaunchSubstitutionResult = _dataflow_to_launch_substitution(item.value[0])
+                    value: LaunchSubstitutionResult = _dataflow_to_launch_substitution(item.value[1])
                 else:
                     continue  # FIXME
-                if key.is_unknown:
+                if not key.is_resolved:
                     unknown = _arguments.get(key, [])
                     unknown.append(value)
                     _arguments[key] = unknown
@@ -153,10 +158,11 @@ def node_function(
     #   arguments: Optional[Iterable[SomeSubstitutionsType]]
     #   **kwargs
     return LaunchNode(
-        name=_dataflow_to_launch_value(name),
-        package=_dataflow_to_launch_value(package),
-        executable=_dataflow_to_launch_value(executable),
-        output=_dataflow_to_launch_value(output, default='log'),
+        _dataflow_to_launch_substitution(package),
+        _dataflow_to_launch_substitution(executable),
+        name=_dataflow_to_launch_substitution(name),
+        # parameters=launch_params,
+        output=_dataflow_to_launch_substitution(output, default='log'),
         arguments=_dataflow_to_launch_list(arguments),
     )
 
@@ -204,29 +210,27 @@ def _dataflow_to_string(value: PythonResult) -> str:
     return UNKNOWN_TOKEN
 
 
-def _dataflow_to_launch_value(
-    value: Optional[PythonResult],
+def _dataflow_to_launch_substitution(
+    result: Optional[PythonResult],
     default: Optional[str] = None,
-) -> Optional[LaunchSubstitution]:
-    if value is None:
-        if default is None:
-            return None
-        return TextSubstitution(default)
-    if value.is_resolved:
-        if isinstance(value.value, LaunchSubstitution):
-            return value.value
-        return TextSubstitution(str(value.value))
-    return UNKNOWN_SUBSTITUTION
+) -> Optional[LaunchSubstitutionResult]:
+    if result is None:
+        return None if default is None else const_text(default)
+    if result.is_resolved:
+        if isinstance(result.value, LaunchSubstitution):
+            return const_substitution(result.value, source=result.source)
+        return const_text(str(result.value), source=result.source)
+    return unknown_substitution(source=result.source)
 
 
-def _dataflow_to_launch_list(arg_list: Optional[PythonResult]) -> List[LaunchSubstitution]:
+def _dataflow_to_launch_list(arg_list: Optional[PythonResult]) -> List[LaunchSubstitutionResult]:
     values = []
     if arg_list is not None:
         if arg_list.is_resolved:
             for arg in arg_list.value:
-                values.append(_dataflow_to_launch_value(arg))
+                values.append(_dataflow_to_launch_substitution(arg))
         else:
-            values.append(UNKNOWN_SUBSTITUTION)
+            values.append(unknown_substitution())  # FIXME
     return values
 
 

@@ -9,7 +9,7 @@ from typing import Any, Dict, Final, Iterable, List, Optional, Tuple, Union
 
 from attrs import field, frozen
 
-from haros.metamodel.common import TrackedCode
+from haros.metamodel.common import ListResult, NativeTypeResult, Resolved, Result, TrackedCode
 from haros.metamodel.ros import RosNodeModel
 
 ###############################################################################
@@ -82,6 +82,20 @@ class LaunchSubstitution:
         return '$(?)'
 
 
+LaunchSubstitutionResult = NativeTypeResult[LaunchSubstitution]
+
+
+def unknown_substitution(source: Optional[TrackedCode] = None) -> LaunchSubstitutionResult:
+    return Result(source, LaunchSubstitution)
+
+
+def const_substitution(
+    sub: LaunchSubstitution,
+    source: Optional[TrackedCode] = None,
+) -> LaunchSubstitutionResult:
+    return Resolved(source, type(sub), sub)
+
+
 @frozen
 class UnknownSubstitution(LaunchSubstitution):
     source: TrackedCode
@@ -106,10 +120,14 @@ class TextSubstitution(LaunchSubstitution):
         return self.value
 
 
+def const_text(text: str, source: Optional[TrackedCode] = None) -> LaunchSubstitutionResult:
+    return const_substitution(TextSubstitution(text), source=source)
+
+
 @frozen
 class LaunchConfiguration(LaunchSubstitution):
     name: str
-    default_value: Optional[LaunchSubstitution] = None
+    default_value: Optional[LaunchSubstitutionResult] = None
 
     @property
     def is_configuration(self) -> bool:
@@ -330,8 +348,8 @@ class LaunchEntity:
 @frozen
 class LaunchArgument(LaunchEntity):
     name: str
-    default_value: Optional[LaunchSubstitution] = None
-    description: Optional[LaunchSubstitution] = None
+    default_value: Optional[LaunchSubstitutionResult] = None
+    description: Optional[LaunchSubstitutionResult] = None
 
     @property
     def is_argument(self) -> bool:
@@ -348,17 +366,17 @@ class LaunchArgument(LaunchEntity):
 
 @frozen
 class LaunchInclusion(LaunchEntity):
-    file: LaunchSubstitution
-    namespace: Optional[LaunchSubstitution] = None
-    arguments: Dict[str, LaunchSubstitution] = field(factory=dict)
+    file: LaunchSubstitutionResult
+    namespace: Optional[LaunchSubstitutionResult] = None
+    arguments: Dict[str, LaunchSubstitutionResult] = field(factory=dict)
 
     @property
     def is_inclusion(self) -> bool:
         return True
 
 
-LaunchNodeParameterDict = Dict[LaunchSubstitution, LaunchSubstitution]
-LaunchNodeParameterItem = Union[LaunchSubstitution, LaunchNodeParameterDict]
+LaunchNodeParameterDict = Dict[LaunchSubstitutionResult, LaunchSubstitutionResult]
+LaunchNodeParameterItem = Union[LaunchSubstitutionResult, LaunchNodeParameterDict]
 
 
 @frozen
@@ -401,14 +419,14 @@ class LaunchNode(LaunchEntity):
     prepended '--ros-args' item.»
     """
 
-    name: Optional[LaunchSubstitution] = None
-    package: LaunchSubstitution = UNKNOWN_SUBSTITUTION
-    executable: LaunchSubstitution = UNKNOWN_SUBSTITUTION
-    namespace: Optional[LaunchSubstitution] = None
+    package: LaunchSubstitutionResult
+    executable: LaunchSubstitutionResult
+    name: Optional[LaunchSubstitutionResult] = None
+    namespace: Optional[LaunchSubstitutionResult] = None
     parameters: Iterable[LaunchNodeParameterItem] = field(factory=list)
-    remaps: Dict[LaunchSubstitution, LaunchSubstitution] = field(factory=dict)
-    output: LaunchSubstitution = UNKNOWN_SUBSTITUTION
-    arguments: Iterable[LaunchSubstitution] = field(factory=tuple)
+    remaps: Dict[LaunchSubstitutionResult, LaunchSubstitutionResult] = field(factory=dict)
+    output: LaunchSubstitutionResult = const_text('log')
+    arguments: Iterable[LaunchSubstitutionResult] = field(factory=list)
 
     @property
     def is_node(self) -> bool:

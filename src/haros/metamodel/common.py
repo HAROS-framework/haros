@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Generic, Iterable, List, Mapping, Optional, Set, TypeVar
+from typing import Any, Dict, Generic, Iterable, List, Mapping, Optional, Set, Type, TypeVar
 
 from collections import defaultdict
 
@@ -118,6 +118,10 @@ class Result(Generic[T, V]):
 
     def __str__(self) -> str:
         return '$(?)'
+
+
+NativeTypeResult = Result[Type[V], V]
+ListResult = NativeTypeResult[List[V]]
 
 
 @frozen
