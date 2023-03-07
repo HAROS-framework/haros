@@ -22,7 +22,7 @@ from haros.analysis.python.dataflow import (
 )
 from haros.analysis.python.graph import from_ast
 from haros.errors import WrongFileTypeError
-from haros.metamodel.common import Result, VariantData
+from haros.metamodel.common import Resolved, Result, VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
     const_substitution,
@@ -33,11 +33,13 @@ from haros.metamodel.launch import (
     LaunchEntity,
     LaunchInclusion,
     LaunchNode,
+    LaunchNodeParameterList,
     LaunchSubstitution,
     LaunchSubstitutionResult,
     PathJoinSubstitution,
     TextSubstitution,
     ThisDirectorySubstitution,
+    unknown_parameter_list,
     unknown_substitution,
 )
 from haros.parsing.python import parse
@@ -157,11 +159,26 @@ def node_function(
     #   ros_arguments: Optional[Iterable[SomeSubstitutionsType]]
     #   arguments: Optional[Iterable[SomeSubstitutionsType]]
     #   **kwargs
+    if parameters is None:
+        params = Resolved(None, type(list), [])
+    elif parameters.is_resolved:
+        params = Resolved(parameters.source, type(list), [])
+        for item in parameters.value:
+            if item.is_resolved:
+                if item.type.can_be_mapping:
+                    params.value.append(Resolved(item.source, dict, item.value))  # FIXME
+                else:
+                    params.value.append(Resolved(item.source, LaunchSubstitution, item.value))  # FIXME
+            else:
+                params = unknown_parameter_list(source=parameters.source)
+                break
+    else:
+        params = unknown_parameter_list(source=parameters.source)
     return LaunchNode(
         _dataflow_to_launch_substitution(package),
         _dataflow_to_launch_substitution(executable),
         name=_dataflow_to_launch_substitution(name),
-        # parameters=launch_params,
+        parameters=params,
         output=_dataflow_to_launch_substitution(output, default='log'),
         arguments=_dataflow_to_launch_list(arguments),
     )

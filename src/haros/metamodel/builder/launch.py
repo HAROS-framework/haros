@@ -14,14 +14,14 @@ from attrs import define, field, frozen
 
 from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
-from haros.metamodel.common import TrackedCode
+from haros.metamodel.common import Result, TrackedCode
 from haros.metamodel.launch import (
     LaunchArgument,
     LaunchDescription,
     LaunchInclusion,
     LaunchModel,
     LaunchNode,
-    LaunchNodeParameterItem,
+    LaunchNodeParameterList,
     LaunchSubstitution,
     LaunchSubstitutionResult,
 )
@@ -243,34 +243,45 @@ class LaunchModelBuilder:
         )
         self.nodes.append(rosnode)
 
-    def parameters_from_list(self, parameters: Iterable[LaunchNodeParameterItem]) -> RosLaunchResult:
+    def parameters_from_list(self, parameters: LaunchNodeParameterList) -> RosLaunchResult:
+        if not parameters.is_resolved:
+            return unknown_mapping(source=parameters.source)
         result: RosLaunchResult = const_mapping({})
         param_dict: Dict[str, RosLaunchResult] = result.value
-        for item in parameters:
-            if isinstance(item, LaunchSubstitutionResult):
-                path: RosLaunchResult = self.scope.resolve(item)
-                if path.is_resolved:  # FIXME
-                    # self.system.read_yaml_file(path.value)
-                    logger.warning(f'unable to load parameter file: {path}')
-                    param_dict[str(path)] = const_mapping({'TODO': const_string('FIXME')})
-                else:
-                    logger.warning('unable to resolve parameter file path')
-                    result = unknown_mapping()
-                    param_dict = result.known
-                    continue
-            elif isinstance(item, dict):
-                for key, sub in item.items():
-                    name: RosLaunchResult = self.scope.resolve(key)
-                    if not name.is_resolved:
-                        # break the whole dict analysis
-                        logger.warning('unable to resolve parameter name')
+        for item in parameters.value:
+            assert isinstance(item, Result), f'unexpected launch node parameter: {item!r}'
+            if item.is_resolved:
+                print('ITEM TYPE', item.type)
+                if issubclass(item.type, LaunchSubstitution):  # FIXME provide a function for this
+                    path: RosLaunchResult = self.scope.resolve(item)
+                    if path.is_resolved:  # FIXME
+                        # self.system.read_yaml_file(path.value)
+                        logger.warning(f'unable to load parameter file: {path}')
+                        param_dict[str(path)] = const_mapping({'TODO': const_string('FIXME')})
+                    else:
+                        logger.warning('unable to resolve parameter file path')
                         result = unknown_mapping()
                         param_dict = result.known
-                        break
-                    # TODO how to handle nested dicts and non-string values?
-                    param_dict[name.value] = self.scope.resolve(sub)
+                        continue
+                else:
+                    assert issubclass(item.type, dict), f'unexpected parameter: {item!r}'
+                    for key, sub in item.value.items():
+                        if key.is_resolved and isinstance(key.value, str):  # FIXME
+                            name: RosLaunchResult = const_string(key.value, source=key.source)
+                        else:
+                            name: RosLaunchResult = self.scope.resolve(key)
+                        if not name.is_resolved:
+                            # break the whole dict analysis
+                            logger.warning('unable to resolve parameter name')
+                            result = unknown_mapping(source=key.source)
+                            param_dict = result.known
+                            break
+                        # TODO how to handle nested dicts and non-string values?
+                        param_dict[name.value] = self.scope.resolve(sub)
             else:
-                assert False, f'unexpected launch node parameter: {item!r}'
+                logger.warning('unable to resolve parameter list item')
+                result = unknown_mapping(source=item.source)
+                param_dict = result.known
         return result
 
     def _get_node_name(self, name: Optional[LaunchSubstitutionResult]) -> str:

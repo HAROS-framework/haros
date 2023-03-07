@@ -23,10 +23,6 @@ from haros.metamodel.ros import RosNodeModel
 @frozen
 class LaunchSubstitution:
     @property
-    def is_unknown(self) -> bool:
-        return False
-
-    @property
     def is_text(self) -> bool:
         return False
 
@@ -94,18 +90,6 @@ def const_substitution(
     source: Optional[TrackedCode] = None,
 ) -> LaunchSubstitutionResult:
     return Resolved(source, type(sub), sub)
-
-
-@frozen
-class UnknownSubstitution(LaunchSubstitution):
-    source: TrackedCode
-
-    @property
-    def is_unknown(self) -> bool:
-        return True
-
-
-UNKNOWN_SUBSTITUTION: Final[UnknownSubstitution] = UnknownSubstitution(TrackedCode.unknown())
 
 
 @frozen
@@ -375,8 +359,17 @@ class LaunchInclusion(LaunchEntity):
         return True
 
 
-LaunchNodeParameterDict = Dict[LaunchSubstitutionResult, LaunchSubstitutionResult]
+LaunchNodeParameterDict = NativeTypeResult[Dict[LaunchSubstitutionResult, LaunchSubstitutionResult]]
 LaunchNodeParameterItem = Union[LaunchSubstitutionResult, LaunchNodeParameterDict]
+LaunchNodeParameterList = ListResult[LaunchNodeParameterItem]
+
+
+def unknown_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
+    return Result(source, type(list))
+
+
+def empty_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
+    return Resolved(source, type(list), [])
 
 
 @frozen
@@ -423,7 +416,7 @@ class LaunchNode(LaunchEntity):
     executable: LaunchSubstitutionResult
     name: Optional[LaunchSubstitutionResult] = None
     namespace: Optional[LaunchSubstitutionResult] = None
-    parameters: Iterable[LaunchNodeParameterItem] = field(factory=list)
+    parameters: LaunchNodeParameterList = field(factory=empty_parameter_list)
     remaps: Dict[LaunchSubstitutionResult, LaunchSubstitutionResult] = field(factory=dict)
     output: LaunchSubstitutionResult = const_text('log')
     arguments: Iterable[LaunchSubstitutionResult] = field(factory=list)
