@@ -166,8 +166,17 @@ def node_function(
         for item in parameters.value:
             if item.is_resolved:
                 if item.type.can_be_mapping:
+                    # dictionary that specifies parameter rules
+                    # Keys of the dictionary can be strings or an iterable of
+                    #   Substitutions that will be expanded to a string.
+                    # Values in the dictionary can be strings, integers, floats, or tuples
+                    #   of Substitutions that will be expanded to a string.
+                    # Additionally, values in the dictionary can be lists of the
+                    #   aforementioned types, or another dictionary with the same properties.
                     params.value.append(Resolved(item.source, dict, item.value))  # FIXME
                 else:
+                    # yaml file that contains parameter rules
+                    # (string or pathlib.Path to the full path of the file)
                     params.value.append(Resolved(item.source, LaunchSubstitution, item.value))  # FIXME
             else:
                 params = unknown_parameter_list(source=parameters.source)
