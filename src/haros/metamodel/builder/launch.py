@@ -217,17 +217,17 @@ class LaunchModelBuilder:
             return  # FIXME
 
     def launch_node(self, node: LaunchNode):
-        name: str = self._get_node_name(node.name)
         package: RosLaunchResult = self.scope.resolve(node.package)
         executable: RosLaunchResult = self.scope.resolve(node.executable)
+        node_id = uid_node(str(package), str(executable))
+        name: str = self._get_node_name(node.name, package, executable)
         # namespace: Optional[LaunchSubstitution]
         # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
         output: RosLaunchResult = self.scope.resolve(node.output)
         args: RosLaunchResult = const_list([
             self.scope.resolve(arg) for arg in node.arguments
         ])
-        params: RosLaunchResult = self.parameters_from_list(node.parameters)
-        node_id = uid_node(str(package), str(executable))
+        params: RosLaunchResult = self.parameters_from_list(node.parameters, node=name)
         if package.is_resolved and executable.is_resolved:
             fsnode = self.system.get_node_model(package, executable)  # FIXME
             if fsnode is None:
@@ -243,7 +243,7 @@ class LaunchModelBuilder:
         )
         self.nodes.append(rosnode)
 
-    def parameters_from_list(self, parameters: LaunchNodeParameterList) -> RosLaunchResult:
+    def parameters_from_list(self, parameters: LaunchNodeParameterList, node: Optional[str] = None) -> RosLaunchResult:
         if not parameters.is_resolved:
             return unknown_mapping(source=parameters.source)
         result: RosLaunchResult = const_mapping({})
@@ -251,7 +251,7 @@ class LaunchModelBuilder:
         for item in parameters.value:
             assert isinstance(item, Result), f'unexpected launch node parameter: {item!r}'
             try:
-                new_params = self.process_parameter_item(item)
+                new_params = self.process_parameter_item(item, node=node)
             except TypeError as e:
                 logger.error(str(e))
             if new_params.is_resolved:
@@ -261,26 +261,14 @@ class LaunchModelBuilder:
                 param_dict = result.known
         return result
 
-    def process_parameter_item(self, item: Result) -> RosLaunchResult:
+    def process_parameter_item(self, item: Result, node: Optional[str] = None) -> RosLaunchResult:
         if item.is_resolved:
             if issubclass(item.type, str) or issubclass(item.type, Path):
-                path = str(item.value)
-                # self.system.read_yaml_file(path.value)
-                logger.warning(f'unable to load parameter file: {path}')
-                return const_mapping({'TODO': const_string(str(path))})
+                return self._parameters_from_yaml(item.value, node=node)
             elif issubclass(item.type, LaunchSubstitution):
                 path: RosLaunchResult = self.scope.resolve(item)
-                if path.is_resolved:  # FIXME
-                    try:
-                        # FIXME handle '/usr/share/ros/' paths differently
-                        self.system.read_yaml_file(path.value)
-                    except OSError:
-                        logger.warning(f'unable to load parameter file: {path}')
-                        return unknown_mapping(source=path.source)
-                    except ValueError:
-                        logger.warning(f'parameter file located in unsafe path: {path}')
-                        return unknown_mapping(source=path.source)
-                    return const_mapping({'TODO': const_string(str(path))})
+                if path.is_resolved:
+                    return self._parameters_from_yaml(path.value, node=node)
                 else:
                     logger.warning('unable to resolve parameter file path')
                     return unknown_mapping(source=path.source)
@@ -304,9 +292,59 @@ class LaunchModelBuilder:
             logger.warning('unable to resolve parameter list item')
             return unknown_mapping(source=item.source)
 
-    def _get_node_name(self, name: Optional[LaunchSubstitutionResult]) -> str:
+    def _parameters_from_yaml(self, path: str, node: Optional[str] = None) -> RosLaunchResult:
+        try:
+            data = self.system.read_yaml_file(path)
+        except OSError as e:
+            logger.warning(f'unable to load parameter file: {e}')
+            return unknown_mapping(source=path.source)
+        except ValueError:
+            logger.warning(f'parameter file located in unsafe path: {path}')
+            return unknown_mapping(source=path.source)
+        # return const_mapping({'TODO': const_string(str(path))})
+        params = data
+        if node:
+            params = {}
+            parts = node.split('/')
+            parts.reverse()
+            current = data
+            while parts:
+                name = parts.pop()
+                current = current.get(name, current.get(f'/{name}', {}))
+                if current:
+                    params.update(current.get('ros__parameters', {}))
+            current = data.get(node, {})
+            if current:
+                params.update(current.get('ros__parameters', {}))
+            if node.startswith('/'):
+                current = data.get(node[1:], {})
+                if current:
+                    params.update(current.get('ros__parameters', {}))
+            else:
+                current = data.get(f'/{node}', {})
+                if current:
+                    params.update(current.get('ros__parameters', {}))
+            current = data.get('/**', {})  # FIXME there might be other patterns
+            if current:
+                params.update(current.get('ros__parameters', {}))
+        return const_mapping(params)
+
+    def _get_node_name(
+        self,
+        name: Optional[LaunchSubstitutionResult],
+        package: RosLaunchResult,
+        executable: RosLaunchResult,
+    ) -> str:
         if name is None:
-            return 'anonymous'  # FIXME
+            if not package.is_resolved or not executable.is_resolved:
+                return 'anonymous'  # FIXME
+            node = self.system.get_node_model(package.value, executable.value)
+            if node is None:
+                return 'anonymous'  # FIXME
+            name = node.rosname
+            if name is None:
+                return executable.value  # FIXME
+            return str(name)
         value: RosLaunchResult = self.scope.resolve(name)
         return value.value if value.is_resolved else '$(?)'
 

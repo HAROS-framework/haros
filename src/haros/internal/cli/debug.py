@@ -52,7 +52,20 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         logger.error(f'debug: not a file: "{path}"')
         return 1
 
+    workspace = Path.cwd() / 'tests' / 'ws1'
+    repo = workspace / 'src' / 'repo'
     system = AnalysisSystemInterface(
+        workspace=str(workspace),
+        packages={
+            'turtlebot3': (repo / 'turtlebot3').as_posix(),
+            'turtlebot3_bringup': (repo / 'turtlebot3_bringup').as_posix(),
+            'turtlebot3_cartographer': (repo / 'turtlebot3_cartographer').as_posix(),
+            'turtlebot3_description': (repo / 'turtlebot3_description').as_posix(),
+            'turtlebot3_example': (repo / 'turtlebot3_example').as_posix(),
+            'turtlebot3_navigation2': (repo / 'turtlebot3_navigation2').as_posix(),
+            'turtlebot3_node': (repo / 'turtlebot3_node').as_posix(),
+            'turtlebot3_teleop': (repo / 'turtlebot3_teleop').as_posix(),
+        },
         model=debugging_model(),
         parse_launch_description=get_launch_description,
     )
@@ -101,7 +114,7 @@ def debugging_model() -> ProjectModel:
 
     package = PackageModel('turtlebot3_node')
     project.packages[package.uid] = package
-    node = NodeModel('turtlebot3_node', 'turtlebot3_ros')
+    node = NodeModel('turtlebot3_node', 'turtlebot3_ros', rosname='turtlebot3_node')
     project.nodes[node.uid] = node
     return project
 

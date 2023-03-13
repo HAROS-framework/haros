@@ -223,6 +223,10 @@ class RosName:
         return self.text
 
 
+def maybe_str_to_rosname(name: Optional[str]) -> Optional[RosName]:
+    return None if name is None else RosName(name)
+
+
 @frozen
 class RosAdvertiseCall(RosSourceEntity):
     # Parameters
@@ -294,7 +298,7 @@ class NodeModel(RosFileSystemEntity):
     name: str = field(validator=matches_re(RE_NAME))
     # Defaults
     is_library: bool = False
-    # TODO rosname: typing.Optional[RosName] = None
+    rosname: Optional[RosName] = field(default=None, converter=maybe_str_to_rosname)
     files: List[str] = field(factory=list)
     source: SourceCodeMetadata = field(factory=SourceCodeMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)

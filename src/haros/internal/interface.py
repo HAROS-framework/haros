@@ -25,9 +25,17 @@ from haros.metamodel.ros import NodeModel, ProjectModel, uid_node
 
 PathType = Union[str, Path]
 
+PACKAGE_SHARE_DIR = '/usr/share/ros/'
+
 ###############################################################################
 # Helper Functions
 ###############################################################################
+
+
+def uniform_path_string(path: PathType) -> str:
+    if isinstance(path, Path):
+        return path.as_posix().replace('\\', '/')
+    return path.replace('\\', '/')
 
 
 def fail_to_parse_launch_file(path: PathType) -> LaunchDescription:
@@ -95,7 +103,7 @@ class AnalysisSystemInterface:
         return description
 
     def read_text_file(self, filepath: PathType, encoding: Optional[str] = None) -> str:
-        filepath = str(filepath)
+        filepath = self._redirect_to_local_packages(filepath)
         if self.strict:
             safe_dir = self._safe_root()
             if safe_dir and not filepath.startswith(safe_dir):
@@ -103,11 +111,22 @@ class AnalysisSystemInterface:
         return Path(filepath).read_text()
 
     def read_yaml_file(self, filepath: PathType, encoding: Optional[str] = None) -> Dict[Any, Any]:
-        text: str = self.read_text_file(filepath, encoding=encoding)
-        return safe_load(text)
+        return safe_load(self.read_text_file(filepath, encoding=encoding))
 
     def execute_command(self, cmd: str) -> str:
         raise EnvironmentError(EACCES, cmd)
+
+    def _redirect_to_local_packages(self, path: PathType) -> str:
+        path = uniform_path_string(path)
+        if path.startswith(PACKAGE_SHARE_DIR):
+            relative = path[len(PACKAGE_SHARE_DIR):]
+            parts = relative.split('/', maxsplit=1)
+            package = parts[0]
+            suffix = relative[len(package):]
+            new_path = self.packages.get(package, f'{PACKAGE_SHARE_DIR}{package}')
+            if new_path is not None:
+                return f'{new_path}{suffix}'
+        return path
 
     def _safe_root(self) -> Optional[str]:
         if self.workspace is not None:
