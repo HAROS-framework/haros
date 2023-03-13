@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Callable, Iterable, Mapping, Optional, Union
+from typing import Any, Callable, Dict, Iterable, Mapping, Optional, Union
 
 from errno import EACCES
 import logging
@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 
 from attrs import field, frozen
+from yaml import safe_load
 
 from haros.errors import AnalysisError
 from haros.metamodel.launch import LaunchDescription
@@ -93,13 +94,17 @@ class AnalysisSystemInterface:
             self.launch_cache[filepath] = description
         return description
 
-    def read_text_file(self, filepath: PathType) -> str:
+    def read_text_file(self, filepath: PathType, encoding: Optional[str] = None) -> str:
         filepath = str(filepath)
         if self.strict:
             safe_dir = self._safe_root()
             if safe_dir and not filepath.startswith(safe_dir):
                 raise ValueError(filepath)
         return Path(filepath).read_text()
+
+    def read_yaml_file(self, filepath: PathType, encoding: Optional[str] = None) -> Dict[Any, Any]:
+        text: str = self.read_text_file(filepath, encoding=encoding)
+        return safe_load(text)
 
     def execute_command(self, cmd: str) -> str:
         raise EnvironmentError(EACCES, cmd)

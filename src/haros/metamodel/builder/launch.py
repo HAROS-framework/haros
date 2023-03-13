@@ -263,7 +263,6 @@ class LaunchModelBuilder:
 
     def process_parameter_item(self, item: Result) -> RosLaunchResult:
         if item.is_resolved:
-            print('ITEM TYPE', item.type)
             if issubclass(item.type, str) or issubclass(item.type, Path):
                 path = str(item.value)
                 # self.system.read_yaml_file(path.value)
@@ -272,12 +271,19 @@ class LaunchModelBuilder:
             elif issubclass(item.type, LaunchSubstitution):
                 path: RosLaunchResult = self.scope.resolve(item)
                 if path.is_resolved:  # FIXME
-                    # self.system.read_yaml_file(path.value)
-                    logger.warning(f'unable to load parameter file: {path}')
+                    try:
+                        # FIXME handle '/usr/share/ros/' paths differently
+                        self.system.read_yaml_file(path.value)
+                    except OSError:
+                        logger.warning(f'unable to load parameter file: {path}')
+                        return unknown_mapping(source=path.source)
+                    except ValueError:
+                        logger.warning(f'parameter file located in unsafe path: {path}')
+                        return unknown_mapping(source=path.source)
                     return const_mapping({'TODO': const_string(str(path))})
                 else:
                     logger.warning('unable to resolve parameter file path')
-                    return unknown_mapping()
+                    return unknown_mapping(source=path.source)
             elif issubclass(item.type, dict):
                 result = {}
                 for key, sub in item.value.items():

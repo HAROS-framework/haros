@@ -35,6 +35,10 @@ class LaunchSubstitution:
         return False
 
     @property
+    def is_package_share(self) -> bool:
+        return False
+
+    @property
     def is_argument(self) -> bool:
         return False
 
@@ -119,6 +123,20 @@ class LaunchConfiguration(LaunchSubstitution):
 
     def __str__(self) -> str:
         return f'$(var {self.name} {self.default_value})'
+
+
+@frozen
+class PackageShareDirectorySubstitution(LaunchSubstitution):
+    """Custom substitution to evaluate share directory lazily."""
+
+    package: LaunchSubstitutionResult
+
+    @property
+    def is_package_share(self) -> bool:
+        return True
+
+    def __str__(self) -> str:
+        return f'$(share {self.package})'
 
 
 @frozen
@@ -248,7 +266,7 @@ class AnonymousNameSubstitution(LaunchSubstitution):
     the same parameter name will create the same "anonymized" name.
     """
 
-    name: LaunchSubstitution
+    name: LaunchSubstitutionResult
 
     @property
     def is_anon_name(self) -> bool:

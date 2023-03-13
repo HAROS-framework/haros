@@ -36,6 +36,7 @@ from haros.metamodel.launch import (
     LaunchNodeParameterList,
     LaunchSubstitution,
     LaunchSubstitutionResult,
+    PackageShareDirectorySubstitution,
     PathJoinSubstitution,
     TextSubstitution,
     ThisDirectorySubstitution,
@@ -198,10 +199,12 @@ def node_function(
     )
 
 
-def get_package_share_directory_function(package: PythonResult):
+def get_package_share_directory_function(package: PythonResult) -> LaunchSubstitutionResult:
     if not package.is_resolved:
         return UnresolvedPythonString()
+        # return unknown_substitution(source=package.source)
     return f'/usr/share/ros/{package.value}'
+    # return const_text(package.value, source=package.source)
 
 
 LAUNCH_SYMBOLS = {
@@ -228,7 +231,7 @@ def _prepare_builtin_symbols() -> Mapping[str, Any]:
             value = library_function_wrapper(key, 'os.path', value)
         setattr(ns.path, key, value)
     ns.environ = {
-        'TURTLEBOT3_MODEL': 'hamburger',
+        'TURTLEBOT3_MODEL': 'burger',
         'LDS_MODEL': 'LDS-01',
     }
     symbols['os'] = ns
