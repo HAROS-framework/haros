@@ -177,7 +177,12 @@ def node_function(
                 else:
                     # yaml file that contains parameter rules
                     # (string or pathlib.Path to the full path of the file)
-                    params.value.append(Resolved(item.source, LaunchSubstitution, item.value))  # FIXME
+                    if item.type.can_be_string:
+                        params.value.append(Resolved(item.source, str, item.value))
+                    elif isinstance(item.value, Path):
+                        params.value.append(Resolved(item.source, Path, item.value))
+                    else:
+                        params.value.append(Resolved(item.source, LaunchSubstitution, item.value))
             else:
                 params = unknown_parameter_list(source=parameters.source)
                 break
