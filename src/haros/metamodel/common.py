@@ -5,9 +5,10 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Generic, Iterable, List, Mapping, Optional, Set, Type, TypeVar
+from typing import Any, Dict, Generic, Iterable, List, Mapping, Optional, Self, Set, Type, TypeVar
 
 from collections import defaultdict
+from collections.abc import Iterable as IterableType, Mapping as MappingType
 
 from attrs import asdict, define, evolve, field, frozen
 
@@ -78,15 +79,85 @@ class TrackedCode:
 # Data Analysis
 ###############################################################################
 
+
+def noop(*args, **kwargs):
+    pass
+
+
 T = TypeVar('T')
 V = TypeVar('V')
 K = TypeVar('K')
 
+BUILTIN_FUNCTION_TYPE = type(min)
+DEF_FUNCTION_TYPE = type(noop)
+CLASS_TYPE = type(TrackedCode)
+
 
 @frozen
-class Result(Generic[T, V]):
+class TypeToken(Generic[V]):
+    token: Type[V]
+
+    @property
+    def is_bool(self) -> bool:
+        return issubclass(self.token, bool)
+
+    @property
+    def is_int(self) -> bool:
+        return issubclass(self.token, int)
+
+    @property
+    def is_float(self) -> bool:
+        return issubclass(self.token, float)
+
+    @property
+    def is_complex(self) -> bool:
+        return issubclass(self.token, complex)
+
+    @property
+    def is_number(self) -> bool:
+        return self.can_be_int or self.can_be_float or self.can_be_complex
+
+    @property
+    def is_string(self) -> bool:
+        return issubclass(self.token, str)
+
+    @property
+    def is_primitive(self) -> bool:
+        return self.can_be_bool or self.can_be_number or self.can_be_string
+
+    @property
+    def is_function(self) -> bool:
+        return issubclass(self.token, (BUILTIN_FUNCTION_TYPE, DEF_FUNCTION_TYPE))
+
+    @property
+    def is_class(self) -> bool:
+        return issubclass(self.token, CLASS_TYPE)
+
+    @property
+    def is_exception(self) -> bool:
+        return issubclass(self.token, Exception)
+
+    @property
+    def is_definition(self) -> bool:
+        return self.can_be_function or self.can_be_class
+
+    @property
+    def is_iterable(self) -> bool:
+        return issubclass(self.token, IterableType)
+
+    @property
+    def is_mapping(self) -> bool:
+        return issubclass(self.token, MappingType)
+
+    @property
+    def has_items(self) -> bool:
+        return self.is_string or self.is_iterable or self.is_mapping
+
+
+@frozen
+class Result(Generic[V]):
+    type: TypeToken[V]
     source: Optional[TrackedCode]
-    type: T
 
     @property
     def is_resolved(self) -> bool:
@@ -96,7 +167,7 @@ class Result(Generic[T, V]):
     def is_traceable(self) -> bool:
         return self.source is not None
 
-    def cast_to(self, new_type: T) -> 'Result':
+    def cast_to(self, new_type: TypeToken[V]) -> Self:
         return evolve(self, type=new_type)
 
     def pretty(self) -> str:
@@ -120,12 +191,8 @@ class Result(Generic[T, V]):
         return '$(?)'
 
 
-NativeTypeResult = Result[Type[V], V]
-ListResult = NativeTypeResult[List[V]]
-
-
 @frozen
-class Resolved(Result[T, V]):
+class Resolved(Result[V]):
     value: V
 
     @property
@@ -137,7 +204,7 @@ class Resolved(Result[T, V]):
 
 
 @frozen
-class UnresolvedInt(Result[T, int]):
+class UnresolvedInt(Result[int]):
     min_value: Optional[int] = None
     max_value: Optional[int] = None
 
@@ -146,7 +213,7 @@ class UnresolvedInt(Result[T, int]):
 
 
 @frozen
-class UnresolvedFloat(Result[T, float]):
+class UnresolvedFloat(Result[float]):
     min_value: Optional[float] = None
     max_value: Optional[float] = None
 
@@ -155,7 +222,7 @@ class UnresolvedFloat(Result[T, float]):
 
 
 @frozen
-class UnresolvedString(Result[T, str]):
+class UnresolvedString(Result[str]):
     parts: List[Optional[str]] = field(factory=list)
 
     def __str__(self) -> str:
@@ -166,8 +233,8 @@ class UnresolvedString(Result[T, str]):
 
 
 @frozen
-class UnresolvedIterable(Result[T, Iterable[V]]):
-    parts: List[Result[T, V]] = field(factory=list)
+class UnresolvedIterable(Result[Iterable[V]]):
+    parts: List[Result[V]] = field(factory=list)
 
     def __str__(self) -> str:
         if not self.parts:
@@ -176,8 +243,8 @@ class UnresolvedIterable(Result[T, Iterable[V]]):
 
 
 @frozen
-class UnresolvedMapping(Result[T, Mapping[K, V]]):
-    known: Dict[K, Result[T, V]] = field(factory=dict)
+class UnresolvedMapping(Result[Mapping[K, V]]):
+    known: Dict[K, Result[V]] = field(factory=dict)
 
     def __str__(self) -> str:
         return f'$(? map {self.known})'
