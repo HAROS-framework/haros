@@ -414,6 +414,7 @@ TYPE_TOKEN_BUILTIN: Final[PythonTypeToken[BUILTIN_FUNCTION_TYPE]] = PythonTypeTo
 TYPE_TOKEN_FUNCTION: Final[PythonTypeToken[DEF_FUNCTION_TYPE]] = PythonTypeToken.of_def_function()
 TYPE_TOKEN_CLASS: Final[PythonTypeToken[CLASS_TYPE]] = PythonTypeToken.of_class()
 TYPE_TOKEN_EXCEPTION: Final[PythonTypeToken[Exception]] = PythonTypeToken.of_exception()
+TYPE_TOKEN_OBJECT: Final[PythonTypeToken[Any]] = PythonTypeToken(object, mask=TypeMask.OBJECT)
 
 
 def unknown_value(
@@ -730,24 +731,25 @@ class DataScope:
         self,
         name: str,
         raw_value: Any,
-        type_mask: TypeMask = PythonType.ANY,
+        type_mask: TypeMask = TypeMask.ANY,
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
         # TODO TrackedCode from ast
         source: Optional[TrackedCode] = None
         token = PythonTypeToken.of(raw_value, mask=type_mask)
-        value = Resolved(source, type, raw_value)
+        value = Resolved(token, source, raw_value)
         return self.set(name, value, ast=ast, import_base=import_base)
 
     def set_unknown(
         self,
         name: str,
-        type: PythonType = PythonType.ANY,
+        type_mask: TypeMask = TypeMask.ANY,
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
-        value = unknown_value(type=type)
+        token = PythonTypeToken(object, mask=type_mask)
+        value = unknown_value(type=token)
         return self.set(name, value, ast=ast, import_base=import_base)
 
     def define(self, name: str, definition: Definition):
@@ -847,15 +849,15 @@ class DataScope:
         if expression.is_function_call:
             return self.value_from_function_call(expression)
         if expression.is_star_expression:
-            return unknown_value(type=PythonType.OBJECT)
+            return unknown_value(type=TYPE_TOKEN_OBJECT)
         if expression.is_generator:
-            return unknown_value(type=PythonType.OBJECT)
+            return unknown_value(type=TYPE_TOKEN_OBJECT)
         if expression.is_operator:
             return self.value_from_operator(expression)
         if expression.is_conditional:
             return unknown_value()
         if expression.is_lambda:
-            return unknown_value(type=PythonType.FUNCTION)
+            return unknown_value(type=DEF_FUNCTION_TYPE)
         if expression.is_assignment:
             # Python >= 3.8
             return unknown_value()
@@ -884,23 +886,23 @@ class DataScope:
             values = tuple(self.value_from_expression(v) for v in literal.values)
             if all(v.is_resolved for v in values):
                 values = tuple(v.value for v in values)
-                return solved(PythonType.ITERABLE, values)
+                return const_tuple(values)
         if literal.is_list and not literal.is_comprehension:
             values = list(self.value_from_expression(v) for v in literal.values)
             if all(v.is_resolved for v in values):
                 # values = list(v.value for v in values)
-                return solved(PythonType.ITERABLE, values)
+                return const_list(values)
             else:
-                return solved(PythonType.ITERABLE, values)
+                return const_list(values)
         if literal.is_dict and not literal.is_comprehension:
             entries = dict(
                 (self.value_from_expression(e.key), self.value_from_expression(e.value))
                 for e in literal.entries
             )
             # if not all(key.is_resolved for key in entries.keys()):
-            return solved(PythonType.MAPPING, entries)
+            return const_dict(entries)
         # TODO FIXME
-        return unknown_value(type=PythonType.OBJECT)
+        return unknown_value(type=TYPE_TOKEN_OBJECT)
 
     def value_from_reference(self, reference: PythonReference) -> Result:
         if reference.object is not None:
@@ -946,23 +948,25 @@ class DataScope:
             if not value.type.can_be_number:
                 raise DataFlowError.type_check('NUMBER', value.type.name, value)
             if not value.is_resolved:
-                return unknown_value(type=PythonType.NUMBER)
+                token = PythonTypeToken(object, mask=TypeMask.NUMBER)
+                return unknown_value(type=token)
             if operator.operator == '+':
                 r = +value.value
             elif operator.operator == '-':
                 r = -value.value
             else:
-                return unknown_value(type=PythonType.NUMBER)
+                token = PythonTypeToken(object, mask=TypeMask.NUMBER)
+                return unknown_value(type=token)
             # TODO FIXME refine return type
             return const_number(r)
         if operator.is_logic:
             if not value.is_resolved:
-                return unknown_value(type=PythonType.BOOL)
+                return unknown_value(type=TYPE_TOKEN_BOOL)
             r = not value.value
             return const_bool(r)
         return unknown_value()
 
-    def value_from_binary_operator(self, operator: PythonBinaryOperator) -> Result:
+    def value_from_binary_operator(self, operator: PythonBinaryOperator) -> Result[Any]:
         assert operator.is_binary
         a = self.value_from_expression(operator.operand1)
         b = self.value_from_expression(operator.operand2)
@@ -976,7 +980,7 @@ class DataScope:
                 return const_bool(a.value and b.value)
             if o == 'or':
                 return const_bool(a.value or b.value)
-            return unknown_value(type=PythonType.BOOL)
+            return unknown_value(type=TYPE_TOKEN_BOOL)
         if operator.is_comparison:
             if o == '==':
                 return const_bool(a.value == b.value)
@@ -998,7 +1002,7 @@ class DataScope:
                 return const_bool(a.value is b.value)
             if o == 'is not':
                 return const_bool(a.value is not b.value)
-            return unknown_value(type=PythonType.BOOL)
+            return unknown_value(type=TYPE_TOKEN_BOOL)
         if operator.is_arithmetic:
             if o == '+':
                 r = a.value + b.value
@@ -1013,7 +1017,8 @@ class DataScope:
                 return const_int(a.value // b.value)
             if o == '**':
                 return const_number(a.value ** b.value)
-            return unknown_value(type=PythonType.NUMBER)
+            token = PythonTypeToken(object, mask=TypeMask.NUMBER)
+            return unknown_value(type=token)
         return unknown_value()
 
     def value_from_item_access(self, access: PythonItemAccess) -> Result:
