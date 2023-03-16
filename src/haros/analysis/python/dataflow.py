@@ -218,6 +218,36 @@ class TypeMask(enum.Flag):
     OBJECTS = STRING | ITERABLE | MAPPING | OBJECT
     ANY = PRIMITIVE | DEFINITIONS | OBJECT
 
+    @classmethod
+    def from_value(cls, value: Any) -> Self:
+        if raw_value is None:
+            return cls.NONE
+        if isinstance(value, bool):
+            return cls.BOOL
+        if isinstance(value, int):
+            return cls.INT
+        if isinstance(value, float):
+            return cls.FLOAT
+        if isinstance(value, complex):
+            return cls.COMPLEX
+        if isinstance(value, str):
+            return cls.STRING
+        if isinstance(value, BaseException):
+            return cls.EXCEPTION
+        if isinstance(value, type):
+            return cls.CLASS
+        if isinstance(value, FunctionWrapper) or callable(value):
+            return cls.FUNCTION
+        if isinstance(value, (tuple, list, set)):
+            return cls.ITERABLE
+        if isinstance(value, dict):
+            return cls.MAPPING
+        d = {}
+        g = (type(d.items()), type(d.keys()), type(d.values()))
+        if isinstance(value, g):
+            return cls.ITERABLE
+        return cls.OBJECT
+
     @property
     def can_be_bool(self) -> bool:
         return bool(self & PythonType.BOOL)
@@ -299,6 +329,8 @@ class PythonTypeToken(TypeToken[V]):
 
     @classmethod
     def of(cls, value: V, mask: TypeMask = TypeMask.ANY) -> Self:
+        if mask == TypeMask.ANY:
+            mask = TypeMask.from_value(value)
         return cls(type(value), mask=mask)
 
     @classmethod
@@ -597,36 +629,39 @@ class Definition:
         return self.import_base == BUILTINS_MODULE
 
     @classmethod
-    def of_builtin_function(cls, name: str) -> 'Definition':
+    def of_builtin_function(cls, name: str) -> Self:
         #value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert callable(raw_value),  f'expected function, got: {raw_value!r}'
+        token = PythonTypeToken(type(raw_value), mask=TypeMask.FUNCTION)
         wrapper = builtin_function_wrapper(name, raw_value)
-        value = Resolved(None, PythonType.FUNCTION, wrapper)
+        value = Resolved(token, None, wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def of_builtin_class(cls, name: str) -> 'Definition':
+    def of_builtin_class(cls, name: str) -> Self:
         #value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
-        value = Resolved(None, PythonType.CLASS, raw_value)
+        token = PythonTypeToken(type(raw_value), mask=TypeMask.CLASS)
+        value = Resolved(token, None, raw_value)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def of_builtin_exception(cls, name: str) -> 'Definition':
+    def of_builtin_exception(cls, name: str) -> Self:
         #value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
         assert issubclass(raw_value, BaseException), f'expected exception, got: {raw_value!r}'
-        value = Resolved(None, PythonType.EXCEPTION, raw_value)
+        token = PythonTypeToken(type(raw_value), mask=TypeMask.EXCEPTION)
+        value = Resolved(token, None, raw_value)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def from_value(cls, raw_value: Any, ast: Optional[PythonAst] = None) -> 'Definition':
-        return cls(solved_from(raw_value), ast=ast)
+    def from_value(cls, raw_value: Any, ast: Optional[PythonAst] = None) -> Self:
+        return cls(solved_from(raw_value), ast=ast)  # FIXME TrackedCode from ast
 
-    def cast_to(self, type: PythonTypeToken) -> 'Definition':
+    def cast_to(self, type: PythonTypeToken) -> Self:
         if self.value.type == type:
             return self
         new_type_mask = self.value.type.mask & type.mask
@@ -646,14 +681,14 @@ class Definition:
 ###############################################################################
 
 
-def _default_return_value() -> VariantData[Result]:
+def _default_return_value() -> VariantData[Result[Any]]:
     return VariantData.with_base_value(const_none())
 
 
 @define
 class DataScope:
     variables: Dict[str, VariantData[Definition]] = field(factory=dict)
-    return_values: VariantData[Result] = field(factory=_default_return_value)
+    return_values: VariantData[Result[Any]] = field(factory=_default_return_value)
     _condition_stack: List[LogicValue] = field(init=False, factory=list)
     _symbols: Dict[str, Any] = field(factory=dict)
 
@@ -664,7 +699,7 @@ class DataScope:
         return self._condition_stack[-1]
 
     @classmethod
-    def with_builtins(cls) -> 'DataScope':
+    def with_builtins(cls) -> Self:
         variables = {}
         for name in BUILTIN_FUNCTIONS:
             variables[name] = VariantData.with_base_value(Definition.of_builtin_function(name))
@@ -674,7 +709,7 @@ class DataScope:
             variables[name] = VariantData.with_base_value(Definition.of_builtin_exception(name))
         return cls(variables=variables)
 
-    def duplicate(self) -> 'DataScope':
+    def duplicate(self) -> Self:
         variables = {k: v.duplicate() for k, v in self.variables.items()}
         return self.__class__(variables=variables)
 
@@ -684,7 +719,7 @@ class DataScope:
     def set(
         self,
         name: str,
-        value: Result,
+        value: Result[Any],
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
@@ -695,12 +730,13 @@ class DataScope:
         self,
         name: str,
         raw_value: Any,
-        type: PythonType = PythonType.ANY,
+        type_mask: TypeMask = PythonType.ANY,
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
         # TODO TrackedCode from ast
         source: Optional[TrackedCode] = None
+        token = PythonTypeToken.of(raw_value, mask=type_mask)
         value = Resolved(source, type, raw_value)
         return self.set(name, value, ast=ast, import_base=import_base)
 
