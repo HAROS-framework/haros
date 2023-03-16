@@ -5,17 +5,23 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, List, Optional, Tuple
+from typing import Any, Callable, Dict, Final, List, Optional, Self, Tuple, Type
 
 import enum
 
 from attrs import define, evolve, field, frozen
 
 from haros.metamodel.common import (
+    BUILTIN_FUNCTION_TYPE,
+    CLASS_TYPE,
+    DEF_FUNCTION_TYPE,
+    IterableType,
     K,
+    MappingType,
     Resolved,
     Result,
     TrackedCode,
+    TypeToken,
     UnresolvedFloat,
     UnresolvedInt,
     UnresolvedIterable,
@@ -193,7 +199,7 @@ BUILTIN_EXCEPTIONS: Final[List[str]] = [
 ]
 
 
-class PythonType(enum.Flag):
+class TypeMask(enum.Flag):
     NONE = enum.auto()
     BOOL = enum.auto()
     INT = enum.auto()
@@ -287,23 +293,99 @@ class PythonType(enum.Flag):
 ###############################################################################
 
 
-PythonResult = Result[PythonType, V]
-ResolvedPython = Resolved[PythonType, V]
-UnresolvedPythonInt = UnresolvedInt[PythonType]
-UnresolvedPythonFloat = UnresolvedFloat[PythonType]
-UnresolvedPythonString = UnresolvedString[PythonType]
-UnresolvedPythonIterable = UnresolvedIterable[PythonType, V]
-UnresolvedPythonMapping = UnresolvedMapping[PythonType, K, V]
+@frozen
+class PythonTypeToken(TypeToken[V]):
+    mask: TypeMask = TypeMask.ANY
+
+    @classmethod
+    def of_bool(cls, mask: TypeMask = TypeMask.BOOL) -> Self:
+        return cls(bool, mask=mask)
+
+    @classmethod
+    def of_int(cls, mask: TypeMask = TypeMask.INT) -> Self:
+        return cls(int, mask=mask)
+
+    @classmethod
+    def of_float(cls, mask: TypeMask = TypeMask.FLOAT) -> Self:
+        return cls(float, mask=mask)
+
+    @classmethod
+    def of_complex(cls, mask: TypeMask = TypeMask.COMPLEX) -> Self:
+        return cls(complex, mask=mask)
+
+    @classmethod
+    def of_string(cls, mask: TypeMask = TypeMask.STRING) -> Self:
+        return cls(str, mask=mask)
+
+    @classmethod
+    def of_builtin_function(cls, mask: TypeMask = TypeMask.FUNCTION) -> Self:
+        return cls(BUILTIN_FUNCTION_TYPE, mask=mask)
+
+    @classmethod
+    def of_def_function(cls, mask: TypeMask = TypeMask.FUNCTION) -> Self:
+        return cls(DEF_FUNCTION_TYPE, mask=mask)
+
+    @classmethod
+    def of_class(cls, mask: TypeMask = TypeMask.CLASS) -> Self:
+        return cls(CLASS_TYPE, mask=mask)
+
+    @classmethod
+    def of_exception(cls, mask: TypeMask = TypeMask.EXCEPTION) -> Self:
+        return cls(Exception, mask=mask)
+
+    @classmethod
+    def of_iterable(cls, mask: TypeMask = TypeMask.ITERABLE) -> Self:
+        return cls(IterableType, mask=mask)
+
+    @classmethod
+    def of_list(cls, mask: TypeMask = TypeMask.ITERABLE) -> Self:
+        return cls(list, mask=mask)
+
+    @classmethod
+    def of_tuple(cls, mask: TypeMask = TypeMask.ITERABLE) -> Self:
+        return cls(tuple, mask=mask)
+
+    @classmethod
+    def of_set(cls, mask: TypeMask = TypeMask.ITERABLE) -> Self:
+        return cls(set, mask=mask)
+
+    @classmethod
+    def of_mapping(cls, mask: TypeMask = TypeMask.MAPPING) -> Self:
+        return cls(MappingType, mask=mask)
+
+    @classmethod
+    def of_dict(cls, mask: TypeMask = TypeMask.MAPPING) -> Self:
+        return cls(dict, mask=mask)
+
+    @classmethod
+    def of_custom_object(cls, token: Type[V]) -> Self:
+        return cls(token, mask=TypeMask.OBJECT)
+
+
+TYPE_TOKEN_ANYTHING: Final[PythonTypeToken[Any]] = PythonTypeToken(object)
+TYPE_TOKEN_BOOL: Final[PythonTypeToken[bool]] = PythonTypeToken.of_bool()
+TYPE_TOKEN_INT: Final[PythonTypeToken[int]] = PythonTypeToken.of_int()
+TYPE_TOKEN_FLOAT: Final[PythonTypeToken[float]] = PythonTypeToken.of_float()
+TYPE_TOKEN_COMPLEX: Final[PythonTypeToken[complex]] = PythonTypeToken.of_complex()
+TYPE_TOKEN_STRING: Final[PythonTypeToken[str]] = PythonTypeToken.of_string()
+TYPE_TOKEN_LIST: Final[PythonTypeToken[list]] = PythonTypeToken.of_list()
+TYPE_TOKEN_TUPLE: Final[PythonTypeToken[tuple]] = PythonTypeToken.of_tuple()
+TYPE_TOKEN_SET: Final[PythonTypeToken[set]] = PythonTypeToken.of_set()
+TYPE_TOKEN_DICT: Final[PythonTypeToken[dict]] = PythonTypeToken.of_dict()
+TYPE_TOKEN_BUILTIN: Final[PythonTypeToken[BUILTIN_FUNCTION_TYPE]] = PythonTypeToken.of_builtin_function()
+TYPE_TOKEN_FUNCTION: Final[PythonTypeToken[DEF_FUNCTION_TYPE]] = PythonTypeToken.of_def_function()
+TYPE_TOKEN_CLASS: Final[PythonTypeToken[CLASS_TYPE]] = PythonTypeToken.of_class()
+TYPE_TOKEN_EXCEPTION: Final[PythonTypeToken[Exception]] = PythonTypeToken.of_exception()
 
 
 def unknown_value(
-    type: PythonType = PythonType.ANY,
+    type: PythonTypeToken[V] = TYPE_TOKEN_ANYTHING,
     source: Optional[TrackedCode] = None,
-) -> PythonResult:
-    return Result(source, type)
+) -> Result[V]:
+    return Result(type, source)
 
 
-def unknown_int(source: Optional[TrackedCode] = None) -> UnresolvedPythonInt:
+def unknown_int(source: Optional[TrackedCode] = None) -> UnresolvedInt:
     return UnresolvedInt(source, PythonType.INT)
 
 
@@ -323,31 +405,31 @@ def unknown_mapping(source: Optional[TrackedCode] = None) -> UnresolvedPythonMap
     return UnresolvedMapping(source, PythonType.MAPPING)
 
 
-def const_int(raw_value: int, source: Optional[TrackedCode] = None) -> ResolvedPython[int]:
+def const_int(raw_value: int, source: Optional[TrackedCode] = None) -> Resolved[int]:
     return Resolved(source, PythonType.INT, raw_value)
 
 
-def const_float(raw_value: float, source: Optional[TrackedCode] = None) -> ResolvedPython[float]:
+def const_float(raw_value: float, source: Optional[TrackedCode] = None) -> Resolved[float]:
     return Resolved(source, PythonType.FLOAT, raw_value)
 
 
-def const_complex(raw_value: complex, source: Optional[TrackedCode] = None) -> ResolvedPython[complex]:
+def const_complex(raw_value: complex, source: Optional[TrackedCode] = None) -> Resolved[complex]:
     return Resolved(source, PythonType.COMPLEX, raw_value)
 
 
-def const_number(raw_value: V, source: Optional[TrackedCode] = None) -> ResolvedPython[V]:
+def const_number(raw_value: V, source: Optional[TrackedCode] = None) -> Resolved[V]:
     return Resolved(source, PythonType.NUMBER, raw_value)
 
 
-def const_string(raw_value: str, source: Optional[TrackedCode] = None) -> ResolvedPython[str]:
+def const_string(raw_value: str, source: Optional[TrackedCode] = None) -> Resolved[str]:
     return Resolved(source, PythonType.STRING, raw_value)
 
 
-def const_bool(raw_value: bool, source: Optional[TrackedCode] = None) -> ResolvedPython[bool]:
+def const_bool(raw_value: bool, source: Optional[TrackedCode] = None) -> Resolved[bool]:
     return Resolved(source, PythonType.BOOL, raw_value)
 
 
-def const_none(source: Optional[TrackedCode] = None) -> ResolvedPython[Any]:
+def const_none(source: Optional[TrackedCode] = None) -> Resolved[Any]:
     return Resolved(source, PythonType.NONE, None)
 
 
@@ -355,11 +437,11 @@ def solved(
     type: PythonType,
     raw_value: V,
     source: Optional[TrackedCode] = None,
-) -> ResolvedPython[V]:
+) -> Resolved[V]:
     return Resolved(source, type, raw_value)
 
 
-def solved_from(raw_value: Any, source: Optional[TrackedCode] = None) -> ResolvedPython:
+def solved_from(raw_value: Any, source: Optional[TrackedCode] = None) -> Resolved:
     if raw_value is None:
         return Resolved(source, PythonType.NONE, None)
     if isinstance(raw_value, bool):
@@ -402,7 +484,7 @@ class FunctionWrapper:
 
 def wrap_normal_function(function: Callable) -> Callable:
     # The purpose of this is just to make return values uniform.
-    def wrapper(*args, **kwargs) -> VariantData[PythonResult]:
+    def wrapper(*args, **kwargs) -> VariantData[Result]:
         for arg in args:
             if not arg.is_resolved:
                 print()
@@ -438,7 +520,7 @@ def library_function_wrapper(name: str, module: str, function: Callable) -> Func
 
 
 def custom_function_wrapper(name: str, module: str, function: Callable) -> FunctionWrapper:
-    def wrapper(*args, **kwargs) -> VariantData[PythonResult]:
+    def wrapper(*args, **kwargs) -> VariantData[Result]:
         raw_value = function(*args, **kwargs)
         return VariantData.with_base_value(solved_from(raw_value))
     return FunctionWrapper(name, module, wrapper)
@@ -446,7 +528,7 @@ def custom_function_wrapper(name: str, module: str, function: Callable) -> Funct
 
 @frozen
 class Definition:
-    value: PythonResult
+    value: Result
     ast: Optional[PythonAst] = None
     import_base: str = ''
 
@@ -555,14 +637,14 @@ class Definition:
 ###############################################################################
 
 
-def _default_return_value() -> VariantData[PythonResult]:
+def _default_return_value() -> VariantData[Result]:
     return VariantData.with_base_value(const_none())
 
 
 @define
 class DataScope:
     variables: Dict[str, VariantData[Definition]] = field(factory=dict)
-    return_values: VariantData[PythonResult] = field(factory=_default_return_value)
+    return_values: VariantData[Result] = field(factory=_default_return_value)
     _condition_stack: List[LogicValue] = field(init=False, factory=list)
     _symbols: Dict[str, Any] = field(factory=dict)
 
@@ -593,7 +675,7 @@ class DataScope:
     def set(
         self,
         name: str,
-        value: PythonResult,
+        value: Result,
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
@@ -637,7 +719,7 @@ class DataScope:
         self._condition_stack.pop()
 
     def add_imported_function(self, name: str, module: str, function: Callable):
-        # `function` receives `PythonResult`, returns `Any`
+        # `function` receives `Result`, returns `Any`
         wrapper = custom_function_wrapper(name, module, function)
         self.add_imported_symbol(name, module, wrapper)
 
@@ -709,7 +791,7 @@ class DataScope:
             return TRUE if bool(value.value) else FALSE
         return LogicVariable(data=expression)
 
-    def value_from_expression(self, expression: PythonExpression) -> PythonResult:
+    def value_from_expression(self, expression: PythonExpression) -> Result:
         assert expression.is_expression
         if expression.is_literal:
             return self.value_from_literal(expression)
@@ -738,7 +820,7 @@ class DataScope:
             return unknown_value()
         return unknown_value()
 
-    def value_from_literal(self, literal: PythonLiteral) -> PythonResult:
+    def value_from_literal(self, literal: PythonLiteral) -> Result:
         assert literal.is_expression and literal.is_literal
         if literal.is_none:
             return const_none()
@@ -775,9 +857,9 @@ class DataScope:
         # TODO FIXME
         return unknown_value(type=PythonType.OBJECT)
 
-    def value_from_reference(self, reference: PythonReference) -> PythonResult:
+    def value_from_reference(self, reference: PythonReference) -> Result:
         if reference.object is not None:
-            obj: PythonResult = self.value_from_expression(reference.object)
+            obj: Result = self.value_from_expression(reference.object)
             if not obj.type.can_have_attributes:
                 return unknown_value()
             if not obj.is_resolved:
@@ -797,7 +879,7 @@ class DataScope:
         definition = var.get()
         return definition.value
 
-    def value_from_operator(self, operator: PythonOperator) -> PythonResult:
+    def value_from_operator(self, operator: PythonOperator) -> Result:
         assert operator.is_operator
         if operator.is_unary:
             return self.value_from_unary_operator(operator)
@@ -805,7 +887,7 @@ class DataScope:
             return self.value_from_binary_operator(operator)
         return unknown_value()
 
-    def value_from_unary_operator(self, operator: PythonUnaryOperator) -> PythonResult:
+    def value_from_unary_operator(self, operator: PythonUnaryOperator) -> Result:
         assert operator.is_unary
         value = self.value_from_expression(operator.operand)
         if operator.is_bitwise:
@@ -835,7 +917,7 @@ class DataScope:
             return const_bool(r)
         return unknown_value()
 
-    def value_from_binary_operator(self, operator: PythonBinaryOperator) -> PythonResult:
+    def value_from_binary_operator(self, operator: PythonBinaryOperator) -> Result:
         assert operator.is_binary
         a = self.value_from_expression(operator.operand1)
         b = self.value_from_expression(operator.operand2)
@@ -889,16 +971,16 @@ class DataScope:
             return unknown_value(type=PythonType.NUMBER)
         return unknown_value()
 
-    def value_from_item_access(self, access: PythonItemAccess) -> PythonResult:
+    def value_from_item_access(self, access: PythonItemAccess) -> Result:
         # object: PythonExpression
         # key: PythonSubscript
-        obj: PythonResult = self.value_from_expression(access.object)
+        obj: Result = self.value_from_expression(access.object)
         if not obj.is_resolved or not obj.type.can_have_items:
             return unknown_value()
         if access.key.is_slice:
             return unknown_value()
         assert access.key.is_key
-        key: PythonResult = self.value_from_expression(access.key.expression)
+        key: Result = self.value_from_expression(access.key.expression)
         if not key.is_resolved:
             return unknown_value()
         try:
@@ -909,7 +991,7 @@ class DataScope:
             return value
         return solved_from(value)
 
-    def value_from_function_call(self, call: PythonFunctionCall) -> PythonResult:
+    def value_from_function_call(self, call: PythonFunctionCall) -> Result:
         value = self.value_from_expression(call.function)
         if not value.is_resolved:
             return unknown_value()
@@ -919,7 +1001,7 @@ class DataScope:
         assert isinstance(function, FunctionWrapper), f'not function wrapper: {repr(function)}'
         assert callable(function.call), f'not callable: {repr(function.call)}'
         if not call.arguments:
-            result: VariantData[PythonResult] = function.call()
+            result: VariantData[Result] = function.call()
             if result.has_values and result.is_deterministic:
                 return result.get()
             return unknown_value()
@@ -942,7 +1024,7 @@ class DataScope:
                 elif argument.is_double_star:
                     # kwargs.update(arg)
                     return unknown_value()  # FIXME
-        result: VariantData[PythonResult] = function.call(*args, **kwargs)
+        result: VariantData[Result] = function.call(*args, **kwargs)
         if result.has_values and result.is_deterministic:
             return result.get()
         return unknown_value()

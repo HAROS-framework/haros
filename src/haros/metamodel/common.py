@@ -97,6 +97,70 @@ CLASS_TYPE = type(TrackedCode)
 class TypeToken(Generic[V]):
     token: Type[V]
 
+    @classmethod
+    def of_anything(cls) -> Self:
+        return cls(object)
+
+    @classmethod
+    def of_bool(cls) -> Self:
+        return cls(bool)
+
+    @classmethod
+    def of_int(cls) -> Self:
+        return cls(int)
+
+    @classmethod
+    def of_float(cls) -> Self:
+        return cls(float)
+
+    @classmethod
+    def of_complex(cls) -> Self:
+        return cls(complex)
+
+    @classmethod
+    def of_string(cls) -> Self:
+        return cls(str)
+
+    @classmethod
+    def of_builtin_function(cls) -> Self:
+        return cls(BUILTIN_FUNCTION_TYPE)
+
+    @classmethod
+    def of_def_function(cls) -> Self:
+        return cls(DEF_FUNCTION_TYPE)
+
+    @classmethod
+    def of_class(cls) -> Self:
+        return cls(CLASS_TYPE)
+
+    @classmethod
+    def of_exception(cls) -> Self:
+        return cls(Exception)
+
+    @classmethod
+    def of_iterable(cls) -> Self:
+        return cls(IterableType)
+
+    @classmethod
+    def of_list(cls) -> Self:
+        return cls(list)
+
+    @classmethod
+    def of_tuple(cls) -> Self:
+        return cls(tuple)
+
+    @classmethod
+    def of_set(cls) -> Self:
+        return cls(set)
+
+    @classmethod
+    def of_mapping(cls) -> Self:
+        return cls(MappingType)
+
+    @classmethod
+    def of_dict(cls) -> Self:
+        return cls(dict)
+
     @property
     def is_bool(self) -> bool:
         return issubclass(self.token, bool)
@@ -152,6 +216,9 @@ class TypeToken(Generic[V]):
     @property
     def has_items(self) -> bool:
         return self.is_string or self.is_iterable or self.is_mapping
+
+    def __str__(self) -> str:
+        return str(self.token)
 
 
 @frozen
