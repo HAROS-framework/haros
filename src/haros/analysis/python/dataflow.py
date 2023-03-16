@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, List, Optional, Self, Tuple, Type
+from typing import Any, Callable, Dict, Final, List, Optional, Self, Set, Tuple, Type
 
 import enum
 
@@ -298,6 +298,10 @@ class PythonTypeToken(TypeToken[V]):
     mask: TypeMask = TypeMask.ANY
 
     @classmethod
+    def of(cls, value: V, mask: TypeMask = TypeMask.ANY) -> Self:
+        return cls(type(value), mask=mask)
+
+    @classmethod
     def of_bool(cls, mask: TypeMask = TypeMask.BOOL) -> Self:
         return cls(bool, mask=mask)
 
@@ -368,9 +372,11 @@ TYPE_TOKEN_INT: Final[PythonTypeToken[int]] = PythonTypeToken.of_int()
 TYPE_TOKEN_FLOAT: Final[PythonTypeToken[float]] = PythonTypeToken.of_float()
 TYPE_TOKEN_COMPLEX: Final[PythonTypeToken[complex]] = PythonTypeToken.of_complex()
 TYPE_TOKEN_STRING: Final[PythonTypeToken[str]] = PythonTypeToken.of_string()
+TYPE_TOKEN_ITERABLE: Final[PythonTypeToken[Iterable]] = PythonTypeToken.of_iterable()
 TYPE_TOKEN_LIST: Final[PythonTypeToken[list]] = PythonTypeToken.of_list()
 TYPE_TOKEN_TUPLE: Final[PythonTypeToken[tuple]] = PythonTypeToken.of_tuple()
 TYPE_TOKEN_SET: Final[PythonTypeToken[set]] = PythonTypeToken.of_set()
+TYPE_TOKEN_MAPPING: Final[PythonTypeToken[Mapping]] = PythonTypeToken.of_mapping()
 TYPE_TOKEN_DICT: Final[PythonTypeToken[dict]] = PythonTypeToken.of_dict()
 TYPE_TOKEN_BUILTIN: Final[PythonTypeToken[BUILTIN_FUNCTION_TYPE]] = PythonTypeToken.of_builtin_function()
 TYPE_TOKEN_FUNCTION: Final[PythonTypeToken[DEF_FUNCTION_TYPE]] = PythonTypeToken.of_def_function()
@@ -386,93 +392,135 @@ def unknown_value(
 
 
 def unknown_int(source: Optional[TrackedCode] = None) -> UnresolvedInt:
-    return UnresolvedInt(source, PythonType.INT)
+    return UnresolvedInt(TYPE_TOKEN_INT, source)
 
 
-def unknown_float(source: Optional[TrackedCode] = None) -> UnresolvedPythonFloat:
-    return UnresolvedFloat(source, PythonType.FLOAT)
+def unknown_float(source: Optional[TrackedCode] = None) -> UnresolvedFloat:
+    return UnresolvedFloat(TYPE_TOKEN_FLOAT, source)
 
 
-def unknown_string(source: Optional[TrackedCode] = None) -> UnresolvedPythonString:
-    return UnresolvedString(source, PythonType.STRING)
+def unknown_string(source: Optional[TrackedCode] = None) -> UnresolvedString:
+    return UnresolvedString(TYPE_TOKEN_STRING, source)
 
 
-def unknown_iterable(source: Optional[TrackedCode] = None) -> UnresolvedPythonIterable:
-    return UnresolvedIterable(source, PythonType.ITERABLE)
+def unknown_iterable(source: Optional[TrackedCode] = None) -> UnresolvedIterable:
+    return UnresolvedIterable(TYPE_TOKEN_ITERABLE, source)
 
 
-def unknown_mapping(source: Optional[TrackedCode] = None) -> UnresolvedPythonMapping:
-    return UnresolvedMapping(source, PythonType.MAPPING)
+def unknown_list(source: Optional[TrackedCode] = None) -> UnresolvedIterable:
+    return UnresolvedIterable(TYPE_TOKEN_LIST, source)
+
+
+def unknown_tuple(source: Optional[TrackedCode] = None) -> UnresolvedIterable:
+    return UnresolvedIterable(TYPE_TOKEN_TUPLE, source)
+
+
+def unknown_set(source: Optional[TrackedCode] = None) -> UnresolvedIterable:
+    return UnresolvedIterable(TYPE_TOKEN_SET, source)
+
+
+def unknown_mapping(source: Optional[TrackedCode] = None) -> UnresolvedMapping:
+    return UnresolvedMapping(TYPE_TOKEN_MAPPING, source)
+
+
+def unknown_dict(source: Optional[TrackedCode] = None) -> UnresolvedMapping:
+    return UnresolvedMapping(TYPE_TOKEN_DICT, source)
 
 
 def const_int(raw_value: int, source: Optional[TrackedCode] = None) -> Resolved[int]:
-    return Resolved(source, PythonType.INT, raw_value)
+    return Resolved(TYPE_TOKEN_INT, source, raw_value)
 
 
 def const_float(raw_value: float, source: Optional[TrackedCode] = None) -> Resolved[float]:
-    return Resolved(source, PythonType.FLOAT, raw_value)
+    return Resolved(TYPE_TOKEN_FLOAT, source, raw_value)
 
 
 def const_complex(raw_value: complex, source: Optional[TrackedCode] = None) -> Resolved[complex]:
-    return Resolved(source, PythonType.COMPLEX, raw_value)
+    return Resolved(TYPE_TOKEN_COMPLEX, source, raw_value)
 
 
 def const_number(raw_value: V, source: Optional[TrackedCode] = None) -> Resolved[V]:
-    return Resolved(source, PythonType.NUMBER, raw_value)
+    token = PythonTypeToken.of(raw_value, mask=TypeMask.NUMBER)
+    return Resolved(token, source, raw_value)
 
 
 def const_string(raw_value: str, source: Optional[TrackedCode] = None) -> Resolved[str]:
-    return Resolved(source, PythonType.STRING, raw_value)
+    return Resolved(TYPE_TOKEN_STRING, source, raw_value)
 
 
 def const_bool(raw_value: bool, source: Optional[TrackedCode] = None) -> Resolved[bool]:
-    return Resolved(source, PythonType.BOOL, raw_value)
+    return Resolved(TYPE_TOKEN_BOOL, source, raw_value)
+
+
+def const_tuple(raw_value: Tuple, source: Optional[TrackedCode] = None) -> Resolved[Tuple]:
+    return Resolved(TYPE_TOKEN_TUPLE, source, raw_value)
+
+
+def const_list(raw_value: List[V], source: Optional[TrackedCode] = None) -> Resolved[List[V]]:
+    token = PythonTypeToken.of(raw_value, mask=TypeMask.ITERABLE)
+    return Resolved(token, source, raw_value)
+
+
+def const_set(raw_value: Set[V], source: Optional[TrackedCode] = None) -> Resolved[Set[V]]:
+    token = PythonTypeToken.of(raw_value, mask=TypeMask.ITERABLE)
+    return Resolved(token, source, raw_value)
+
+
+def const_dict(raw_value: Dict[K, V], source: Optional[TrackedCode] = None) -> Resolved[Dict[K, V]]:
+    token = PythonTypeToken.of(raw_value, mask=TypeMask.MAPPING)
+    return Resolved(token, source, raw_value)
 
 
 def const_none(source: Optional[TrackedCode] = None) -> Resolved[Any]:
-    return Resolved(source, PythonType.NONE, None)
+    token = PythonTypeToken.of(None, mask=TypeMask.NONE)
+    return Resolved(token, source, None)
 
 
 def solved(
-    type: PythonType,
+    type: PythonTypeToken[V],
     raw_value: V,
     source: Optional[TrackedCode] = None,
 ) -> Resolved[V]:
-    return Resolved(source, type, raw_value)
+    return Resolved(type, source, raw_value)
 
 
-def solved_from(raw_value: Any, source: Optional[TrackedCode] = None) -> Resolved:
+def solved_from(raw_value: V, source: Optional[TrackedCode] = None) -> Resolved[V]:
     if raw_value is None:
-        return Resolved(source, PythonType.NONE, None)
+        return const_none(source=source)
     if isinstance(raw_value, bool):
-        return Resolved(source, PythonType.BOOL, raw_value)
+        return const_bool(raw_value, source=source)
     if isinstance(raw_value, int):
-        return Resolved(source, PythonType.INT, raw_value)
+        return const_int(raw_value, source=source)
     if isinstance(raw_value, float):
-        return Resolved(source, PythonType.FLOAT, raw_value)
+        return const_float(raw_value, source=source)
     if isinstance(raw_value, complex):
-        return Resolved(source, PythonType.COMPLEX, raw_value)
+        return const_complex(raw_value, source=source)
     if isinstance(raw_value, str):
-        return Resolved(source, PythonType.STRING, raw_value)
+        return const_string(raw_value, source=source)
     if isinstance(raw_value, BaseException):
-        return Resolved(source, PythonType.EXCEPTION, raw_value)
+        token = PythonTypeToken.of(raw_value, mask=TypeMask.EXCEPTION)
+        return Resolved(token, source, raw_value)
     if isinstance(raw_value, type):
-        return Resolved(source, PythonType.CLASS, raw_value)
+        token = PythonTypeToken.of(raw_value, mask=TypeMask.CLASS)
+        return Resolved(token, source, raw_value)
     if isinstance(raw_value, FunctionWrapper) or callable(raw_value):
-        return Resolved(source, PythonType.FUNCTION, raw_value)
+        token = PythonTypeToken.of(raw_value, mask=TypeMask.FUNCTION)
+        return Resolved(token, source, raw_value)
     if isinstance(raw_value, tuple):
-        return Resolved(source, PythonType.ITERABLE, raw_value)
+        return const_tuple(raw_value, source=source)
     if isinstance(raw_value, list):
-        return Resolved(source, PythonType.ITERABLE, raw_value)
+        return const_list(raw_value, source=source)
     if isinstance(raw_value, set):
-        return Resolved(source, PythonType.ITERABLE, raw_value)
+        return const_set(raw_value, source=source)
     if isinstance(raw_value, dict):
-        return Resolved(source, PythonType.MAPPING, raw_value)
+        return const_dict(raw_value, source=source)
     d = {}
     g = (type(d.items()), type(d.keys()), type(d.values()))
     if isinstance(raw_value, g):
-        return Resolved(source, PythonType.ITERABLE, raw_value)
-    return Resolved(source, PythonType.OBJECT, raw_value)
+        token = PythonTypeToken.of(raw_value, mask=TypeMask.ITERABLE)
+        return Resolved(token, source, raw_value)
+    token = PythonTypeToken.of(raw_value, mask=TypeMask.OBJECT)
+    return Resolved(token, source, raw_value)
 
 
 @frozen
@@ -528,7 +576,7 @@ def custom_function_wrapper(name: str, module: str, function: Callable) -> Funct
 
 @frozen
 class Definition:
-    value: Result
+    value: Result[Any]
     ast: Optional[PythonAst] = None
     import_base: str = ''
 
@@ -547,46 +595,6 @@ class Definition:
     @property
     def is_builtin(self) -> bool:
         return self.import_base == BUILTINS_MODULE
-
-    @property
-    def is_bool_type(self) -> bool:
-        return bool(self.type & PythonType.BOOL)
-
-    @property
-    def is_int_type(self) -> bool:
-        return bool(self.type & PythonType.INT)
-
-    @property
-    def is_float_type(self) -> bool:
-        return bool(self.type & PythonType.FLOAT)
-
-    @property
-    def is_complex_type(self) -> bool:
-        return bool(self.type & PythonType.COMPLEX)
-
-    @property
-    def is_number_type(self) -> bool:
-        return bool(self.type & PythonType.NUMBER)
-
-    @property
-    def is_string_type(self) -> bool:
-        return bool(self.type & PythonType.STRING)
-
-    @property
-    def is_function_type(self) -> bool:
-        return bool(self.type & PythonType.FUNCTION)
-
-    @property
-    def is_class_type(self) -> bool:
-        return bool(self.type & PythonType.CLASS)
-
-    @property
-    def is_exception_type(self) -> bool:
-        return bool(self.type & PythonType.EXCEPTION)
-
-    @property
-    def is_object_type(self) -> bool:
-        return bool(self.type & PythonType.OBJECT)
 
     @classmethod
     def of_builtin_function(cls, name: str) -> 'Definition':
@@ -618,12 +626,13 @@ class Definition:
     def from_value(cls, raw_value: Any, ast: Optional[PythonAst] = None) -> 'Definition':
         return cls(solved_from(raw_value), ast=ast)
 
-    def cast_to(self, type: PythonType) -> 'Definition':
+    def cast_to(self, type: PythonTypeToken) -> 'Definition':
         if self.value.type == type:
             return self
-        new_type = self.value.type & type
-        if bool(new_type):
-            return evolve(self, value=self.value.cast_to(type))
+        new_type_mask = self.value.type.mask & type.mask
+        if bool(new_type_mask):
+            new_type = evolve(type, mask=new_type_mask)
+            return evolve(self, value=self.value.cast_to(new_type))
         raise TypeError(f'unable to cast {self.value.type} to {type}')
 
     def __str__(self) -> str:

@@ -98,6 +98,10 @@ class TypeToken(Generic[V]):
     token: Type[V]
 
     @classmethod
+    def of(cls, value: V) -> Self:
+        return cls(type(value))
+
+    @classmethod
     def of_anything(cls) -> Self:
         return cls(object)
 
@@ -219,6 +223,22 @@ class TypeToken(Generic[V]):
 
     def __str__(self) -> str:
         return str(self.token)
+
+
+TYPE_TOKEN_ANYTHING: Final[TypeToken[Any]] = TypeToken.of_anything()
+TYPE_TOKEN_BOOL: Final[TypeToken[bool]] = TypeToken.of_bool()
+TYPE_TOKEN_INT: Final[TypeToken[int]] = TypeToken.of_int()
+TYPE_TOKEN_FLOAT: Final[TypeToken[float]] = TypeToken.of_float()
+TYPE_TOKEN_COMPLEX: Final[TypeToken[complex]] = TypeToken.of_complex()
+TYPE_TOKEN_STRING: Final[TypeToken[str]] = TypeToken.of_string()
+TYPE_TOKEN_LIST: Final[TypeToken[list]] = TypeToken.of_list()
+TYPE_TOKEN_TUPLE: Final[TypeToken[tuple]] = TypeToken.of_tuple()
+TYPE_TOKEN_SET: Final[TypeToken[set]] = TypeToken.of_set()
+TYPE_TOKEN_DICT: Final[TypeToken[dict]] = TypeToken.of_dict()
+TYPE_TOKEN_BUILTIN: Final[TypeToken[BUILTIN_FUNCTION_TYPE]] = TypeToken.of_builtin_function()
+TYPE_TOKEN_FUNCTION: Final[TypeToken[DEF_FUNCTION_TYPE]] = TypeToken.of_def_function()
+TYPE_TOKEN_CLASS: Final[TypeToken[CLASS_TYPE]] = TypeToken.of_class()
+TYPE_TOKEN_EXCEPTION: Final[TypeToken[Exception]] = TypeToken.of_exception()
 
 
 @frozen
