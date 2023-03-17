@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, List, Optional, Self, Set, Tuple, Type
+from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, Optional, Set, Tuple, Type
 
 import enum
 
@@ -219,7 +219,7 @@ class TypeMask(enum.Flag):
     ANY = PRIMITIVE | DEFINITIONS | OBJECT
 
     @classmethod
-    def from_value(cls, value: Any) -> Self:
+    def from_value(cls, value: Any) -> 'TypeMask':
         if raw_value is None:
             return cls.NONE
         if isinstance(value, bool):
@@ -250,71 +250,71 @@ class TypeMask(enum.Flag):
 
     @property
     def can_be_bool(self) -> bool:
-        return bool(self & PythonType.BOOL)
+        return bool(self & TypeMask.BOOL)
 
     @property
     def can_be_int(self) -> bool:
-        return bool(self & PythonType.INT)
+        return bool(self & TypeMask.INT)
 
     @property
     def can_be_float(self) -> bool:
-        return bool(self & PythonType.FLOAT)
+        return bool(self & TypeMask.FLOAT)
 
     @property
     def can_be_complex(self) -> bool:
-        return bool(self & PythonType.COMPLEX)
+        return bool(self & TypeMask.COMPLEX)
 
     @property
     def can_be_number(self) -> bool:
-        return bool(self & PythonType.NUMBER)
+        return bool(self & TypeMask.NUMBER)
 
     @property
     def can_be_string(self) -> bool:
-        return bool(self & PythonType.STRING)
+        return bool(self & TypeMask.STRING)
 
     @property
     def can_be_primitive(self) -> bool:
-        return bool(self & PythonType.PRIMITIVE)
+        return bool(self & TypeMask.PRIMITIVE)
 
     @property
     def can_be_function(self) -> bool:
-        return bool(self & PythonType.FUNCTION)
+        return bool(self & TypeMask.FUNCTION)
 
     @property
     def can_be_class(self) -> bool:
-        return bool(self & PythonType.CLASS)
+        return bool(self & TypeMask.CLASS)
 
     @property
     def can_be_exception(self) -> bool:
-        return bool(self & PythonType.EXCEPTION)
+        return bool(self & TypeMask.EXCEPTION)
 
     @property
     def can_be_definitions(self) -> bool:
-        return bool(self & PythonType.DEFINITIONS)
+        return bool(self & TypeMask.DEFINITIONS)
 
     @property
     def can_be_iterable(self) -> bool:
-        return bool(self & PythonType.ITERABLE)
+        return bool(self & TypeMask.ITERABLE)
 
     @property
     def can_be_mapping(self) -> bool:
-        return bool(self & PythonType.MAPPING)
+        return bool(self & TypeMask.MAPPING)
 
     @property
     def can_be_object(self) -> bool:
-        return bool(self & PythonType.OBJECT)
+        return bool(self & TypeMask.OBJECT)
 
     @property
     def can_be_any_object(self) -> bool:
-        return bool(self & PythonType.OBJECTS)
+        return bool(self & TypeMask.OBJECTS)
 
     @property
     def can_have_attributes(self) -> bool:
-        return bool(self & ~PythonType.PRIMITIVE)
+        return bool(self & ~TypeMask.PRIMITIVE)
 
     @property
     def can_have_items(self) -> bool:
-        mask = PythonType.STRING | PythonType.ITERABLE | PythonType.MAPPING | PythonType.OBJECT
+        mask = TypeMask.STRING | TypeMask.ITERABLE | TypeMask.MAPPING | TypeMask.OBJECT
         return bool(self & mask)
 
 
@@ -328,73 +328,73 @@ class PythonTypeToken(TypeToken[V]):
     mask: TypeMask = TypeMask.ANY
 
     @classmethod
-    def of(cls, value: V, mask: TypeMask = TypeMask.ANY) -> Self:
+    def of(cls, value: V, mask: TypeMask = TypeMask.ANY) -> 'PythonTypeToken':
         if mask == TypeMask.ANY:
             mask = TypeMask.from_value(value)
         return cls(type(value), mask=mask)
 
     @classmethod
-    def of_bool(cls, mask: TypeMask = TypeMask.BOOL) -> Self:
+    def of_bool(cls, mask: TypeMask = TypeMask.BOOL) -> 'PythonTypeToken':
         return cls(bool, mask=mask)
 
     @classmethod
-    def of_int(cls, mask: TypeMask = TypeMask.INT) -> Self:
+    def of_int(cls, mask: TypeMask = TypeMask.INT) -> 'PythonTypeToken':
         return cls(int, mask=mask)
 
     @classmethod
-    def of_float(cls, mask: TypeMask = TypeMask.FLOAT) -> Self:
+    def of_float(cls, mask: TypeMask = TypeMask.FLOAT) -> 'PythonTypeToken':
         return cls(float, mask=mask)
 
     @classmethod
-    def of_complex(cls, mask: TypeMask = TypeMask.COMPLEX) -> Self:
+    def of_complex(cls, mask: TypeMask = TypeMask.COMPLEX) -> 'PythonTypeToken':
         return cls(complex, mask=mask)
 
     @classmethod
-    def of_string(cls, mask: TypeMask = TypeMask.STRING) -> Self:
+    def of_string(cls, mask: TypeMask = TypeMask.STRING) -> 'PythonTypeToken':
         return cls(str, mask=mask)
 
     @classmethod
-    def of_builtin_function(cls, mask: TypeMask = TypeMask.FUNCTION) -> Self:
+    def of_builtin_function(cls, mask: TypeMask = TypeMask.FUNCTION) -> 'PythonTypeToken':
         return cls(BUILTIN_FUNCTION_TYPE, mask=mask)
 
     @classmethod
-    def of_def_function(cls, mask: TypeMask = TypeMask.FUNCTION) -> Self:
+    def of_def_function(cls, mask: TypeMask = TypeMask.FUNCTION) -> 'PythonTypeToken':
         return cls(DEF_FUNCTION_TYPE, mask=mask)
 
     @classmethod
-    def of_class(cls, mask: TypeMask = TypeMask.CLASS) -> Self:
+    def of_class(cls, mask: TypeMask = TypeMask.CLASS) -> 'PythonTypeToken':
         return cls(CLASS_TYPE, mask=mask)
 
     @classmethod
-    def of_exception(cls, mask: TypeMask = TypeMask.EXCEPTION) -> Self:
+    def of_exception(cls, mask: TypeMask = TypeMask.EXCEPTION) -> 'PythonTypeToken':
         return cls(Exception, mask=mask)
 
     @classmethod
-    def of_iterable(cls, mask: TypeMask = TypeMask.ITERABLE) -> Self:
+    def of_iterable(cls, mask: TypeMask = TypeMask.ITERABLE) -> 'PythonTypeToken':
         return cls(IterableType, mask=mask)
 
     @classmethod
-    def of_list(cls, mask: TypeMask = TypeMask.ITERABLE) -> Self:
+    def of_list(cls, mask: TypeMask = TypeMask.ITERABLE) -> 'PythonTypeToken':
         return cls(list, mask=mask)
 
     @classmethod
-    def of_tuple(cls, mask: TypeMask = TypeMask.ITERABLE) -> Self:
+    def of_tuple(cls, mask: TypeMask = TypeMask.ITERABLE) -> 'PythonTypeToken':
         return cls(tuple, mask=mask)
 
     @classmethod
-    def of_set(cls, mask: TypeMask = TypeMask.ITERABLE) -> Self:
+    def of_set(cls, mask: TypeMask = TypeMask.ITERABLE) -> 'PythonTypeToken':
         return cls(set, mask=mask)
 
     @classmethod
-    def of_mapping(cls, mask: TypeMask = TypeMask.MAPPING) -> Self:
+    def of_mapping(cls, mask: TypeMask = TypeMask.MAPPING) -> 'PythonTypeToken':
         return cls(MappingType, mask=mask)
 
     @classmethod
-    def of_dict(cls, mask: TypeMask = TypeMask.MAPPING) -> Self:
+    def of_dict(cls, mask: TypeMask = TypeMask.MAPPING) -> 'PythonTypeToken':
         return cls(dict, mask=mask)
 
     @classmethod
-    def of_custom_object(cls, token: Type[V]) -> Self:
+    def of_custom_object(cls, token: Type[V]) -> 'PythonTypeToken':
         return cls(token, mask=TypeMask.OBJECT)
 
 
@@ -630,7 +630,7 @@ class Definition:
         return self.import_base == BUILTINS_MODULE
 
     @classmethod
-    def of_builtin_function(cls, name: str) -> Self:
+    def of_builtin_function(cls, name: str) -> 'Definition':
         #value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert callable(raw_value),  f'expected function, got: {raw_value!r}'
@@ -640,7 +640,7 @@ class Definition:
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def of_builtin_class(cls, name: str) -> Self:
+    def of_builtin_class(cls, name: str) -> 'Definition':
         #value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
@@ -649,7 +649,7 @@ class Definition:
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def of_builtin_exception(cls, name: str) -> Self:
+    def of_builtin_exception(cls, name: str) -> 'Definition':
         #value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
@@ -659,10 +659,10 @@ class Definition:
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def from_value(cls, raw_value: Any, ast: Optional[PythonAst] = None) -> Self:
+    def from_value(cls, raw_value: Any, ast: Optional[PythonAst] = None) -> 'Definition':
         return cls(solved_from(raw_value), ast=ast)  # FIXME TrackedCode from ast
 
-    def cast_to(self, type: PythonTypeToken) -> Self:
+    def cast_to(self, type: PythonTypeToken) -> 'Definition':
         if self.value.type == type:
             return self
         new_type_mask = self.value.type.mask & type.mask
@@ -700,7 +700,7 @@ class DataScope:
         return self._condition_stack[-1]
 
     @classmethod
-    def with_builtins(cls) -> Self:
+    def with_builtins(cls) -> 'DataScope':
         variables = {}
         for name in BUILTIN_FUNCTIONS:
             variables[name] = VariantData.with_base_value(Definition.of_builtin_function(name))
@@ -710,7 +710,7 @@ class DataScope:
             variables[name] = VariantData.with_base_value(Definition.of_builtin_exception(name))
         return cls(variables=variables)
 
-    def duplicate(self) -> Self:
+    def duplicate(self) -> 'DataScope':
         variables = {k: v.duplicate() for k, v in self.variables.items()}
         return self.__class__(variables=variables)
 
@@ -731,24 +731,24 @@ class DataScope:
         self,
         name: str,
         raw_value: Any,
-        type_mask: TypeMask = TypeMask.ANY,
+        type: TypeMask = TypeMask.ANY,
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
         # TODO TrackedCode from ast
         source: Optional[TrackedCode] = None
-        token = PythonTypeToken.of(raw_value, mask=type_mask)
+        token = PythonTypeToken.of(raw_value, mask=type)
         value = Resolved(token, source, raw_value)
         return self.set(name, value, ast=ast, import_base=import_base)
 
     def set_unknown(
         self,
         name: str,
-        type_mask: TypeMask = TypeMask.ANY,
+        type: TypeMask = TypeMask.ANY,
         ast: Optional[PythonAst] = None,
         import_base: str = '',
     ):
-        token = PythonTypeToken(object, mask=type_mask)
+        token = PythonTypeToken(object, mask=type)
         value = unknown_value(type=token)
         return self.set(name, value, ast=ast, import_base=import_base)
 
@@ -801,13 +801,13 @@ class DataScope:
     def add_function_def(self, statement: PythonFunctionDefStatement, fun: FunctionWrapper = None):
         assert statement.is_statement and statement.is_function_def
         if fun is None:
-            self.set_unknown(statement.name, type=PythonType.FUNCTION, ast=statement)
+            self.set_unknown(statement.name, type=TypeMask.FUNCTION, ast=statement)
         else:
-            self.set_raw_value(statement.name, fun, type=PythonType.FUNCTION, ast=statement)
+            self.set_raw_value(statement.name, fun, type=TypeMask.FUNCTION, ast=statement)
 
     def add_class_def(self, statement: PythonClassDefStatement):
         assert statement.is_statement and statement.is_class_def
-        self.set_unknown(statement.name, type=PythonType.CLASS, ast=statement)
+        self.set_unknown(statement.name, type=TypeMask.CLASS, ast=statement)
 
     def add_assignment(self, statement: PythonAssignmentStatement):
         assert statement.is_statement and statement.is_assignment
@@ -907,7 +907,7 @@ class DataScope:
     def value_from_reference(self, reference: PythonReference) -> Result:
         if reference.object is not None:
             obj: Result = self.value_from_expression(reference.object)
-            if not obj.type.can_have_attributes:
+            if not obj.type.mask.can_have_attributes:
                 return unknown_value()
             if not obj.is_resolved:
                 return unknown_value()
@@ -938,14 +938,14 @@ class DataScope:
         assert operator.is_unary
         value = self.value_from_expression(operator.operand)
         if operator.is_bitwise:
-            if not value.type.can_be_int:
+            if not value.type.mask.can_be_int:
                 raise DataFlowError.type_check('INT', value.type.name, value)
             if not value.is_resolved:
                 return unknown_int()
             r = ~value.value
             return const_int(r)
         if operator.is_arithmetic:
-            if not value.type.can_be_number:
+            if not value.type.mask.can_be_number:
                 raise DataFlowError.type_check('NUMBER', value.type.name, value)
             if not value.is_resolved:
                 token = PythonTypeToken(object, mask=TypeMask.NUMBER)
@@ -1025,7 +1025,7 @@ class DataScope:
         # object: PythonExpression
         # key: PythonSubscript
         obj: Result = self.value_from_expression(access.object)
-        if not obj.is_resolved or not obj.type.can_have_items:
+        if not obj.is_resolved or not obj.type.mask.can_have_items:
             return unknown_value()
         if access.key.is_slice:
             return unknown_value()
@@ -1045,7 +1045,7 @@ class DataScope:
         value = self.value_from_expression(call.function)
         if not value.is_resolved:
             return unknown_value()
-        if not value.type.can_be_function:
+        if not value.type.mask.can_be_function:
             return unknown_value()
         function = value.value
         assert isinstance(function, FunctionWrapper), f'not function wrapper: {repr(function)}'

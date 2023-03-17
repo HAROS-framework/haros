@@ -5,7 +5,20 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Generic, Iterable, List, Mapping, Optional, Self, Set, Type, TypeVar
+from typing import (
+    Any,
+    Dict,
+    Final,
+    Generic,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 from collections import defaultdict
 from collections.abc import Iterable as IterableType, Mapping as MappingType
@@ -98,71 +111,71 @@ class TypeToken(Generic[V]):
     token: Type[V]
 
     @classmethod
-    def of(cls, value: V) -> Self:
+    def of(cls, value: V) -> 'TypeToken':
         return cls(type(value))
 
     @classmethod
-    def of_anything(cls) -> Self:
+    def of_anything(cls) -> 'TypeToken':
         return cls(object)
 
     @classmethod
-    def of_bool(cls) -> Self:
+    def of_bool(cls) -> 'TypeToken':
         return cls(bool)
 
     @classmethod
-    def of_int(cls) -> Self:
+    def of_int(cls) -> 'TypeToken':
         return cls(int)
 
     @classmethod
-    def of_float(cls) -> Self:
+    def of_float(cls) -> 'TypeToken':
         return cls(float)
 
     @classmethod
-    def of_complex(cls) -> Self:
+    def of_complex(cls) -> 'TypeToken':
         return cls(complex)
 
     @classmethod
-    def of_string(cls) -> Self:
+    def of_string(cls) -> 'TypeToken':
         return cls(str)
 
     @classmethod
-    def of_builtin_function(cls) -> Self:
+    def of_builtin_function(cls) -> 'TypeToken':
         return cls(BUILTIN_FUNCTION_TYPE)
 
     @classmethod
-    def of_def_function(cls) -> Self:
+    def of_def_function(cls) -> 'TypeToken':
         return cls(DEF_FUNCTION_TYPE)
 
     @classmethod
-    def of_class(cls) -> Self:
+    def of_class(cls) -> 'TypeToken':
         return cls(CLASS_TYPE)
 
     @classmethod
-    def of_exception(cls) -> Self:
+    def of_exception(cls) -> 'TypeToken':
         return cls(Exception)
 
     @classmethod
-    def of_iterable(cls) -> Self:
+    def of_iterable(cls) -> 'TypeToken':
         return cls(IterableType)
 
     @classmethod
-    def of_list(cls) -> Self:
+    def of_list(cls) -> 'TypeToken':
         return cls(list)
 
     @classmethod
-    def of_tuple(cls) -> Self:
+    def of_tuple(cls) -> 'TypeToken':
         return cls(tuple)
 
     @classmethod
-    def of_set(cls) -> Self:
+    def of_set(cls) -> 'TypeToken':
         return cls(set)
 
     @classmethod
-    def of_mapping(cls) -> Self:
+    def of_mapping(cls) -> 'TypeToken':
         return cls(MappingType)
 
     @classmethod
-    def of_dict(cls) -> Self:
+    def of_dict(cls) -> 'TypeToken':
         return cls(dict)
 
     @property
@@ -260,10 +273,10 @@ class Result(Generic[V]):
         cls,
         type: TypeToken[V] = TYPE_TOKEN_ANYTHING,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'Result':
         return Result(type, source)
 
-    def cast_to(self, new_type: TypeToken[V]) -> Self:
+    def cast_to(self, new_type: TypeToken[V]) -> 'Result':
         return evolve(self, type=new_type)
 
     def pretty(self) -> str:
@@ -296,52 +309,81 @@ class Resolved(Result[V]):
         return True
 
     @classmethod
-    def from_none(cls, source: Optional[TrackedCode] = None) -> Self:
+    def from_none(cls, source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_NONE, source, None)
 
     @classmethod
-    def from_int(cls, value: int, source: Optional[TrackedCode] = None) -> Self:
+    def from_int(cls, value: int, source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_INT, source, value)
 
     @classmethod
-    def from_float(cls, value: float, source: Optional[TrackedCode] = None) -> Self:
+    def from_float(cls, value: float, source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_FLOAT, source, value)
 
     @classmethod
-    def from_complex(cls, value: complex, source: Optional[TrackedCode] = None) -> Self:
+    def from_complex(cls, value: complex, source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_COMPLEX, source, value)
 
     @classmethod
-    def from_number(cls, value: V, source: Optional[TrackedCode] = None) -> Self:
-        token = PythonTypeToken.of(value, mask=TypeMask.NUMBER)
-        return cls(token, source, value)
-
-    @classmethod
-    def from_string(cls, value: str, source: Optional[TrackedCode] = None) -> Self:
+    def from_string(cls, value: str, source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_STRING, source, value)
 
     @classmethod
-    def from_bool(cls, value: bool, source: Optional[TrackedCode] = None) -> Self:
+    def from_bool(cls, value: bool, source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_BOOL, source, value)
 
     @classmethod
-    def from_tuple(cls, value: Tuple[V], source: Optional[TrackedCode] = None) -> Self:
+    def from_tuple(cls, value: Tuple[V], source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_TUPLE, source, value)
 
     @classmethod
-    def from_list(cls, value: List[V], source: Optional[TrackedCode] = None) -> Self:
+    def from_list(cls, value: List[V], source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_LIST, source, value)
 
     @classmethod
-    def from_set(cls, value: Set[V], source: Optional[TrackedCode] = None) -> Self:
+    def from_set(cls, value: Set[V], source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_SET, source, value)
 
     @classmethod
-    def from_dict(cls, value: Dict[K, V], source: Optional[TrackedCode] = None) -> Self:
+    def from_dict(cls, value: Dict[K, V], source: Optional[TrackedCode] = None) -> 'Resolved':
         return cls(TYPE_TOKEN_DICT, source, value)
 
     @classmethod
-    def from_value(cls, value: V, source: Optional[TrackedCode] = None) -> Self:
+    def from_value(cls, value: V, source: Optional[TrackedCode] = None) -> 'Resolved':
+        if value is None:
+            return cls.from_none(source=source)
+        # if isinstance(value, bool):
+        #     return cls.from_bool(value, source=source)
+        # if isinstance(value, int):
+        #     return cls.from_int(value, source=source)
+        # if isinstance(value, float):
+        #     return cls.from_float(value, source=source)
+        # if isinstance(value, complex):
+        #     return cls.from_complex(value, source=source)
+        # if isinstance(value, str):
+        #     return cls.from_string(value, source=source)
+        if isinstance(value, BaseException):
+            return cls(TYPE_TOKEN_EXCEPTION, source, value)
+        if isinstance(value, CLASS_TYPE):
+            return cls(TypeToken.of(value), source, value)
+        if isinstance(value, BUILTIN_FUNCTION_TYPE):
+            return cls(TYPE_TOKEN_FUNCTION, source, value)
+        if isinstance(value, DEF_FUNCTION_TYPE):
+            return cls(TYPE_TOKEN_FUNCTION, source, value)
+        if callable(value):
+            return cls(TYPE_TOKEN_FUNCTION, source, value)
+        # if isinstance(value, tuple):
+        #     return cls.from_tuple(value, source=source)
+        # if isinstance(value, list):
+        #     return cls.from_list(value, source=source)
+        # if isinstance(value, set):
+        #     return cls.from_set(value, source=source)
+        # if isinstance(value, dict):
+        #     return cls.from_dict(value, source=source)
+        # d = {}
+        # g = (type(d.items()), type(d.keys()), type(d.values()))
+        # if isinstance(value, g):
+        #     return cls(TYPE_TOKEN_ITERABLE, source, value)
         return cls(TypeToken.of(value), source, value)
 
     def __str__(self) -> str:
@@ -359,7 +401,7 @@ class UnresolvedInt(Result[int]):
         min_value: Optional[int] = None,
         max_value: Optional[int] = None,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'UnresolvedInt':
         return cls(TYPE_TOKEN_INT, source, min_value=min_value, max_value=max_value)
 
     def __str__(self) -> str:
@@ -377,7 +419,7 @@ class UnresolvedFloat(Result[float]):
         min_value: Optional[float] = None,
         max_value: Optional[float] = None,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'UnresolvedFloat':
         return cls(TYPE_TOKEN_FLOAT, source, min_value=min_value, max_value=max_value)
 
     def __str__(self) -> str:
@@ -393,7 +435,7 @@ class UnresolvedString(Result[str]):
         cls,
         parts: Optional[List[Optional[str]]] = None,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'UnresolvedString':
         parts = list(parts) if parts is not None else []
         return cls(TYPE_TOKEN_STRING, source, parts=parts)
 
@@ -413,7 +455,7 @@ class UnresolvedIterable(Result[Iterable[V]]):
         cls,
         parts: Optional[Iterable[Result[V]]] = None,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'UnresolvedIterable':
         parts = list(parts) if parts is not None else []
         return cls(TYPE_TOKEN_ITERABLE, source, parts=parts)
 
@@ -422,7 +464,7 @@ class UnresolvedIterable(Result[Iterable[V]]):
         cls,
         parts: Optional[Iterable[Result[V]]] = None,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'UnresolvedIterable':
         parts = list(parts) if parts is not None else []
         return cls(TYPE_TOKEN_LIST, source, parts=parts)
 
@@ -431,7 +473,7 @@ class UnresolvedIterable(Result[Iterable[V]]):
         cls,
         parts: Optional[Iterable[Result[V]]] = None,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'UnresolvedIterable':
         parts = list(parts) if parts is not None else []
         return cls(TYPE_TOKEN_TUPLE, source, parts=parts)
 
@@ -440,7 +482,7 @@ class UnresolvedIterable(Result[Iterable[V]]):
         cls,
         parts: Optional[Iterable[Result[V]]] = None,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'UnresolvedIterable':
         parts = list(parts) if parts is not None else []
         return cls(TYPE_TOKEN_SET, source, parts=parts)
 
@@ -459,7 +501,7 @@ class UnresolvedMapping(Result[Mapping[K, V]]):
         cls,
         known: Optional[Mapping[K, Result[V]]] = None,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'UnresolvedMapping':
         known = dict(known) if known is not None else {}
         return cls(TYPE_TOKEN_MAPPING, source, known=known)
 
@@ -468,51 +510,12 @@ class UnresolvedMapping(Result[Mapping[K, V]]):
         cls,
         known: Optional[Mapping[K, Result[V]]] = None,
         source: Optional[TrackedCode] = None,
-    ) -> Self:
+    ) -> 'UnresolvedMapping':
         known = dict(known) if known is not None else {}
         return cls(TYPE_TOKEN_DICT, source, known=known)
 
     def __str__(self) -> str:
         return f'$(? map {self.known})'
-
-
-def solved_from(value: V, source: Optional[TrackedCode] = None) -> Resolved[V]:
-    if value is None:
-        return const_none(source=source)
-    if isinstance(value, bool):
-        return const_bool(value, source=source)
-    if isinstance(value, int):
-        return const_int(value, source=source)
-    if isinstance(value, float):
-        return const_float(value, source=source)
-    if isinstance(value, complex):
-        return const_complex(value, source=source)
-    if isinstance(value, str):
-        return const_string(value, source=source)
-    if isinstance(value, BaseException):
-        token = PythonTypeToken.of(value, mask=TypeMask.EXCEPTION)
-        return Resolved(token, source, value)
-    if isinstance(value, type):
-        token = PythonTypeToken.of(value, mask=TypeMask.CLASS)
-        return Resolved(token, source, value)
-    if isinstance(value, FunctionWrapper) or callable(value):
-        token = PythonTypeToken.of(value, mask=TypeMask.FUNCTION)
-        return Resolved(token, source, value)
-    if isinstance(value, tuple):
-        return const_tuple(value, source=source)
-    if isinstance(value, list):
-        return const_list(value, source=source)
-    if isinstance(value, set):
-        return const_set(value, source=source)
-    if isinstance(value, dict):
-        return const_dict(value, source=source)
-    d = {}
-    g = (type(d.items()), type(d.keys()), type(d.values()))
-    if isinstance(value, g):
-        token = PythonTypeToken.of(value, mask=TypeMask.ITERABLE)
-        return Resolved(token, source, value)
-    token = PythonTypeToken.of(value, mask=TypeMask.OBJECT)
-    return Resolved(token, source, value)
 
 
 ###############################################################################

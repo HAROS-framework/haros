@@ -115,13 +115,13 @@ def include_launch_description_function(
     _arguments = {}
     if launch_arguments is not None:
         if launch_arguments.is_resolved:
-            assert launch_arguments.type.can_be_iterable
+            assert launch_arguments.type.mask.can_be_iterable
             for item in launch_arguments.value:
                 if isinstance(item, tuple):
                     key: Result[LaunchSubstitution] = _dataflow_to_launch_substitution(item[0])
                     value: Result[LaunchSubstitution] = _dataflow_to_launch_substitution(item[1])
                 elif item.is_resolved:
-                    assert item.type.can_be_iterable
+                    assert item.type.mask.can_be_iterable
                     key: Result[LaunchSubstitution] = _dataflow_to_launch_substitution(item.value[0])
                     value: Result[LaunchSubstitution] = _dataflow_to_launch_substitution(item.value[1])
                 else:
@@ -156,12 +156,12 @@ def node_function(
     #   arguments: Optional[Iterable[SomeSubstitutionsType]]
     #   **kwargs
     if parameters is None:
-        params = Resolved(None, type(list), [])
+        params = Resolved.from_list([])
     elif parameters.is_resolved:
-        params = Resolved(parameters.source, type(list), [])
+        params = Resolved.from_list([], source=parameters.source)
         for item in parameters.value:
             if item.is_resolved:
-                if item.type.can_be_mapping:
+                if item.type.mask.can_be_mapping:
                     # dictionary that specifies parameter rules
                     # Keys of the dictionary can be strings or an iterable of
                     #   Substitutions that will be expanded to a string.
@@ -169,16 +169,16 @@ def node_function(
                     #   of Substitutions that will be expanded to a string.
                     # Additionally, values in the dictionary can be lists of the
                     #   aforementioned types, or another dictionary with the same properties.
-                    params.value.append(Resolved(item.source, dict, item.value))  # FIXME
+                    params.value.append(Resolved.from_dict(item.value, source=item.source))  # FIXME
                 else:
                     # yaml file that contains parameter rules
                     # (string or pathlib.Path to the full path of the file)
-                    if item.type.can_be_string:
-                        params.value.append(Resolved(item.source, str, item.value))
+                    if item.type.mask.can_be_string:
+                        params.value.append(Resolved.from_string(item.value, source=item.source))
                     elif isinstance(item.value, Path):
-                        params.value.append(Resolved(item.source, Path, item.value))
+                        params.value.append(Resolved.from_value(item.value, source=item.source))
                     else:
-                        params.value.append(Resolved(item.source, LaunchSubstitution, item.value))
+                        params.value.append(Resolved.from_value(item.value, source=item.source))
             else:
                 params = unknown_parameter_list(source=parameters.source)
                 break

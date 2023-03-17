@@ -138,12 +138,12 @@ def print_ros_node(node):
 
 def print_dynamic_collection(name, result):
     if result.is_resolved:
-        if result.type.can_be_list:
-            print(f'  {name}:')
-            print_list_of_values(result.value, indent=4)
-        elif result.type.can_be_mapping:
+        if result.type.is_mapping:
             print(f'  {name}:')
             print_mapping(result.value, indent=4)
+        elif result.type.is_iterable:
+            print(f'  {name}:')
+            print_list_of_values(result.value, indent=4)
         else:
             print(f'  {name}: {result.value}')
     else:

@@ -320,24 +320,6 @@ def unknown_value(
 ) -> Result:
     return Result(source, type)
 
-def unknown_list(source: Optional[TrackedCode] = None) -> UnresolvedIterable:
-    return UnresolvedIterable(source, TypeMask.LIST)
-
-def unknown_mapping(source: Optional[TrackedCode] = None) -> UnresolvedMapping:
-    return UnresolvedMapping(source, TypeMask.MAPPING)
-
-def const_bool(value: str, source: Optional[TrackedCode] = None) -> Result[bool]:
-    # TODO validate values
-    return Resolved(source, TypeMask.BOOL, value)
-
-def const_int(value: str, source: Optional[TrackedCode] = None) -> Result[int]:
-    # TODO validate values
-    return Resolved(source, TypeMask.INT, value)
-
-def const_double(value: str, source: Optional[TrackedCode] = None) -> Result[float]:
-    # TODO validate values
-    return Resolved(source, TypeMask.DOUBLE, value)
-
 def const_string(value: str, source: Optional[TrackedCode] = None) -> Result[str]:
     # TODO validate values
     return Resolved(source, TypeMask.STRING, value)
@@ -364,12 +346,12 @@ def const_mapping(
 
 @frozen
 class RosNodeModel(RosRuntimeEntity):
-    rosname: Result
-    node: Result
-    arguments: Result = field(factory=unknown_list)
-    parameters: Result = field(factory=unknown_mapping)
-    remappings: Result = field(factory=unknown_mapping)
-    output: Result = const_string('log')
+    rosname: Result[RosName]
+    node: Result[str]
+    arguments: Result[List[str]] = field(factory=UnresolvedIterable.unknown_list)
+    parameters: Result = field(factory=UnresolvedMapping.unknown_dict)
+    remappings: Result = field(factory=UnresolvedMapping.unknown_dict)
+    output: Result[str] = Resolved.from_string('log')
 
 
 @frozen

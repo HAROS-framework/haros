@@ -2,12 +2,6 @@
 # Copyright © 2022 André Santos
 
 ###############################################################################
-# Imports
-###############################################################################
-
-from typing import Self
-
-###############################################################################
 # Interface
 ###############################################################################
 
@@ -49,15 +43,15 @@ class ControlFlowError(AnalysisError):
     #     self.statement = kwargs.get('statement')
 
     @classmethod
-    def not_looping(cls) -> Self:
+    def not_looping(cls) -> 'ControlFlowError':
         return cls('found a loop jump statement outside of a loop')
 
     @classmethod
-    def not_branching(cls) -> Self:
+    def not_branching(cls) -> 'ControlFlowError':
         return cls('found a branching statement outside of a conditional')
 
     @classmethod
-    def if_after_else(cls) -> Self:
+    def if_after_else(cls) -> 'ControlFlowError':
         return cls('found a branching statement after an else statement')
 
 
@@ -65,5 +59,5 @@ class DataFlowError(AnalysisError):
     """Errors related to data flow analysis."""
 
     @classmethod
-    def type_check(cls, expected: str, found: str, expr) -> Self:
+    def type_check(cls, expected: str, found: str, expr) -> 'DataFlowError':
         return cls(f'type check failed: expected {expected}, found {found}: {expr}')

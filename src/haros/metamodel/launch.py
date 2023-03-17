@@ -82,18 +82,15 @@ class LaunchSubstitution:
         return '$(?)'
 
 
-Result[LaunchSubstitution] = Result[LaunchSubstitution]
-
-
 def unknown_substitution(source: Optional[TrackedCode] = None) -> Result[LaunchSubstitution]:
-    return Result(source, LaunchSubstitution)
+    return Result(LaunchSubstitution, source)
 
 
 def const_substitution(
     sub: LaunchSubstitution,
     source: Optional[TrackedCode] = None,
 ) -> Result[LaunchSubstitution]:
-    return Resolved(source, type(sub), sub)
+    return Resolved(type(sub), source, sub)
 
 
 @frozen
