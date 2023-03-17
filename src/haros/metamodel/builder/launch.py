@@ -23,20 +23,16 @@ from haros.metamodel.launch import (
     LaunchNode,
     LaunchNodeParameterList,
     LaunchSubstitution,
-    LaunchSubstitutionResult,
 )
 from haros.metamodel.ros import (
     const_list,
     const_mapping,
     const_string,
-    RosLaunchResult,
     RosNodeModel,
     uid_node,
     unknown_list,
     unknown_mapping,
     unknown_value,
-    UnresolvedRosLaunchList,
-    UnresolvedRosLaunchMapping,
 )
 
 ###############################################################################
@@ -53,17 +49,17 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 @frozen
 class LaunchScope:
     file_path: Path
-    args: Dict[str, RosLaunchResult] = field(factory=dict)
-    configs: Dict[str, RosLaunchResult] = field(factory=dict)
+    args: Dict[str, Result] = field(factory=dict)
+    configs: Dict[str, Result] = field(factory=dict)
     anonymous: Dict[str, str] = field(factory=dict)
 
-    def get(self, name: str) -> RosLaunchResult:
+    def get(self, name: str) -> Result:
         value = self.configs.get(name, self.args.get(name))
         if value is None:
             return unknown_value()  # FIXME maybe raise error
         return value
 
-    def set(self, name: str, value: RosLaunchResult):
+    def set(self, name: str, value: Result):
         # if name not in self.configs:
         self.configs[name] = value
 
@@ -73,7 +69,7 @@ class LaunchScope:
     def set_text(self, name: str, text: str):
         return self.set(name, const_string(text))
 
-    def resolve(self, result: Optional[LaunchSubstitutionResult]) -> RosLaunchResult:
+    def resolve(self, result: Optional[Result[LaunchSubstitution]]) -> Result:
         if result is None:
             return unknown_value()
         if not result.is_resolved:
@@ -84,7 +80,7 @@ class LaunchScope:
         self,
         sub: LaunchSubstitution,
         source: Optional[TrackedCode] = None,
-    ) -> RosLaunchResult:
+    ) -> Result:
         if sub.is_text:
             return const_string(sub.value, source=source)
         if sub.is_configuration:
@@ -187,16 +183,16 @@ class LaunchModelBuilder:
 
     def declare_argument(self, arg: LaunchArgument):
         name: str = arg.name
-        default_value: Optional[LaunchSubstitutionResult] = arg.default_value
+        default_value: Optional[Result[LaunchSubstitution]] = arg.default_value
         self.root.args[name] = self.scope.resolve(default_value)
 
     def include_launch(self, include: LaunchInclusion):
         if include.namespace is None:
-            namespace: RosLaunchResult = const_string('/')
+            namespace: Result = const_string('/')
         else:
-            namespace: RosLaunchResult = self.scope.resolve(include.namespace)
-        arguments: Dict[str, LaunchSubstitutionResult] = include.arguments
-        file: RosLaunchResult = self.scope.resolve(include.file)
+            namespace: Result = self.scope.resolve(include.namespace)
+        arguments: Dict[str, Result[LaunchSubstitution]] = include.arguments
+        file: Result = self.scope.resolve(include.file)
         print(f'included launch file: {include.file}')
         if file.is_resolved:
             try:
@@ -217,17 +213,17 @@ class LaunchModelBuilder:
             return  # FIXME
 
     def launch_node(self, node: LaunchNode):
-        package: RosLaunchResult = self.scope.resolve(node.package)
-        executable: RosLaunchResult = self.scope.resolve(node.executable)
+        package: Result = self.scope.resolve(node.package)
+        executable: Result = self.scope.resolve(node.executable)
         node_id = uid_node(str(package), str(executable))
         name: str = self._get_node_name(node.name, package, executable)
         # namespace: Optional[LaunchSubstitution]
         # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
-        output: RosLaunchResult = self.scope.resolve(node.output)
-        args: RosLaunchResult = const_list([
+        output: Result = self.scope.resolve(node.output)
+        args: Result = const_list([
             self.scope.resolve(arg) for arg in node.arguments
         ])
-        params: RosLaunchResult = self.parameters_from_list(node.parameters, node=name)
+        params: Result = self.parameters_from_list(node.parameters, node=name)
         if package.is_resolved and executable.is_resolved:
             fsnode = self.system.get_node_model(package, executable)  # FIXME
             if fsnode is None:
@@ -243,11 +239,11 @@ class LaunchModelBuilder:
         )
         self.nodes.append(rosnode)
 
-    def parameters_from_list(self, parameters: LaunchNodeParameterList, node: Optional[str] = None) -> RosLaunchResult:
+    def parameters_from_list(self, parameters: LaunchNodeParameterList, node: Optional[str] = None) -> Result:
         if not parameters.is_resolved:
             return unknown_mapping(source=parameters.source)
-        result: RosLaunchResult = const_mapping({})
-        param_dict: Dict[str, RosLaunchResult] = result.value
+        result: Result = const_mapping({})
+        param_dict: Dict[str, Result] = result.value
         for item in parameters.value:
             assert isinstance(item, Result), f'unexpected launch node parameter: {item!r}'
             try:
@@ -261,12 +257,12 @@ class LaunchModelBuilder:
                 param_dict = result.known
         return result
 
-    def process_parameter_item(self, item: Result, node: Optional[str] = None) -> RosLaunchResult:
+    def process_parameter_item(self, item: Result, node: Optional[str] = None) -> Result:
         if item.is_resolved:
             if issubclass(item.type, str) or issubclass(item.type, Path):
                 return self._parameters_from_yaml(item.value, node=node)
             elif issubclass(item.type, LaunchSubstitution):
-                path: RosLaunchResult = self.scope.resolve(item)
+                path: Result = self.scope.resolve(item)
                 if path.is_resolved:
                     return self._parameters_from_yaml(path.value, node=node)
                 else:
@@ -276,9 +272,9 @@ class LaunchModelBuilder:
                 result = {}
                 for key, sub in item.value.items():
                     if key.is_resolved and isinstance(key.value, str):
-                        name: RosLaunchResult = const_string(key.value, source=key.source)
+                        name: Result = const_string(key.value, source=key.source)
                     else:
-                        name: RosLaunchResult = self.scope.resolve(key)
+                        name: Result = self.scope.resolve(key)
                     if not name.is_resolved:
                         # break the whole dict analysis
                         logger.warning('unable to resolve parameter name')
@@ -292,7 +288,7 @@ class LaunchModelBuilder:
             logger.warning('unable to resolve parameter list item')
             return unknown_mapping(source=item.source)
 
-    def _parameters_from_yaml(self, path: str, node: Optional[str] = None) -> RosLaunchResult:
+    def _parameters_from_yaml(self, path: str, node: Optional[str] = None) -> Result:
         try:
             data = self.system.read_yaml_file(path)
         except OSError as e:
@@ -331,9 +327,9 @@ class LaunchModelBuilder:
 
     def _get_node_name(
         self,
-        name: Optional[LaunchSubstitutionResult],
-        package: RosLaunchResult,
-        executable: RosLaunchResult,
+        name: Optional[Result[LaunchSubstitution]],
+        package: Result,
+        executable: Result,
     ) -> str:
         if name is None:
             if not package.is_resolved or not executable.is_resolved:
@@ -345,7 +341,7 @@ class LaunchModelBuilder:
             if name is None:
                 return executable.value  # FIXME
             return str(name)
-        value: RosLaunchResult = self.scope.resolve(name)
+        value: Result = self.scope.resolve(name)
         return value.value if value.is_resolved else '$(?)'
 
 

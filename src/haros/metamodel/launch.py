@@ -5,11 +5,11 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from attrs import field, frozen
 
-from haros.metamodel.common import ListResult, NativeTypeResult, Resolved, Result, TrackedCode
+from haros.metamodel.common import Resolved, Result, TrackedCode
 from haros.metamodel.ros import RosNodeModel
 
 ###############################################################################
@@ -82,17 +82,17 @@ class LaunchSubstitution:
         return '$(?)'
 
 
-LaunchSubstitutionResult = NativeTypeResult[LaunchSubstitution]
+Result[LaunchSubstitution] = Result[LaunchSubstitution]
 
 
-def unknown_substitution(source: Optional[TrackedCode] = None) -> LaunchSubstitutionResult:
+def unknown_substitution(source: Optional[TrackedCode] = None) -> Result[LaunchSubstitution]:
     return Result(source, LaunchSubstitution)
 
 
 def const_substitution(
     sub: LaunchSubstitution,
     source: Optional[TrackedCode] = None,
-) -> LaunchSubstitutionResult:
+) -> Result[LaunchSubstitution]:
     return Resolved(source, type(sub), sub)
 
 
@@ -108,14 +108,14 @@ class TextSubstitution(LaunchSubstitution):
         return self.value
 
 
-def const_text(text: str, source: Optional[TrackedCode] = None) -> LaunchSubstitutionResult:
+def const_text(text: str, source: Optional[TrackedCode] = None) -> Result[LaunchSubstitution]:
     return const_substitution(TextSubstitution(text), source=source)
 
 
 @frozen
 class LaunchConfiguration(LaunchSubstitution):
     name: str
-    default_value: Optional[LaunchSubstitutionResult] = None
+    default_value: Optional[Result[LaunchSubstitution]] = None
 
     @property
     def is_configuration(self) -> bool:
@@ -129,7 +129,7 @@ class LaunchConfiguration(LaunchSubstitution):
 class PackageShareDirectorySubstitution(LaunchSubstitution):
     """Custom substitution to evaluate share directory lazily."""
 
-    package: LaunchSubstitutionResult
+    package: Result[LaunchSubstitution]
 
     @property
     def is_package_share(self) -> bool:
@@ -237,7 +237,7 @@ class CommandSubstitution(LaunchSubstitution):
     command: command to be executed. The substitutions will be performed, and
         `shlex.split` will be used on the result.
     """
-    command: LaunchSubstitutionResult
+    command: Result[LaunchSubstitution]
 
     """
     :on_stderr: specifies what to do when there is stderr output.
@@ -266,7 +266,7 @@ class AnonymousNameSubstitution(LaunchSubstitution):
     the same parameter name will create the same "anonymized" name.
     """
 
-    name: LaunchSubstitutionResult
+    name: Result[LaunchSubstitution]
 
     @property
     def is_anon_name(self) -> bool:
@@ -305,7 +305,7 @@ class ThisDirectorySubstitution(LaunchSubstitution):
 
 @frozen
 class ConcatenationSubstitution(LaunchSubstitution):
-    parts: Tuple[LaunchSubstitutionResult]
+    parts: Tuple[Result[LaunchSubstitution]]
 
     @property
     def is_concatenation(self) -> bool:
@@ -317,7 +317,7 @@ class ConcatenationSubstitution(LaunchSubstitution):
 
 @frozen
 class PathJoinSubstitution(LaunchSubstitution):
-    parts: Tuple[LaunchSubstitutionResult]
+    parts: Tuple[Result[LaunchSubstitution]]
 
     @property
     def is_path_join(self) -> bool:
@@ -350,8 +350,8 @@ class LaunchEntity:
 @frozen
 class LaunchArgument(LaunchEntity):
     name: str
-    default_value: Optional[LaunchSubstitutionResult] = None
-    description: Optional[LaunchSubstitutionResult] = None
+    default_value: Optional[Result[LaunchSubstitution]] = None
+    description: Optional[Result[LaunchSubstitution]] = None
 
     @property
     def is_argument(self) -> bool:
@@ -368,18 +368,18 @@ class LaunchArgument(LaunchEntity):
 
 @frozen
 class LaunchInclusion(LaunchEntity):
-    file: LaunchSubstitutionResult
-    namespace: Optional[LaunchSubstitutionResult] = None
-    arguments: Dict[str, LaunchSubstitutionResult] = field(factory=dict)
+    file: Result[LaunchSubstitution]
+    namespace: Optional[Result[LaunchSubstitution]] = None
+    arguments: Dict[str, Result[LaunchSubstitution]] = field(factory=dict)
 
     @property
     def is_inclusion(self) -> bool:
         return True
 
 
-LaunchNodeParameterDict = NativeTypeResult[Dict[LaunchSubstitutionResult, LaunchSubstitutionResult]]
-LaunchNodeParameterItem = Union[LaunchSubstitutionResult, LaunchNodeParameterDict]
-LaunchNodeParameterList = ListResult[LaunchNodeParameterItem]
+LaunchNodeParameterDict = Result[Dict[Result[LaunchSubstitution], Result[LaunchSubstitution]]]
+LaunchNodeParameterItem = Union[Result[LaunchSubstitution], LaunchNodeParameterDict]
+LaunchNodeParameterList = Result[List[LaunchNodeParameterItem]]
 
 
 def unknown_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
@@ -430,14 +430,14 @@ class LaunchNode(LaunchEntity):
     prepended '--ros-args' item.»
     """
 
-    package: LaunchSubstitutionResult
-    executable: LaunchSubstitutionResult
-    name: Optional[LaunchSubstitutionResult] = None
-    namespace: Optional[LaunchSubstitutionResult] = None
+    package: Result[LaunchSubstitution]
+    executable: Result[LaunchSubstitution]
+    name: Optional[Result[LaunchSubstitution]] = None
+    namespace: Optional[Result[LaunchSubstitution]] = None
     parameters: LaunchNodeParameterList = field(factory=empty_parameter_list)
-    remaps: Dict[LaunchSubstitutionResult, LaunchSubstitutionResult] = field(factory=dict)
-    output: LaunchSubstitutionResult = const_text('log')
-    arguments: Iterable[LaunchSubstitutionResult] = field(factory=list)
+    remaps: Dict[Result[LaunchSubstitution], Result[LaunchSubstitution]] = field(factory=dict)
+    output: Result[LaunchSubstitution] = const_text('log')
+    arguments: Iterable[Result[LaunchSubstitution]] = field(factory=list)
 
     @property
     def is_node(self) -> bool:

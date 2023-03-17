@@ -50,7 +50,7 @@ class Languages(Enum):
     ROSACTION = 'ROS Action'
 
 
-class RosLaunchResultType(Flag):
+class TypeMask(Flag):
     BOOL = auto()
     INT = auto()
     DOUBLE = auto()
@@ -63,39 +63,39 @@ class RosLaunchResultType(Flag):
 
     @property
     def can_be_bool(self) -> bool:
-        return bool(self & RosLaunchResultType.BOOL)
+        return bool(self & TypeMask.BOOL)
 
     @property
     def can_be_int(self) -> bool:
-        return bool(self & RosLaunchResultType.INT)
+        return bool(self & TypeMask.INT)
 
     @property
     def can_be_double(self) -> bool:
-        return bool(self & RosLaunchResultType.DOUBLE)
+        return bool(self & TypeMask.DOUBLE)
 
     @property
     def can_be_number(self) -> bool:
-        return bool(self & RosLaunchResultType.NUMBER)
+        return bool(self & TypeMask.NUMBER)
 
     @property
     def can_be_string(self) -> bool:
-        return bool(self & RosLaunchResultType.STRING)
+        return bool(self & TypeMask.STRING)
 
     @property
     def can_be_primitive(self) -> bool:
-        return bool(self & RosLaunchResultType.PRIMITIVE)
+        return bool(self & TypeMask.PRIMITIVE)
 
     @property
     def can_be_list(self) -> bool:
-        return bool(self & RosLaunchResultType.LIST)
+        return bool(self & TypeMask.LIST)
 
     @property
     def can_be_mapping(self) -> bool:
-        return bool(self & RosLaunchResultType.MAPPING)
+        return bool(self & TypeMask.MAPPING)
 
     @property
     def can_have_items(self) -> bool:
-        mask = RosLaunchResultType.STRING | RosLaunchResultType.LIST | RosLaunchResultType.MAPPING
+        mask = TypeMask.STRING | TypeMask.LIST | TypeMask.MAPPING
         return bool(self & mask)
 
 
@@ -314,51 +314,47 @@ class NodeModel(RosFileSystemEntity):
 ###############################################################################
 
 
-RosLaunchResult = Result[RosLaunchResultType, V]
-UnresolvedRosLaunchList = UnresolvedIterable[RosLaunchResultType, V]
-UnresolvedRosLaunchMapping = UnresolvedMapping[RosLaunchResultType, K, V]
-
 def unknown_value(
-    type: RosLaunchResultType = RosLaunchResultType.STRING,
+    type: TypeMask = TypeMask.STRING,
     source: Optional[TrackedCode] = None,
-) -> RosLaunchResult:
+) -> Result:
     return Result(source, type)
 
-def unknown_list(source: Optional[TrackedCode] = None) -> UnresolvedRosLaunchList:
-    return UnresolvedIterable(source, RosLaunchResultType.LIST)
+def unknown_list(source: Optional[TrackedCode] = None) -> UnresolvedIterable:
+    return UnresolvedIterable(source, TypeMask.LIST)
 
-def unknown_mapping(source: Optional[TrackedCode] = None) -> UnresolvedRosLaunchMapping:
-    return UnresolvedMapping(source, RosLaunchResultType.MAPPING)
+def unknown_mapping(source: Optional[TrackedCode] = None) -> UnresolvedMapping:
+    return UnresolvedMapping(source, TypeMask.MAPPING)
 
-def const_bool(value: str, source: Optional[TrackedCode] = None) -> RosLaunchResult[bool]:
+def const_bool(value: str, source: Optional[TrackedCode] = None) -> Result[bool]:
     # TODO validate values
-    return Resolved(source, RosLaunchResultType.BOOL, value)
+    return Resolved(source, TypeMask.BOOL, value)
 
-def const_int(value: str, source: Optional[TrackedCode] = None) -> RosLaunchResult[int]:
+def const_int(value: str, source: Optional[TrackedCode] = None) -> Result[int]:
     # TODO validate values
-    return Resolved(source, RosLaunchResultType.INT, value)
+    return Resolved(source, TypeMask.INT, value)
 
-def const_double(value: str, source: Optional[TrackedCode] = None) -> RosLaunchResult[float]:
+def const_double(value: str, source: Optional[TrackedCode] = None) -> Result[float]:
     # TODO validate values
-    return Resolved(source, RosLaunchResultType.DOUBLE, value)
+    return Resolved(source, TypeMask.DOUBLE, value)
 
-def const_string(value: str, source: Optional[TrackedCode] = None) -> RosLaunchResult[str]:
+def const_string(value: str, source: Optional[TrackedCode] = None) -> Result[str]:
     # TODO validate values
-    return Resolved(source, RosLaunchResultType.STRING, value)
+    return Resolved(source, TypeMask.STRING, value)
 
 def const_list(
     value: str,
     source: Optional[TrackedCode] = None,
-) -> RosLaunchResult[Iterable[RosLaunchResult]]:
+) -> Result[Iterable[Result]]:
     # TODO validate values
-    return Resolved(source, RosLaunchResultType.LIST, value)
+    return Resolved(source, TypeMask.LIST, value)
 
 def const_mapping(
     value: str,
     source: Optional[TrackedCode] = None,
-) -> RosLaunchResult[Mapping[str, RosLaunchResult]]:
+) -> Result[Mapping[str, Result]]:
     # TODO validate values
-    return Resolved(source, RosLaunchResultType.MAPPING, value)
+    return Resolved(source, TypeMask.MAPPING, value)
 
 
 ###############################################################################
@@ -368,12 +364,12 @@ def const_mapping(
 
 @frozen
 class RosNodeModel(RosRuntimeEntity):
-    rosname: RosLaunchResult
-    node: RosLaunchResult
-    arguments: RosLaunchResult = field(factory=unknown_list)
-    parameters: RosLaunchResult = field(factory=unknown_mapping)
-    remappings: RosLaunchResult = field(factory=unknown_mapping)
-    output: RosLaunchResult = const_string('log')
+    rosname: Result
+    node: Result
+    arguments: Result = field(factory=unknown_list)
+    parameters: Result = field(factory=unknown_mapping)
+    remappings: Result = field(factory=unknown_mapping)
+    output: Result = const_string('log')
 
 
 @frozen
