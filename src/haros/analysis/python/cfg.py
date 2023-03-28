@@ -104,7 +104,6 @@ class ControlFlowGraph:
     root_id: ControlNodeId = field()
     nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
     asynchronous: bool = False
-    nested_graphs: Dict[str, 'ControlFlowGraph'] = field(factory=dict)
 
     @root_id.validator
     def _check_root_id(self, attribute, value: ControlNodeId):
@@ -213,7 +212,6 @@ class BasicControlFlowGraphBuilder:
     root_id: ControlNodeId = ROOT_ID
     current_id: ControlNodeId = ROOT_ID
     nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
-    nested_graphs: Dict[str, ControlFlowGraph] = field(factory=dict)
     _node_id_counter: int = 0
     _loop_stack: List[LoopingContext] = field(factory=list, eq=False, hash=False)
     _branch_stack: List[BranchingContext] = field(factory=list, eq=False, hash=False)
