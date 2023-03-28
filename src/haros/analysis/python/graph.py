@@ -68,6 +68,14 @@ class ProgramNode:
     control_in: Set[ControlJump] = field(factory=set)
     control_out: Set[ControlJump] = field(factory=set)
 
+# @frozen
+# class ControlNode:
+#     id: ControlNodeId
+#     body: List[PythonStatement] = field(factory=list, eq=False, hash=False)
+#     condition: LogicValue = field(default=TRUE, eq=False, hash=False)
+#     incoming: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+#     outgoing: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+
 
 @frozen
 class AnalysisExpression:
@@ -168,8 +176,12 @@ def statement_to_node(statement: PythonStatement, uid: ProgramNodeId) -> Program
 
 
 
-
-
+@frozen
+class ProgramGraph:
+    name: str
+    # root_id: ControlNodeId = field()
+    # nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
+    # asynchronous: bool = False
 
 
 
