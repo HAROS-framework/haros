@@ -228,10 +228,23 @@ def maybe_str_to_rosname(name: Optional[str]) -> Optional[RosName]:
 
 
 @frozen
-class RosAdvertiseCall(RosSourceEntity):
+class RosClientAdvertiseCall(RosSourceEntity):
     # Parameters
     name: str
     namespace: str
+
+
+@frozen
+class RosClientSubscribeCall(RosSourceEntity):
+    # Parameters
+    name: str
+    namespace: str
+
+
+@frozen
+class RosClientLibraryCalls:
+    advertise: List[RosClientAdvertiseCall] = field(factory=list)
+    subscribe: List[RosClientSubscribeCall] = field(factory=list)
 
 
 ###############################################################################
@@ -300,9 +313,9 @@ class NodeModel(RosFileSystemEntity):
     is_library: bool = False
     rosname: Optional[RosName] = field(default=None, converter=maybe_str_to_rosname)
     files: List[str] = field(factory=list)
+    rcl_calls: RosClientLibraryCalls = field(factory=RosClientLibraryCalls)
     source: SourceCodeMetadata = field(factory=SourceCodeMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
-    # TODO function calls
 
     @property
     def uid(self) -> str:
