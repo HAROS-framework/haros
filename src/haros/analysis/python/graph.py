@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 from attrs import define, field, frozen
 
-from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph
+from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph, ControlNodeId
 from haros.analysis.python.dataflow import (
     DataScope,
     FunctionWrapper,
@@ -41,7 +41,6 @@ from haros.parsing.python.ast import (
 # Constants
 ###############################################################################
 
-ControlNodeId = NewType('ControlNodeId', int)
 ProgramNodeId = NewType('ProgramNodeId', int)
 ExpressionNodeId = NewType('ExpressionNodeId', int)
 
@@ -59,22 +58,21 @@ class ControlJump:
     node: ProgramNodeId
     condition: LogicValue
 
+    def pretty(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        return f'{self.node} ({self.condition})'
+
 
 @frozen
 class ProgramNode:
     id: ProgramNodeId
     ast: PythonStatement
     condition: LogicValue = field(default=TRUE)
-    control_in: Set[ControlJump] = field(factory=set)
-    control_out: Set[ControlJump] = field(factory=set)
+    incoming: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    outgoing: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
-# @frozen
-# class ControlNode:
-#     id: ControlNodeId
-#     body: List[PythonStatement] = field(factory=list, eq=False, hash=False)
-#     condition: LogicValue = field(default=TRUE, eq=False, hash=False)
-#     incoming: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
-#     outgoing: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
 
 @frozen
@@ -179,10 +177,18 @@ def statement_to_node(statement: PythonStatement, uid: ProgramNodeId) -> Program
 @frozen
 class ProgramGraph:
     name: str
-    # root_id: ControlNodeId = field()
-    # nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
-    # asynchronous: bool = False
+    root_id: ProgramNodeId = field()
+    nodes: Dict[ProgramNodeId, ProgramNode] = field(factory=dict)
+    asynchronous: bool = False
 
+    @root_id.validator
+    def _check_root_id(self, attribute, value: ProgramNodeId):
+        if value not in self.nodes:
+            raise ValueError(f'unknown node id: {value!r}')
+
+    @property
+    def root_node(self) -> ProgramNode:
+        return self.nodes[self.root_id]
 
 
 
@@ -199,6 +205,7 @@ class ProgramGraphBuilder:
     cfg: BasicControlFlowGraphBuilder = field(factory=BasicControlFlowGraphBuilder.from_scratch)
     data: DataScope = field(factory=DataScope.with_builtins)
     nested_graphs: Dict[str, PythonStatement] = field(factory=dict)
+    _pid: int = 0
 
     @classmethod
     def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
@@ -212,6 +219,9 @@ class ProgramGraphBuilder:
         self.data.add_imported_symbol(name, module, value)
 
     def add_statement(self, statement: PythonStatement):
+        pid = ProgramNodeId(self._pid)
+        self._pid += 1
+        node = ProgramNode(pid, statement)
         if statement.is_while or statement.is_for:  # FIXME
             if statement.is_while:
                 test = statement.condition
@@ -325,12 +335,28 @@ class ProgramGraphBuilder:
         self.cfg.clean_up()
 
     def build(self):  # FIXME
-        g = self.cfg.build()
-        #for name, cfg in self.nested_graphs.items():
-        #    g.nested_graphs[name] = cfg
-        return g, self.data
+        cfg = self.cfg.build()
+        # cid = 0
+        # for control_node in cfg.nodes.values():
+        #     incoming = dict
+        #     for statement in control_node.body:
+        #         # id: ProgramNodeId
+        #         # ast: PythonStatement
+        #         # condition: LogicValue = field(default=TRUE)
+        #         # incoming: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+        #         # outgoing: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+        #         node = ProgramNode(
+        #             ProgramNodeId(cid),
+        #             statement,
+        #             condition=control_node.condition,
+        #             incoming
+        #             outgoing
+        #         )
+        #         cid += 1
+        return cfg, self.data
+        # return ProgramGraph(g.name)
 
-    def subgraph_builder(self, name: str):
+    def subgraph_builder(self, name: str):  # FIXME make this an external function to operate on 'built' graphs
         try:
             statement = self.nested_graphs[name]
         except KeyError:
