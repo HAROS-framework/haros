@@ -88,8 +88,8 @@ class ControlNode:
         lines = [
             f'# Node {self.id}',
             f'condition:\n  {self.condition}',
-            f'incoming:\n  {map(str, self.incoming)}',
-            f'outgoing:\n  {map(str, self.outgoing)}',
+            f'incoming:\n  {list(map(str, self.incoming))}',
+            f'outgoing:\n  {list(map(str, self.outgoing))}',
         ]
         if self.body:
             lines.append('body:')
