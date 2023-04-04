@@ -15,10 +15,14 @@ import argparse
 import logging
 from pathlib import Path
 
+from haros.analysis.launch import get_launch_description
 from haros.internal.fsutil import is_ros_package, is_workspace, StorageManager
-from haros.metamodel.builder.projects import build_from_package_paths
+from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.plugins import load as load_plugins
 from haros.internal.settings import Settings
+from haros.metamodel.builder.launch import model_from_description
+from haros.metamodel.builder.projects import build_from_package_paths
+from haros.metamodel.ros import ProjectModel
 
 ###############################################################################
 # Constants
@@ -60,12 +64,22 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     plugins.on_analysis_begin()
     # print(f'analysis: packages: {list(storage.packages.keys())}')
     model = build_from_package_paths(args['name'], storage.packages)
+    system = _setup_interface(storage, model)
     print('project:', model.name)
     for package in model.packages.values():
         print('  package:', package.name)
         for fp in package.files:
             file = model.files[f'{package.name}/{fp}']
             print('    file:', file.path, f'({file.source.language.value})')
+            p = Path(file.path)
+            if p.parts[0] == 'launch':
+                print('      (within launch directory)')
+                if '.launch' in p.suffixes:
+                    print('      (maybe launch file)')
+                    launch_description = get_launch_description(p)
+                    m = model_from_description(p, launch_description, system)
+                    print('Launch Model:')
+                    print_launch_model(m)
     for node in model.nodes.values():
         print('  node:', node.uid, f'({node.source.language.value})')
         for uid in node.files:
@@ -133,3 +147,14 @@ def process_paths(paths: List[Path]) -> StorageManager:
 ###############################################################################
 # Helper Functions
 ###############################################################################
+
+
+def _setup_interface(storage: StorageManager, model: ProjectModel) -> AnalysisSystemInterface:
+    workspace = Path.cwd() / 'tests' / 'ws1'  # FIXME
+    repo = workspace / 'src' / 'repo'
+    return AnalysisSystemInterface(
+        workspace=str(workspace),
+        packages={name: path.as_posix() for name, path in storage.packages.items()},
+        model=model,
+        parse_launch_description=get_launch_description,
+    )
