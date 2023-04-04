@@ -21,6 +21,9 @@ from haros.internal.settings import Settings
 from haros.metamodel.builder.launch import model_from_description
 from haros.metamodel.ros import FileModel, NodeModel, PackageModel, ProjectModel
 
+from haros.analysis.python.graph import from_ast
+from haros.parsing.python import parse
+
 ###############################################################################
 # Constants
 ###############################################################################
@@ -70,10 +73,19 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         parse_launch_description=get_launch_description,
     )
 
-    launch_description = get_launch_description(path)
-    model = model_from_description(path, launch_description, system)
-    print('Launch Model:')
-    print_launch_model(model)
+    # launch_description = get_launch_description(path)
+    # model = model_from_description(path, launch_description, system)
+    # print('Launch Model:')
+    # print_launch_model(model)
+
+    code = path.read_text(encoding='utf-8')
+    ast = parse(code)
+    symbols = {
+        'mymodule.MY_CONSTANT': 44,
+        'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
+    }
+    builder = from_ast(ast, symbols=symbols)
+    # graph, data = builder.subgraph_builder('main').build()
 
     # builder = get_launch_description(path)
     # graph, data = builder.build()
@@ -82,7 +94,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     # print('Variables:')
     # print_variables(data.variables)
     #
-    # print_subgraphs(builder)
+    print_subgraphs(builder)
 
     # qualified_name = 'launch.LaunchDescription'
     # print(f'Find calls to: `{qualified_name}`')
@@ -178,6 +190,13 @@ def print_subgraphs(builder):
         subgraph, data = subbuilder.build()
         print(subgraph.pretty())
 
+        print(f'\nReachable:')
+        for node in subgraph.nodes.values():
+            if node.id == subgraph.root_id or not node.is_unreachable:
+                print('')
+                print(node.pretty())
+
+        print(f'\nUnreachable:')
         for node in subgraph.nodes.values():
             if node.id != subgraph.root_id and node.is_unreachable:
                 print('')
