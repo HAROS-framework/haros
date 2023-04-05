@@ -77,6 +77,9 @@ class SourceCodeLocation:
     column: int = 0
     language: Optional[str] = None
 
+    def serialize(self) -> Mapping[str, Any]:
+        return asdict(self)
+
 
 @frozen
 class TrackedCode:
@@ -235,7 +238,7 @@ class TypeToken(Generic[V]):
         return self.is_string or self.is_iterable or self.is_mapping
 
     def __str__(self) -> str:
-        return str(self.token)
+        return str(getattr(self.token, '__name__', self.token))
 
 
 TYPE_TOKEN_ANYTHING: Final[TypeToken[Any]] = TypeToken.of_anything()
