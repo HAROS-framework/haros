@@ -184,7 +184,6 @@ class LaunchModelBuilder:
             namespace: Result = self.scope.resolve(include.namespace)
         arguments: Dict[str, Result[LaunchSubstitution]] = include.arguments
         file: Result = self.scope.resolve(include.file)
-        print(f'included launch file: {include.file}')
         if file.is_resolved:
             try:
                 description = self.system.get_launch_description(file.value)

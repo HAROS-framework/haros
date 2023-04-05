@@ -916,10 +916,6 @@ class DataScope:
                 value = library_function_wrapper(reference.name, str(type(obj.value)), value)
             return solved_from(value)
         var = self.get(reference.name)
-        if reference.name in ('lidar_pkg_dir', 'LDS_LAUNCH_FILE'):
-            print()
-            print(f'>> reference to {reference.name}:')
-            print('  ', var)
         if not var.has_values or not var.is_deterministic:
             return unknown_value()
         assert var.has_base_value

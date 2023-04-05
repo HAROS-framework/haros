@@ -76,9 +76,9 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
                 print('      (within launch directory)')
                 if '.launch' in p.suffixes:
                     print('      (maybe launch file)')
+                    p = storage.get_file_path(package.name, p)  # absolute path
                     launch_description = get_launch_description(p)
                     m = model_from_description(p, launch_description, system)
-                    print('Launch Model:')
                     print_launch_model(m)
     for node in model.nodes.values():
         print('  node:', node.uid, f'({node.source.language.value})')
@@ -158,3 +158,11 @@ def _setup_interface(storage: StorageManager, model: ProjectModel) -> AnalysisSy
         model=model,
         parse_launch_description=get_launch_description,
     )
+
+
+def print_launch_model(model):
+    print('Launch Model:', model.name)
+    for node in model.nodes:
+        print(f'  ROS node: {node.rosname} ({node.node})')
+    if not model.nodes:
+        print('  <there are no nodes>')
