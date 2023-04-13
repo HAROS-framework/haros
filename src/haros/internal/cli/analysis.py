@@ -12,10 +12,12 @@ Module that contains the command line sub-program.
 from typing import Any, Dict, Final, List
 
 import argparse
+import json
 import logging
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_description
+from haros.export.json import export_launch_model
 from haros.internal.fsutil import is_ros_package, is_workspace, StorageManager
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.plugins import load as load_plugins
@@ -63,6 +65,11 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     logger.info(f'analysis: packages: {storage.packages}')
     plugins.on_analysis_begin()
     # print(f'analysis: packages: {list(storage.packages.keys())}')
+    output = {
+        'launch': {
+            'models': []
+        }
+    }
     model = build_from_package_paths(args['name'], storage.packages)
     system = _setup_interface(storage, model)
     print('project:', model.name)
@@ -80,11 +87,15 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
                     launch_description = get_launch_description(p)
                     m = model_from_description(p, launch_description, system)
                     print_launch_model(m)
+                    o = export_launch_model(m)
+                    output['launch']['models'].append(o)
     for node in model.nodes.values():
         print('  node:', node.uid, f'({node.source.language.value})')
         for uid in node.files:
             print('    file:', uid)
     plugins.on_analysis_end()
+    f = settings.home / 'output' / 'models.json'
+    f.write_text(json.dumps(output), encoding='utf-8')
     return 0
 
 

@@ -198,7 +198,8 @@ def get_package_share_directory_function(package: Result) -> Result[LaunchSubsti
     if not package.is_resolved:
         return UnresolvedString()
         # return unknown_substitution(source=package.source)
-    return f'/usr/share/ros/{package.value}'
+    path = str(package.value).replace('\\', '/')
+    return f'/usr/share/ros/{path}'
     # return const_text(package.value, source=package.source)
 
 
@@ -222,6 +223,8 @@ def _prepare_builtin_symbols() -> Mapping[str, Any]:
         if key.startswith('_'):
             continue
         value = getattr(os.path, key)
+        if key == 'join':
+            value = _os_path_wrapper
         if callable(value):
             value = library_function_wrapper(key, 'os.path', value)
         setattr(ns.path, key, value)
@@ -231,6 +234,10 @@ def _prepare_builtin_symbols() -> Mapping[str, Any]:
     }
     symbols['os'] = ns
     return symbols
+
+
+def _os_path_wrapper(*args) -> str:
+    return Path(*args).as_posix()
 
 
 def _dataflow_to_string(value: Result) -> str:
@@ -248,6 +255,7 @@ def _dataflow_to_launch_substitution(
     if result.is_resolved:
         if isinstance(result.value, LaunchSubstitution):
             return const_substitution(result.value, source=result.source)
+        # FIXME this does not preserve primitive types like boolean
         return const_text(str(result.value), source=result.source)
     return unknown_substitution(source=result.source)
 
