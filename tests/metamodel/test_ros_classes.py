@@ -33,7 +33,7 @@ def test_file_creation():
     # assert f.storage.path is None
     # assert f.storage.size is None
     # assert f.storage.timestamp == 0
-    assert f.source.language == 'Text'
+    assert f.source.language == 'Unknown'
     assert f.source.lines == 1
     assert f.source.ast is None
     assert f.dependencies.build == set()
@@ -104,7 +104,7 @@ def test_file_json():
     # assert data['storage']['path'] is None
     # assert data['storage']['size'] is None
     # assert data['storage']['timestamp'] == 0
-    assert data['source']['language'] == 'Text'
+    assert data['source']['language'] == 'Unknown'
     assert data['source']['lines'] == 1
     assert data['source']['ast'] is None
     assert data['dependencies']['build'] == []

@@ -76,4 +76,4 @@ def _get_language(path: Path) -> Languages:
     if not ext:
         # FIXME
         return Languages.BINARY
-    return Languages.TEXT
+    return Languages.UNKNOWN

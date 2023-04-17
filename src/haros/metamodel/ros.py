@@ -35,7 +35,7 @@ RE_NAME: Final = r'(^[a-zA-Z][a-zA-Z0-9_]*$)'
 
 @unique
 class Languages(Enum):
-    TEXT = 'Text'
+    UNKNOWN = 'Unknown'
     BINARY = 'Binary'
     XML = 'XML'
     YAML = 'YAML'
@@ -233,6 +233,9 @@ class RosClientAdvertiseCall(RosSourceEntity):
     name: str
     namespace: str
 
+    def asdict(self) -> Dict[str, Any]:
+        return asdict(self)
+
 
 @frozen
 class RosClientSubscribeCall(RosSourceEntity):
@@ -240,11 +243,17 @@ class RosClientSubscribeCall(RosSourceEntity):
     name: str
     namespace: str
 
+    def asdict(self) -> Dict[str, Any]:
+        return asdict(self)
+
 
 @frozen
 class RosClientLibraryCalls:
     advertise: List[RosClientAdvertiseCall] = field(factory=list)
     subscribe: List[RosClientSubscribeCall] = field(factory=list)
+
+    def asdict(self) -> Dict[str, Any]:
+        return asdict(self)
 
 
 ###############################################################################

@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_description
-from haros.export.json import export_launch_model
+from haros.export.json import export_launch_model, export_project
 from haros.internal.fsutil import is_ros_package, is_workspace, StorageManager
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.plugins import load as load_plugins
@@ -95,6 +95,9 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
             print('    file:', uid)
     plugins.on_analysis_end()
     f = settings.home / 'output' / 'models.json'
+    f.write_text(json.dumps(output), encoding='utf-8')
+    output = export_project(model)
+    f = settings.home / 'output' / 'project.json'
     f.write_text(json.dumps(output), encoding='utf-8')
     return 0
 

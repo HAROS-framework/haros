@@ -50,7 +50,7 @@ def test_source_metadata_slots():
 
 def test_source_metadata_creation():
     s = SourceCodeMetadata()
-    assert s.language == 'Text'
+    assert s.language == 'Unknown'
     assert s.lines == 1
     assert s.ast is None
 

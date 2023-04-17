@@ -46,7 +46,7 @@ class StorageMetadata:
 
 @define
 class SourceCodeMetadata:
-    language: str = 'Text'  # e.g. C++, Python...
+    language: str = 'Unknown'  # e.g. C++, Python...
     lines: int = 1  # always at least 1, even if the file is empty
     ast: Any = None
 
@@ -62,11 +62,20 @@ class DevelopmentMetadata:
     url_source: Optional[str] = None
     url_tracker: Optional[str] = None
 
+    def asdict(self) -> Dict[str, Any]:
+        return asdict(self)
+
 
 @frozen
 class SourceCodeDependencies:
     build: Set[str] = field(factory=set)
     runtime: Set[str] = field(factory=set)
+
+    def asdict(self) -> Dict[str, Any]:
+        return {
+            'build': list(self.build),
+            'runtime': list(self.runtime),
+        }
 
 
 @frozen
