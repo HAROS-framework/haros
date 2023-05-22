@@ -917,6 +917,9 @@ class DataScope:
             return solved_from(value)
         var = self.get(reference.name)
         if not var.has_values or not var.is_deterministic:
+            # FIXME to have multiple values associated with different conditions
+            # handle `not var.is_deterministic` separately
+            # (return `VariantData[Result]` instead of `Result`)
             return unknown_value()
         assert var.has_base_value
         definition = var.get()
