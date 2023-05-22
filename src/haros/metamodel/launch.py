@@ -350,6 +350,14 @@ class LaunchArgument(LaunchEntity):
     default_value: Optional[Result[LaunchSubstitution]] = None
     description: Optional[Result[LaunchSubstitution]] = None
 
+    # arg: str
+    # name: FeatureName = FeatureName('')
+    # values: List[SolverResult] = attr.Factory(list)
+    # default: Optional[SolverResult] = None
+    # inferred_type: str = 'string'
+    # affects_cg: bool = False
+    # decision_points: int = 0
+
     @property
     def is_argument(self) -> bool:
         return True
@@ -436,6 +444,9 @@ class LaunchNode(LaunchEntity):
     output: Result[LaunchSubstitution] = const_text('log')
     arguments: Iterable[Result[LaunchSubstitution]] = field(factory=list)
 
+    # node: RosNode
+    # name: FeatureName = FeatureName('')
+
     @property
     def is_node(self) -> bool:
         return True
@@ -444,6 +455,14 @@ class LaunchNode(LaunchEntity):
 @frozen
 class LaunchDescription:
     entities: Tuple[LaunchEntity] = ()  # FIXME should be Result
+
+    # file: FileId
+    # name: FeatureName = FeatureName('')
+    # arguments: Dict[FeatureName, ArgFeature] = attr.Factory(dict)
+    # nodes: Dict[FeatureName, NodeFeature] = attr.Factory(dict)
+    # parameters: Dict[FeatureName, ParameterFeature] = attr.Factory(dict)
+    # dependencies: Set[FeatureName] = attr.Factory(set)
+    # conflicts: Dict[FeatureName, LogicValue] = attr.Factory(dict)
 
 
 ###############################################################################
