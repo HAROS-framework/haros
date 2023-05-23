@@ -343,7 +343,9 @@ def model_from_description(
 ) -> LaunchModel:
     logger.info(f'model_from_description({path})')
     builder = LaunchModelBuilder.from_file_path(path, system)
-    for entity in description.entities:
+    if not description.entities.is_resolved:
+        return LaunchModel(path)  # FIXME
+    for entity in description.entities.value:
         if entity.is_argument:
             builder.declare_argument(entity)
         elif entity.is_inclusion:

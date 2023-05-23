@@ -9,7 +9,7 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from attrs import field, frozen
 
-from haros.metamodel.common import Resolved, Result, TrackedCode
+from haros.metamodel.common import Resolved, Result, TrackedCode, TupleResult
 from haros.metamodel.ros import RosNodeModel
 
 ###############################################################################
@@ -454,7 +454,7 @@ class LaunchNode(LaunchEntity):
 
 @frozen
 class LaunchDescription:
-    entities: Tuple[LaunchEntity] = ()  # FIXME should be Result
+    entities: TupleResult[LaunchEntity]
 
     # file: FileId
     # name: FeatureName = FeatureName('')

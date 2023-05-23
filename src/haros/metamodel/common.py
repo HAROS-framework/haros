@@ -312,6 +312,10 @@ class Result(Generic[V]):
         return '$(?)'
 
 
+TupleResult: Final[Type[Result]] = Result[Tuple[Result[V]]]
+ListResult: Final[Type[Result]] = Result[List[Result[V]]]
+
+
 @frozen
 class Resolved(Result[V]):
     value: V

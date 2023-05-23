@@ -75,11 +75,18 @@ def python_launch_description_source_function(arg_list: Result) -> LaunchSubstit
 
 
 def launch_description_function(arg_list: Result) -> LaunchDescription:
-    values = []
     if arg_list.is_resolved:
+        values = []
         for arg in arg_list.value:
-            values.append(arg.value if arg.is_resolved else LaunchEntity())  # FIXME should be Result
-    return LaunchDescription(values)
+            if arg.is_resolved:
+                value = arg.value
+            else:
+                value = Result.unknown_value(source=arg.source)
+            values.append(value)
+        values = Resolved.from_tuple(tuple(values), source=arg_list.source)
+        return LaunchDescription(values)
+    else:
+        return LaunchDescription(Result.unknown_value(source=arg_list.source))
 
 
 def declare_launch_argument_function(
@@ -313,4 +320,4 @@ def launch_description_from_program_graph(graph: Any) -> LaunchDescription:
             continue  # FIXME
         return launch_description
     logger.error('unable to return a complete LaunchDescription')
-    return LaunchDescription()  # FIXME
+    return LaunchDescription(Result.unknown_value())  # FIXME
