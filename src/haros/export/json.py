@@ -17,7 +17,13 @@ from haros.metamodel.common import (
     SourceCodeMetadata,
     TrackedCode,
 )
-from haros.metamodel.launch import LaunchModel
+from haros.metamodel.launch import (
+    ArgumentFeature,
+    LaunchFeature,
+    LaunchFeatureMetadata,
+    LaunchModel,
+    NodeFeature,
+)
 from haros.metamodel.ros import (
     FileModel,
     NodeModel,
@@ -88,18 +94,50 @@ def export_file(model: FileModel) -> Dict[str, Any]:
 def export_launch_model(model: LaunchModel) -> Dict[str, Any]:
     return {
         'name': model.name,
-        'nodes': list(map(ros_node_model, model.nodes))
+        'files': list(map(ros_node_model, model.nodes))
     }
 
 
-def ros_node_model(model: RosNodeModel) -> Dict[str, Any]:
+def launch_feature(model: LaunchFeature) -> Dict[str, Any]:
     return {
-        'rosname': str(model.rosname),
-        'node': str(model.node),
+        'meta': launch_feature_metadata(model.meta),
+        'file': model.file,
+        'arguments': { k: launch_argument_feature(v) for k, v in model.arguments.items() },
+        'nodes': { k: launch_node_feature(v) for k, v in model.nodes.items() },
+        'conflicts': serialize(model.conflicts),
+    }
+
+
+def launch_argument_feature(model: ArgumentFeature) -> Dict[str, Any]:
+    return {
+        'meta': launch_feature_metadata(model.meta),
+        'name': model.name,
+        'default_value': serialize(model.default_value),
+        'description': serialize(model.description),
+        'known_possible_values': serialize(model.known_possible_values),
+        'inferred_type': model.inferred_type.value,
+        'affects_cg': model.affects_cg,
+        # decision_points: int = 0
+    }
+
+
+def launch_node_feature(model: NodeFeature) -> Dict[str, Any]:
+    return {
+        'meta': launch_feature_metadata(model.meta),
+        'rosname': serialize(model.rosname),
+        'package': serialize(model.package),
+        'executable': serialize(model.executable),
         'arguments': serialize(model.arguments),
         'parameters': serialize(model.parameters),
         'remappings': serialize(model.remappings),
         'output': serialize(model.output),
+    }
+
+
+def launch_feature_metadata(meta: LaunchFeatureMetadata) -> Dict[str, Any]:
+    return {
+        'name': meta.name,
+        'dependencies': serialize(meta.dependencies),
     }
 
 
@@ -113,6 +151,8 @@ def serialize(value: Any) -> Any:
         return value
     if isinstance(value, Result):
         return _result(value)
+    if isinstance(value, RosName):
+        return _rosname(value)
     if isinstance(value, MappingType):
         return {str(serialize(k)): serialize(v) for k, v in value.items()}
     if isinstance(value, IterableType):

@@ -19,6 +19,7 @@ from haros.metamodel.common import (
     UnresolvedMapping,
     UnresolvedString,
 )
+from haros.metamodel.logic import LogicValue
 from haros.metamodel.ros import RosName, RosNodeModel
 
 ###############################################################################
@@ -460,13 +461,13 @@ class LaunchDescription:
 ###############################################################################
 
 
-FeatureName = NewType('FeatureName', str)
+FeatureId = NewType('FeatureId', str)
 
 
 @frozen
 class LaunchFeatureMetadata:
-    name: FeatureName
-    dependencies: Set[FeatureName] = field(factory=set)
+    name: FeatureId
+    dependencies: Set[FeatureId] = field(factory=set)
 
 
 @frozen
@@ -500,7 +501,7 @@ class ArgumentFeature(LaunchFeature):
     name: str
     default_value: Optional[Result[str]] = None
     description: Optional[Result[str]] = None
-    known_possible_values: List[Result[str]] = attr.Factory(list)
+    known_possible_values: List[Result[str]] = field(factory=list)
     inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
     affects_cg: bool = False
     # decision_points: int = 0
@@ -537,20 +538,22 @@ class NodeFeature(LaunchFeature):
 
 @frozen
 class LaunchFileFeature(LaunchFeature):
-    entities: TupleResult[LaunchEntity]
-
     file: str
-    # arguments: Dict[FeatureName, ArgFeature] = attr.Factory(dict)
-    # nodes: Dict[FeatureName, NodeFeature] = attr.Factory(dict)
-    # dependencies: Set[FeatureName] = attr.Factory(set)
-    # conflicts: Dict[FeatureName, LogicValue] = attr.Factory(dict)
+    arguments: Dict[FeatureId, ArgumentFeature] = field(factory=dict)
+    nodes: Dict[FeatureId, NodeFeature] = field(factory=dict)
+    conflicts: Dict[FeatureId, LogicValue] = field(factory=dict)
 
     @property
     def is_launch_file(self) -> bool:
         return True
 
+    def features(self) -> Dict[FeatureId, LaunchFeature]:
+        features = dict(self.arguments)
+        features.update(self.nodes)
+        return features
+
 
 @frozen
 class LaunchModel:
     name: str
-    nodes: List[RosNodeModel] = field(factory=list)
+    files: List[LaunchFileFeature] = field(factory=list)

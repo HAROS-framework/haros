@@ -139,7 +139,7 @@ class LaunchScope:
 class LaunchModelBuilder:
     name: str
     system: AnalysisSystemInterface = field(factory=AnalysisSystemInterface)
-    nodes: List[RosNodeModel] = field(factory=list)
+    nodes: List[RosNodeModel] = field(factory=list)  # FIXME change to NodeFeature
     scope_stack: List[LaunchScope] = field(factory=list)
 
     @classmethod
