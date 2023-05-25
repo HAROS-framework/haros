@@ -5,12 +5,21 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, NewType, Optional, Tuple, Union
 
 from attrs import field, frozen
+from enum import Enum, unique
 
-from haros.metamodel.common import Resolved, Result, TrackedCode, TupleResult
-from haros.metamodel.ros import RosNodeModel
+from haros.metamodel.common import (
+    Resolved,
+    Result,
+    TrackedCode,
+    TupleResult,
+    UnresolvedIterable,
+    UnresolvedMapping,
+    UnresolvedString,
+)
+from haros.metamodel.ros import RosName, RosNodeModel
 
 ###############################################################################
 # ROS Launch Substitutions
@@ -350,14 +359,6 @@ class LaunchArgument(LaunchEntity):
     default_value: Optional[Result[LaunchSubstitution]] = None
     description: Optional[Result[LaunchSubstitution]] = None
 
-    # arg: str
-    # name: FeatureName = FeatureName('')
-    # values: List[SolverResult] = attr.Factory(list)
-    # default: Optional[SolverResult] = None
-    # inferred_type: str = 'string'
-    # affects_cg: bool = False
-    # decision_points: int = 0
-
     @property
     def is_argument(self) -> bool:
         return True
@@ -444,9 +445,6 @@ class LaunchNode(LaunchEntity):
     output: Result[LaunchSubstitution] = const_text('log')
     arguments: Iterable[Result[LaunchSubstitution]] = field(factory=list)
 
-    # node: RosNode
-    # name: FeatureName = FeatureName('')
-
     @property
     def is_node(self) -> bool:
         return True
@@ -456,18 +454,100 @@ class LaunchNode(LaunchEntity):
 class LaunchDescription:
     entities: TupleResult[LaunchEntity]
 
-    # file: FileId
-    # name: FeatureName = FeatureName('')
-    # arguments: Dict[FeatureName, ArgFeature] = attr.Factory(dict)
-    # nodes: Dict[FeatureName, NodeFeature] = attr.Factory(dict)
-    # parameters: Dict[FeatureName, ParameterFeature] = attr.Factory(dict)
-    # dependencies: Set[FeatureName] = attr.Factory(set)
-    # conflicts: Dict[FeatureName, LogicValue] = attr.Factory(dict)
-
 
 ###############################################################################
 # ROS Launch Runtime
 ###############################################################################
+
+
+FeatureName = NewType('FeatureName', str)
+
+
+@frozen
+class LaunchFeatureMetadata:
+    name: FeatureName
+    dependencies: Set[FeatureName] = field(factory=set)
+
+
+@frozen
+class LaunchFeature:
+    meta: LaunchFeatureMetadata
+
+    @property
+    def is_argument(self) -> bool:
+        return False
+
+    @property
+    def is_node(self) -> bool:
+        return False
+
+    @property
+    def is_launch_file(self) -> bool:
+        return False
+
+
+@unique
+class LaunchArgumentValueType(Enum):
+    STRING = 'string'
+    INT = 'int'
+    FLOAT = 'float'
+    PATH = 'path'
+    BOOL = 'bool'
+
+
+@frozen
+class ArgumentFeature(LaunchFeature):
+    name: str
+    default_value: Optional[Result[str]] = None
+    description: Optional[Result[str]] = None
+    known_possible_values: List[Result[str]] = attr.Factory(list)
+    inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
+    affects_cg: bool = False
+    # decision_points: int = 0
+
+    @property
+    def is_argument(self) -> bool:
+        return True
+
+
+@frozen
+class NodeFeature(LaunchFeature):
+    # node: RosNodeModel
+    rosname: Result[RosName]
+    package: Result[str]
+    executable: Result[str]
+    arguments: Result[List[str]] = field(factory=UnresolvedIterable.unknown_list)
+    parameters: Result = field(factory=UnresolvedMapping.unknown_dict)
+    remappings: Result = field(factory=UnresolvedMapping.unknown_dict)
+    output: Result[str] = Resolved.from_string('log')
+
+    @property
+    def is_node(self) -> bool:
+        return True
+
+    @property
+    def node(self) -> Result[str]:
+        pkg = None if not self.package.is_resolved else self.package.value
+        exe = None if not self.executable.is_resolved else self.executable.value
+        if pkg is None or exe is None:
+            src = self.package.source if pkg is None else self.executable.source
+            return UnresolvedString.unknown_value(parts=[pkg, exe], source=src)
+        return Resolved.from_string(f'{pkg}/{exe}', source=self.package.source)
+
+
+@frozen
+class LaunchFileFeature(LaunchFeature):
+    entities: TupleResult[LaunchEntity]
+
+    file: str
+    # arguments: Dict[FeatureName, ArgFeature] = attr.Factory(dict)
+    # nodes: Dict[FeatureName, NodeFeature] = attr.Factory(dict)
+    # dependencies: Set[FeatureName] = attr.Factory(set)
+    # conflicts: Dict[FeatureName, LogicValue] = attr.Factory(dict)
+
+    @property
+    def is_launch_file(self) -> bool:
+        return True
 
 
 @frozen
