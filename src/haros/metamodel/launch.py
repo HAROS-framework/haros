@@ -513,27 +513,43 @@ class ArgumentFeature(LaunchFeature):
 
 @frozen
 class NodeFeature(LaunchFeature):
-    # node: RosNodeModel
-    rosname: Result[RosName]
-    package: Result[str]
-    executable: Result[str]
-    arguments: Result[List[str]] = field(factory=UnresolvedIterable.unknown_list)
-    parameters: Result = field(factory=UnresolvedMapping.unknown_dict)
-    remappings: Result = field(factory=UnresolvedMapping.unknown_dict)
-    output: Result[str] = Resolved.from_string('log')
+    rosnode: RosNodeModel
 
     @property
     def is_node(self) -> bool:
         return True
 
     @property
+    def rosname(self) -> Result[RosName]:
+        return self.rosnode.rosname
+
+    @property
+    def package(self) -> Result[str]:
+        return self.rosnode.package
+
+    @property
+    def executable(self) -> Result[str]:
+        return self.rosnode.executable
+
+    @property
+    def arguments(self) -> Result[List[str]]:
+        return self.rosnode.arguments
+
+    @property
+    def parameters(self) -> Result:
+        return self.rosnode.parameters
+
+    @property
+    def remappings(self) -> Result:
+        return self.rosnode.remappings
+
+    @property
+    def output(self) -> Result[str]:
+        return self.rosnode.output
+
+    @property
     def node(self) -> Result[str]:
-        pkg = None if not self.package.is_resolved else self.package.value
-        exe = None if not self.executable.is_resolved else self.executable.value
-        if pkg is None or exe is None:
-            src = self.package.source if pkg is None else self.executable.source
-            return UnresolvedString.unknown_value(parts=[pkg, exe], source=src)
-        return Resolved.from_string(f'{pkg}/{exe}', source=self.package.source)
+        return self.rosnode.node
 
 
 @frozen

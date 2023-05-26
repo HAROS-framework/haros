@@ -94,7 +94,7 @@ def export_file(model: FileModel) -> Dict[str, Any]:
 def export_launch_model(model: LaunchModel) -> Dict[str, Any]:
     return {
         'name': model.name,
-        'files': list(map(ros_node_model, model.nodes))
+        'files': list(map(launch_feature, model.files))
     }
 
 
@@ -124,13 +124,7 @@ def launch_argument_feature(model: ArgumentFeature) -> Dict[str, Any]:
 def launch_node_feature(model: NodeFeature) -> Dict[str, Any]:
     return {
         'meta': launch_feature_metadata(model.meta),
-        'rosname': serialize(model.rosname),
-        'package': serialize(model.package),
-        'executable': serialize(model.executable),
-        'arguments': serialize(model.arguments),
-        'parameters': serialize(model.parameters),
-        'remappings': serialize(model.remappings),
-        'output': serialize(model.output),
+        'rosnode': rosnode_model(model.rosnode),
     }
 
 
@@ -138,6 +132,23 @@ def launch_feature_metadata(meta: LaunchFeatureMetadata) -> Dict[str, Any]:
     return {
         'name': meta.name,
         'dependencies': serialize(meta.dependencies),
+    }
+
+
+###############################################################################
+# ROS Runtime
+###############################################################################
+
+
+def rosnode_model(model: RosNodeModel) -> Dict[str, Any]:
+    return {
+        'rosname': serialize(model.rosname),
+        'package': serialize(model.package),
+        'executable': serialize(model.executable),
+        'arguments': serialize(model.arguments),
+        'parameters': serialize(model.parameters),
+        'remappings': serialize(model.remappings),
+        'output': serialize(model.output),
     }
 
 

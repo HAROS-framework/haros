@@ -16,13 +16,17 @@ from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
 from haros.metamodel.common import Resolved, Result, TrackedCode
 from haros.metamodel.launch import (
+    ArgumentFeature,
+    FeatureId,
     LaunchArgument,
     LaunchDescription,
+    LaunchFeatureMetadata,
+    LaunchFileFeature,
     LaunchInclusion,
-    LaunchModel,
     LaunchNode,
     LaunchNodeParameterList,
     LaunchSubstitution,
+    NodeFeature,
 )
 from haros.metamodel.ros import RosNodeModel, uid_node
 
@@ -136,10 +140,10 @@ class LaunchScope:
 
 
 @define
-class LaunchModelBuilder:
-    name: str
+class LaunchFeatureModelBuilder:
+    file: str
     system: AnalysisSystemInterface = field(factory=AnalysisSystemInterface)
-    nodes: List[RosNodeModel] = field(factory=list)  # FIXME change to NodeFeature
+    nodes: List[NodeFeature] = field(factory=list)
     scope_stack: List[LaunchScope] = field(factory=list)
 
     @classmethod
@@ -147,9 +151,9 @@ class LaunchModelBuilder:
         cls,
         file_path: Path,
         system: AnalysisSystemInterface,
-    ) -> 'LaunchModelBuilder':
+    ) -> 'LaunchFeatureModelBuilder':
         scopes = [LaunchScope(file_path)]
-        return cls(file_path.name, system=system, scope_stack=scopes)
+        return cls(str(file_path), system=system, scope_stack=scopes)
 
     @property
     def scope(self) -> LaunchScope:
@@ -163,8 +167,25 @@ class LaunchModelBuilder:
     def root(self) -> LaunchScope:
         return self.scope_stack[0]
 
-    def build(self) -> LaunchModel:
-        return LaunchModel(self.name, nodes=list(self.nodes))
+    def build(self) -> LaunchFileFeature:
+        # LaunchScope.args: Dict[str, Result] = field(factory=dict)
+        arguments = {}
+        for name, arg in self.root.args.items():
+            uid = FeatureId(f'arg:{len(arguments)}')
+            meta = LaunchFeatureMetadata(uid)
+            # default_value: Optional[Result[str]] = None
+            # description: Optional[Result[str]] = None
+            # known_possible_values: List[Result[str]] = field(factory=list)
+            # inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
+            # affects_cg: bool = False
+            feature = ArgumentFeature(meta, name)
+            arguments[uid] = feature
+        return LaunchFileFeature(
+            self.file,
+            arguments=arguments,
+            nodes={ n.meta.name: n for n in self.nodes },
+        )
+        # conflicts: Dict[FeatureId, LogicValue] = field(factory=dict)
 
     def enter_group(self):
         self.scope_stack.append(self.scope.duplicate())
@@ -205,7 +226,7 @@ class LaunchModelBuilder:
     def launch_node(self, node: LaunchNode):
         package: Result = self.scope.resolve(node.package)
         executable: Result = self.scope.resolve(node.executable)
-        node_id = uid_node(str(package), str(executable))
+        # node_id = uid_node(str(package), str(executable))
         name: str = self._get_node_name(node.name, package, executable)
         # namespace: Optional[LaunchSubstitution]
         # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
@@ -222,12 +243,17 @@ class LaunchModelBuilder:
         rosname = Resolved.from_string(name)  # TODO source if node.name is not None
         rosnode = RosNodeModel(
             rosname,
-            Resolved.from_string(node_id),
+            package,
+            executable,
+            # Resolved.from_string(node_id),
             arguments=args,
             parameters=params,
             output=output,
         )
-        self.nodes.append(rosnode)
+        uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
+        meta = LaunchFeatureMetadata(uid)
+        feature = NodeFeature(meta, rosnode)
+        self.nodes.append(feature)
 
     def parameters_from_list(self, parameters: LaunchNodeParameterList, node: Optional[str] = None) -> Result:
         if not parameters.is_resolved:
@@ -340,11 +366,11 @@ def model_from_description(
     path: Path,
     description: LaunchDescription,
     system: AnalysisSystemInterface,
-) -> LaunchModel:
+) -> LaunchFileFeature:
     logger.info(f'model_from_description({path})')
-    builder = LaunchModelBuilder.from_file_path(path, system)
+    builder = LaunchFeatureModelBuilder.from_file_path(path, system)
     if not description.entities.is_resolved:
-        return LaunchModel(path)  # FIXME
+        return LaunchFileFeature(path)  # FIXME
     for entity in description.entities.value:
         if entity.is_argument:
             builder.declare_argument(entity)

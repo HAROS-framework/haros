@@ -132,7 +132,7 @@ def debugging_model() -> ProjectModel:
 
 
 def print_launch_model(model):
-    print('LaunchModel:', model.name)
+    print('LaunchFileFeature:', model.name)
     for node in model.nodes:
         print_ros_node(node)
     if not model.nodes:

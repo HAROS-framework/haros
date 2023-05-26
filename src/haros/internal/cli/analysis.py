@@ -17,7 +17,7 @@ import logging
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_description
-from haros.export.json import export_launch_model, export_project
+from haros.export.json import launch_feature, export_project
 from haros.internal.fsutil import is_ros_package, is_workspace, StorageManager
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.plugins import load as load_plugins
@@ -87,7 +87,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
                     launch_description = get_launch_description(p)
                     m = model_from_description(p, launch_description, system)
                     print_launch_model(m)
-                    o = export_launch_model(m)
+                    o = launch_feature(m)
                     output['launch']['models'].append(o)
     for node in model.nodes.values():
         print('  node:', node.uid, f'({node.source.language.value})')

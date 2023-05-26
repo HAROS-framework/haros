@@ -369,11 +369,21 @@ def const_mapping(
 @frozen
 class RosNodeModel(RosRuntimeEntity):
     rosname: Result[RosName]
-    node: Result[str]
+    package: Result[str]
+    executable: Result[str]
     arguments: Result[List[str]] = field(factory=UnresolvedIterable.unknown_list)
     parameters: Result = field(factory=UnresolvedMapping.unknown_dict)
     remappings: Result = field(factory=UnresolvedMapping.unknown_dict)
     output: Result[str] = Resolved.from_string('log')
+
+    @property
+    def node(self) -> Result[str]:
+        pkg = None if not self.package.is_resolved else self.package.value
+        exe = None if not self.executable.is_resolved else self.executable.value
+        if pkg is None or exe is None:
+            src = self.package.source if pkg is None else self.executable.source
+            return UnresolvedString.unknown_value(parts=[pkg, exe], source=src)
+        return Resolved.from_string(f'{pkg}/{exe}', source=self.package.source)
 
 
 @frozen
