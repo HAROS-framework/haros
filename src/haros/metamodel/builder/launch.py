@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, List, Mapping, Optional, Set
+from typing import Dict, Final, Iterable, List, Mapping, Optional, Set, Tuple
 
 import logging
 from pathlib import Path
@@ -19,6 +19,7 @@ from haros.metamodel.launch import (
     ArgumentFeature,
     FeatureId,
     LaunchArgument,
+    LaunchArgumentValueType,
     LaunchDescription,
     LaunchFileFeature,
     LaunchInclusion,
@@ -35,20 +36,76 @@ from haros.metamodel.ros import RosNodeModel, uid_node
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
+BOOL_VALUES: Final[Tuple[str]] = ('true', 'false')
+
 ###############################################################################
 # Interface
 ###############################################################################
 
 
+@define
+class ArgumentFeatureBuilder:
+    id: FeatureId
+    name: str
+    # value of this argument - given via command line or computed from default
+    value: Result[str] = field(factory=Result.unknown_value)
+    # default value, defined on declaration
+    default_value: Optional[Result[str]] = None
+    description: Optional[Result[str]] = None
+    # type computed from the current value
+    inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
+    # affects_cg: bool = False
+
+    def set(self, value: Result[str]):
+        # this method can be used to update the argument value, for example
+        # to assign it a value given by the user via command line
+        self.value = value
+        if value.is_resolved:
+            v = value.value
+            if v.lower() in BOOL_VALUES:
+                self.inferred_type = LaunchArgumentValueType.BOOL
+                return
+            try:
+                if v == str(int(v)):
+                    self.inferred_type = LaunchArgumentValueType.INT
+                    return
+            except ValueError:
+                pass
+            try:
+                if v == str(float(v)):
+                    self.inferred_type = LaunchArgumentValueType.FLOAT
+                    return
+            except ValueError:
+                pass
+            # TODO match path regex
+        self.inferred_type = LaunchArgumentValueType.STRING
+
+    def build(self) -> ArgumentFeature:
+        known_possible_values = []
+        if self.value.is_resolved:
+            known_possible_values.append(self.value.value)
+        return ArgumentFeature(
+            self.id,
+            self.name,
+            default_value=self.default_value,
+            description=self.description,
+            known_possible_values=known_possible_values,
+            inferred_type=self.inferred_type,
+        )
+
+
 @frozen
 class LaunchScope:
     file_path: Path
-    args: Dict[str, Result] = field(factory=dict)
+    args: Dict[str, ArgumentFeatureBuilder] = field(factory=dict)
     configs: Dict[str, Result] = field(factory=dict)
     anonymous: Dict[str, str] = field(factory=dict)
 
     def get(self, name: str) -> Result:
-        value = self.configs.get(name, self.args.get(name))
+        value = self.configs.get(name)
+        if value is None:
+            arg = self.args.get(name)
+            value = None if arg is None else arg.value
         if value is None:
             return Result.unknown_value()  # FIXME maybe raise error
         return value
@@ -63,7 +120,7 @@ class LaunchScope:
     def set_text(self, name: str, text: str):
         return self.set(name, Resolved.from_string(text))
 
-    def resolve(self, result: Optional[Result[LaunchSubstitution]]) -> Result:
+    def resolve(self, result: Optional[Result[LaunchSubstitution]]) -> Result[str]:
         if result is None:
             return Result.unknown_value()
         if not result.is_resolved:
@@ -74,12 +131,15 @@ class LaunchScope:
         self,
         sub: LaunchSubstitution,
         source: Optional[TrackedCode] = None,
-    ) -> Result:
+    ) -> Result[str]:
         if sub.is_text:
             return Resolved.from_string(sub.value, source=source)
         if sub.is_configuration:
             name = sub.name
-            value = self.configs.get(name, self.args.get(name))
+            value = self.configs.get(name)
+            if value is None:
+                arg = self.args.get(name)
+                value = None if arg is None else arg.value
             if value is None:
                 value = self.resolve(sub.default_value)
                 self.set(name, value)
@@ -167,23 +227,11 @@ class LaunchFeatureModelBuilder:
     def root(self) -> LaunchScope:
         return self.scope_stack[0]
 
-    def build(self) -> LaunchFileFeature:
-        # LaunchScope.args: Dict[str, Result] = field(factory=dict)
-        arguments = {}
-        for name, arg in self.root.args.items():
-            uid = FeatureId(f'arg:{len(arguments)}')
-            # default_value: Optional[Result[str]] = None
-            # description: Optional[Result[str]] = None
-            # known_possible_values: List[Result[str]] = field(factory=list)
-            # inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
-            # affects_cg: bool = False
-            feature = ArgumentFeature(uid, name)
-            arguments[uid] = feature
-        uid = FeatureId(f'file:{self.file}')
+    def build(self, uid: Optional[FeatureId] = None) -> LaunchFileFeature:
         return LaunchFileFeature(
-            uid,
+            uid if uid is not None else FeatureId(f'file:{self.file}'),
             self.file,
-            arguments=arguments,
+            arguments={ a.id: a.build() for a in self.root.args.values() },
             nodes={ n.id: n for n in self.nodes },
             inclusions=set(self.included_files),
         )
@@ -197,8 +245,19 @@ class LaunchFeatureModelBuilder:
 
     def declare_argument(self, arg: LaunchArgument):
         name: str = arg.name
-        default_value: Optional[Result[LaunchSubstitution]] = arg.default_value
-        self.root.args[name] = self.scope.resolve(default_value)
+        feature = ArgumentFeatureBuilder(
+            FeatureId(f'arg:{len(self.root.args)}'),
+            name,
+            default_value=self.scope.resolve(arg.default_value),
+            description=self.scope.resolve(arg.description),
+        )
+        if arg.default_value is not None:
+            feature.set(self.scope.resolve(arg.default_value))
+        self.root.args[name] = feature
+        # FIXME raise error if argument name already exists?
+
+    def set_argument_value(self, name: str, value: Result[str]):
+        self.root.args[name].set(value)
 
     def include_launch(self, include: LaunchInclusion):
         if include.namespace is None:

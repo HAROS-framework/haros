@@ -502,9 +502,10 @@ class ArgumentFeature(LaunchFeature):
     name: str
     default_value: Optional[Result[str]] = None
     description: Optional[Result[str]] = None
-    known_possible_values: List[Result[str]] = field(factory=list)
+    # known_possible_values: List[Result[str]] = field(factory=list)
+    known_possible_values: List[str] = field(factory=list)
     inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
-    affects_cg: bool = False
+    # affects_cg: bool = False
     # decision_points: int = 0
 
     @property

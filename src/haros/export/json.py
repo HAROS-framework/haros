@@ -117,7 +117,7 @@ def launch_argument_feature(model: ArgumentFeature) -> Dict[str, Any]:
         'description': serialize(model.description),
         'known_possible_values': serialize(model.known_possible_values),
         'inferred_type': model.inferred_type.value,
-        'affects_cg': model.affects_cg,
+        # 'affects_cg': model.affects_cg,
         # decision_points: int = 0
     }
 
