@@ -118,11 +118,16 @@ class ToAst(Transformer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.node_id_counter = 0
+        self.file_path = None
+        self.package = None
 
     def _node_metadata(self, line: int = 0, column: int = 0) -> PythonAstNodeMetadata:
         uid = PythonAstNodeId(self.node_id_counter)
         self.node_id_counter += 1
-        return PythonAstNodeMetadata(uid, line=line, column=column)
+        meta = PythonAstNodeMetadata(uid, line=line, column=column)
+        meta.annotations['file'] = self.file_path
+        meta.annotations['package'] = self.package
+        return meta
 
     def _new_node(self, cls, *args, line: int = 0, column: int = 0, **kwargs) -> PythonAst:
         meta = self._node_metadata(line=line, column=column)

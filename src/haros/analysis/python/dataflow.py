@@ -20,6 +20,7 @@ from haros.metamodel.common import (
     MappingType,
     Resolved,
     Result,
+    SourceCodeLocation,
     TrackedCode,
     TypeToken,
     UnresolvedFloat,
@@ -417,6 +418,17 @@ TYPE_TOKEN_EXCEPTION: Final[PythonTypeToken[Exception]] = PythonTypeToken.of_exc
 TYPE_TOKEN_OBJECT: Final[PythonTypeToken[Any]] = PythonTypeToken(object, mask=TypeMask.OBJECT)
 
 
+def tracked(ast: PythonAst) -> Optional[TrackedCode]:
+    location = SourceCodeLocation(
+        file=ast.meta.annotations.get('file'),
+        package=ast.meta.annotations.get('package'),
+        line=ast.line,
+        column=ast.column,
+        language='Python',
+    )
+    return TrackedCode(ast, location)
+
+
 def unknown_value(
     type: PythonTypeToken[V] = TYPE_TOKEN_ANYTHING,
     source: Optional[TrackedCode] = None,
@@ -568,13 +580,13 @@ def wrap_normal_function(function: Callable) -> Callable:
     def wrapper(*args, **kwargs) -> VariantData[Result]:
         for arg in args:
             if not arg.is_resolved:
-                print()
-                print(f'unresolved call to {function}({args}, {kwargs})')
+                # print()
+                # print(f'unresolved call to {function}({args}, {kwargs})')
                 return VariantData.with_base_value(unknown_value())
         for arg in kwargs.values():
             if not arg.is_resolved:
-                print()
-                print(f'unresolved call to {function}({args}, {kwargs})')
+                # print()
+                # print(f'unresolved call to {function}({args}, {kwargs})')
                 return VariantData.with_base_value(unknown_value())
         raw_args = [arg.value for arg in args]
         raw_kwargs = {key: arg.value for key, arg in kwargs.items()}
@@ -849,78 +861,78 @@ class DataScope:
         if expression.is_function_call:
             return self.value_from_function_call(expression)
         if expression.is_star_expression:
-            return unknown_value(type=TYPE_TOKEN_OBJECT)
+            return unknown_value(type=TYPE_TOKEN_OBJECT, source=tracked(expression))
         if expression.is_generator:
-            return unknown_value(type=TYPE_TOKEN_OBJECT)
+            return unknown_value(type=TYPE_TOKEN_OBJECT, source=tracked(expression))
         if expression.is_operator:
             return self.value_from_operator(expression)
         if expression.is_conditional:
-            return unknown_value()
+            return unknown_value(source=tracked(expression))
         if expression.is_lambda:
-            return unknown_value(type=DEF_FUNCTION_TYPE)
+            return unknown_value(type=DEF_FUNCTION_TYPE, source=tracked(expression))
         if expression.is_assignment:
             # Python >= 3.8
-            return unknown_value()
+            return unknown_value(source=tracked(expression))
         if expression.is_yield:
-            return unknown_value()
+            return unknown_value(source=tracked(expression))
         if expression.is_await:
-            return unknown_value()
-        return unknown_value()
+            return unknown_value(source=tracked(expression))
+        return unknown_value(source=tracked(expression))
 
     def value_from_literal(self, literal: PythonLiteral) -> Result:
         assert literal.is_expression and literal.is_literal
         if literal.is_none:
-            return const_none()
+            return const_none(source=tracked(literal))
         if literal.is_bool:
-            return const_bool(literal.value)
+            return const_bool(literal.value, source=tracked(literal))
         if literal.is_number:
             if literal.is_int:
-                return const_int(literal.value)
+                return const_int(literal.value, source=tracked(literal))
             if literal.is_float:
-                return const_float(literal.value)
+                return const_float(literal.value, source=tracked(literal))
             if literal.is_complex:
-                return const_complex(literal.value)
+                return const_complex(literal.value, source=tracked(literal))
         if literal.is_string:
-            return const_string(literal.value)
+            return const_string(literal.value, source=tracked(literal))
         if literal.is_tuple and not literal.is_comprehension:
             values = tuple(self.value_from_expression(v) for v in literal.values)
             if all(v.is_resolved for v in values):
                 values = tuple(v.value for v in values)
-                return const_tuple(values)
+                return const_tuple(values, source=tracked(literal))
         if literal.is_list and not literal.is_comprehension:
             values = list(self.value_from_expression(v) for v in literal.values)
             if all(v.is_resolved for v in values):
                 # values = list(v.value for v in values)
-                return const_list(values)
+                return const_list(values, source=tracked(literal))
             else:
-                return const_list(values)
+                return const_list(values, source=tracked(literal))
         if literal.is_dict and not literal.is_comprehension:
             entries = dict(
                 (self.value_from_expression(e.key), self.value_from_expression(e.value))
                 for e in literal.entries
             )
             # if not all(key.is_resolved for key in entries.keys()):
-            return const_dict(entries)
+            return const_dict(entries, source=tracked(literal))
         # TODO FIXME
-        return unknown_value(type=TYPE_TOKEN_OBJECT)
+        return unknown_value(type=TYPE_TOKEN_OBJECT, source=tracked(literal))
 
     def value_from_reference(self, reference: PythonReference) -> Result:
         if reference.object is not None:
             obj: Result = self.value_from_expression(reference.object)
             if not obj.type.mask.can_have_attributes:
-                return unknown_value()
+                return unknown_value(source=obj.source)
             if not obj.is_resolved:
-                return unknown_value()
+                return unknown_value(source=obj.source)
             value = getattr(obj.value, reference.name)
             if callable(value):
                 value = library_function_wrapper(reference.name, str(type(obj.value)), value)
-            return solved_from(value)
+            return solved_from(value, source=tracked(reference))
         var = self.get(reference.name)
         if not var.has_values or not var.is_deterministic:
             # FIXME to have multiple values associated with different conditions
             # handle `not var.is_deterministic` separately
             # (return `VariantData[Result]` instead of `Result`)
-            return unknown_value()
+            return unknown_value(source=tracked(reference))
         assert var.has_base_value
         definition = var.get()
         return definition.value
@@ -931,7 +943,7 @@ class DataScope:
             return self.value_from_unary_operator(operator)
         if operator.is_binary:
             return self.value_from_binary_operator(operator)
-        return unknown_value()
+        return unknown_value(source=tracked(operator))
 
     def value_from_unary_operator(self, operator: PythonUnaryOperator) -> Result:
         assert operator.is_unary
@@ -940,30 +952,30 @@ class DataScope:
             if not value.type.mask.can_be_int:
                 raise DataFlowError.type_check('INT', value.type.name, value)
             if not value.is_resolved:
-                return unknown_int()
+                return unknown_int(source=tracked(operator))
             r = ~value.value
-            return const_int(r)
+            return const_int(r, source=tracked(operator))
         if operator.is_arithmetic:
             if not value.type.mask.can_be_number:
                 raise DataFlowError.type_check('NUMBER', value.type.name, value)
             if not value.is_resolved:
                 token = PythonTypeToken(object, mask=TypeMask.NUMBER)
-                return unknown_value(type=token)
+                return unknown_value(type=token, source=tracked(operator))
             if operator.operator == '+':
                 r = +value.value
             elif operator.operator == '-':
                 r = -value.value
             else:
                 token = PythonTypeToken(object, mask=TypeMask.NUMBER)
-                return unknown_value(type=token)
+                return unknown_value(type=token, source=tracked(operator))
             # TODO FIXME refine return type
-            return const_number(r)
+            return const_number(r, source=tracked(operator))
         if operator.is_logic:
             if not value.is_resolved:
-                return unknown_value(type=TYPE_TOKEN_BOOL)
+                return unknown_value(type=TYPE_TOKEN_BOOL, source=tracked(operator))
             r = not value.value
-            return const_bool(r)
-        return unknown_value()
+            return const_bool(r, source=tracked(operator))
+        return unknown_value(source=tracked(operator))
 
     def value_from_binary_operator(self, operator: PythonBinaryOperator) -> Result[Any]:
         assert operator.is_binary
@@ -971,89 +983,92 @@ class DataScope:
         b = self.value_from_expression(operator.operand2)
         o = operator.operator
         if not a.is_resolved:
-            return unknown_value()
+            return unknown_value(source=tracked(operator))
         if not b.is_resolved:
-            return unknown_value()
+            return unknown_value(source=tracked(operator))
         if operator.is_logic:
             if o == 'and':
-                return const_bool(a.value and b.value)
+                return const_bool(a.value and b.value, source=tracked(operator))
             if o == 'or':
-                return const_bool(a.value or b.value)
-            return unknown_value(type=TYPE_TOKEN_BOOL)
+                return const_bool(a.value or b.value, source=tracked(operator))
+            return unknown_value(type=TYPE_TOKEN_BOOL, source=tracked(operator))
         if operator.is_comparison:
             if o == '==':
-                return const_bool(a.value == b.value)
+                return const_bool(a.value == b.value, source=tracked(operator))
             if o == '!=':
-                return const_bool(a.value != b.value)
+                return const_bool(a.value != b.value, source=tracked(operator))
             if o == '<':
-                return const_bool(a.value < b.value)
+                return const_bool(a.value < b.value, source=tracked(operator))
             if o == '<=':
-                return const_bool(a.value <= b.value)
+                return const_bool(a.value <= b.value, source=tracked(operator))
             if o == '>':
-                return const_bool(a.value > b.value)
+                return const_bool(a.value > b.value, source=tracked(operator))
             if o == '>=':
-                return const_bool(a.value >= b.value)
+                return const_bool(a.value >= b.value, source=tracked(operator))
             if o == 'in':
-                return const_bool(a.value in b.value)
+                return const_bool(a.value in b.value, source=tracked(operator))
             if o == 'not in':
-                return const_bool(a.value not in b.value)
+                return const_bool(a.value not in b.value, source=tracked(operator))
             if o == 'is':
-                return const_bool(a.value is b.value)
+                return const_bool(a.value is b.value, source=tracked(operator))
             if o == 'is not':
-                return const_bool(a.value is not b.value)
-            return unknown_value(type=TYPE_TOKEN_BOOL)
+                return const_bool(a.value is not b.value, source=tracked(operator))
+            return unknown_value(type=TYPE_TOKEN_BOOL, source=tracked(operator))
         if operator.is_arithmetic:
             if o == '+':
                 r = a.value + b.value
-                return const_string(r) if isinstance(r, str) else const_number(r)
+                if isinstance(r, str):
+                    return const_string(r, source=tracked(operator))
+                else:
+                    return const_number(r, source=tracked(operator))
             if o == '-':
-                return const_number(a.value - b.value)
+                return const_number(a.value - b.value, source=tracked(operator))
             if o == '*':
-                return const_number(a.value * b.value)
+                return const_number(a.value * b.value, source=tracked(operator))
             if o == '/':
-                return const_number(a.value / b.value)
+                return const_number(a.value / b.value, source=tracked(operator))
             if o == '//':
-                return const_int(a.value // b.value)
+                return const_int(a.value // b.value, source=tracked(operator))
             if o == '**':
-                return const_number(a.value ** b.value)
+                return const_number(a.value ** b.value, source=tracked(operator))
             token = PythonTypeToken(object, mask=TypeMask.NUMBER)
-            return unknown_value(type=token)
-        return unknown_value()
+            return unknown_value(type=token, source=tracked(operator))
+        return unknown_value(source=tracked(operator))
 
     def value_from_item_access(self, access: PythonItemAccess) -> Result:
         # object: PythonExpression
         # key: PythonSubscript
         obj: Result = self.value_from_expression(access.object)
         if not obj.is_resolved or not obj.type.mask.can_have_items:
-            return unknown_value()
+            return unknown_value(source=tracked(access))
         if access.key.is_slice:
-            return unknown_value()
+            return unknown_value(source=tracked(access))
         assert access.key.is_key
         key: Result = self.value_from_expression(access.key.expression)
         if not key.is_resolved:
-            return unknown_value()
+            return unknown_value(source=tracked(access))
         try:
             value = obj.value[key.value]
         except KeyError:
-            return unknown_value()
+            return unknown_value(source=tracked(access))
         if isinstance(value, Result):
             return value
-        return solved_from(value)
+        return solved_from(value, source=tracked(access))
 
     def value_from_function_call(self, call: PythonFunctionCall) -> Result:
         value = self.value_from_expression(call.function)
         if not value.is_resolved:
-            return unknown_value()
+            return unknown_value(source=tracked(call))
         if not value.type.mask.can_be_function:
-            return unknown_value()
+            return unknown_value(source=tracked(call))
         function = value.value
         assert isinstance(function, FunctionWrapper), f'not function wrapper: {repr(function)}'
         assert callable(function.call), f'not callable: {repr(function.call)}'
         if not call.arguments:
             result: VariantData[Result] = function.call()
             if result.has_values and result.is_deterministic:
-                return result.get()
-            return unknown_value()
+                return evolve(result.get(), source=tracked(call))
+            return unknown_value(source=tracked(call))
         args = []
         kwargs = {}
         for argument in call.arguments:
@@ -1072,8 +1087,8 @@ class DataScope:
                     args.append(arg)
                 elif argument.is_double_star:
                     # kwargs.update(arg)
-                    return unknown_value()  # FIXME
+                    return unknown_value(source=tracked(call))  # FIXME
         result: VariantData[Result] = function.call(*args, **kwargs)
         if result.has_values and result.is_deterministic:
-            return result.get()
-        return unknown_value()
+            return evolve(result.get(), source=tracked(call))
+        return unknown_value(source=tracked(call))

@@ -285,7 +285,7 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
     if ext != '.py':
         raise WrongFileTypeError(f'not a valid launch file: {path}')
     code = path.read_text(encoding='utf-8')
-    ast = parse(code)
+    ast = parse(code, path=path.as_posix())
 
     # system = PythonLaunchSystemInterface(path, None)
 

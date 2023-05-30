@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final
+from typing import Final, Optional
 
 from pathlib import Path
 
@@ -56,8 +56,15 @@ class PythonParser:
     _parser: Lark = field(init=False, factory=_lark_python_parser, eq=False, repr=False)
     _transformer: Transformer = field(init=False, factory=ToAst, eq=False, repr=False)
 
-    def parse(self, text: str) -> PythonModule:
+    def parse(
+        self,
+        text: str,
+        package: Optional[str] = None,
+        path: Optional[str] = None,
+    ) -> PythonModule:
         tree = self._parser.parse(text)
+        self._transformer.file_path = path
+        self._transformer.package = package
         return self._transformer.transform(tree)
 
 
@@ -71,5 +78,5 @@ def parser() -> PythonParser:
     return _parser
 
 
-def parse(text: str) -> PythonModule:
-    return parser().parse(text)
+def parse(text: str, package: Optional[str] = None, path: Optional[str] = None) -> PythonModule:
+    return parser().parse(text, package=package, path=path)

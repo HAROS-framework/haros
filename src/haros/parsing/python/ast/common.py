@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List, NewType, Tuple
+from typing import Any, Dict, List, NewType, Optional, Tuple
 
 from enum import Enum, auto
 
