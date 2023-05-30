@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Iterable, List, NewType, Optional, Tuple, Union
+from typing import Dict, Iterable, List, NewType, Optional, Set, Tuple, Union
 
 from attrs import field, frozen
 from enum import Enum, unique
@@ -464,15 +464,16 @@ class LaunchDescription:
 FeatureId = NewType('FeatureId', str)
 
 
-@frozen
-class LaunchFeatureMetadata:
-    name: FeatureId
-    dependencies: Set[FeatureId] = field(factory=set)
+# @frozen
+# class LaunchFeatureMetadata:
+#     name: FeatureId
+#     dependencies: Set[FeatureId] = field(factory=set)
 
 
 @frozen
 class LaunchFeature:
-    meta: LaunchFeatureMetadata
+    # meta: LaunchFeatureMetadata
+    id: FeatureId
 
     @property
     def is_argument(self) -> bool:
@@ -514,6 +515,7 @@ class ArgumentFeature(LaunchFeature):
 @frozen
 class NodeFeature(LaunchFeature):
     rosnode: RosNodeModel
+    # argument_dependencies: Set[FeatureId] = field(factory=set)
 
     @property
     def is_node(self) -> bool:
@@ -557,6 +559,7 @@ class LaunchFileFeature(LaunchFeature):
     file: str
     arguments: Dict[FeatureId, ArgumentFeature] = field(factory=dict)
     nodes: Dict[FeatureId, NodeFeature] = field(factory=dict)
+    inclusions: Set[FeatureId] = field(factory=set)
     conflicts: Dict[FeatureId, LogicValue] = field(factory=dict)
 
     @property

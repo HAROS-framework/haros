@@ -20,7 +20,7 @@ from haros.metamodel.common import (
 from haros.metamodel.launch import (
     ArgumentFeature,
     LaunchFeature,
-    LaunchFeatureMetadata,
+    LaunchFileFeature,
     LaunchModel,
     NodeFeature,
 )
@@ -98,19 +98,20 @@ def export_launch_model(model: LaunchModel) -> Dict[str, Any]:
     }
 
 
-def launch_feature(model: LaunchFeature) -> Dict[str, Any]:
+def launch_feature(model: LaunchFileFeature) -> Dict[str, Any]:
     return {
-        'meta': launch_feature_metadata(model.meta),
+        'id': model.id,
         'file': model.file,
         'arguments': { k: launch_argument_feature(v) for k, v in model.arguments.items() },
         'nodes': { k: launch_node_feature(v) for k, v in model.nodes.items() },
+        'inclusions': list(model.inclusions),
         'conflicts': serialize(model.conflicts),
     }
 
 
 def launch_argument_feature(model: ArgumentFeature) -> Dict[str, Any]:
     return {
-        'meta': launch_feature_metadata(model.meta),
+        'id': model.id,
         'name': model.name,
         'default_value': serialize(model.default_value),
         'description': serialize(model.description),
@@ -123,15 +124,8 @@ def launch_argument_feature(model: ArgumentFeature) -> Dict[str, Any]:
 
 def launch_node_feature(model: NodeFeature) -> Dict[str, Any]:
     return {
-        'meta': launch_feature_metadata(model.meta),
+        'id': model.id,
         'rosnode': rosnode_model(model.rosnode),
-    }
-
-
-def launch_feature_metadata(meta: LaunchFeatureMetadata) -> Dict[str, Any]:
-    return {
-        'name': meta.name,
-        'dependencies': serialize(meta.dependencies),
     }
 
 

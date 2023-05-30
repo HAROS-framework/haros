@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, List, Mapping, Optional
+from typing import Dict, Final, Iterable, List, Mapping, Optional, Set
 
 import logging
 from pathlib import Path
@@ -20,7 +20,6 @@ from haros.metamodel.launch import (
     FeatureId,
     LaunchArgument,
     LaunchDescription,
-    LaunchFeatureMetadata,
     LaunchFileFeature,
     LaunchInclusion,
     LaunchNode,
@@ -145,6 +144,7 @@ class LaunchFeatureModelBuilder:
     system: AnalysisSystemInterface = field(factory=AnalysisSystemInterface)
     nodes: List[NodeFeature] = field(factory=list)
     scope_stack: List[LaunchScope] = field(factory=list)
+    included_files: Set[FeatureId] = field(factory=set)
 
     @classmethod
     def from_file_path(
@@ -172,18 +172,20 @@ class LaunchFeatureModelBuilder:
         arguments = {}
         for name, arg in self.root.args.items():
             uid = FeatureId(f'arg:{len(arguments)}')
-            meta = LaunchFeatureMetadata(uid)
             # default_value: Optional[Result[str]] = None
             # description: Optional[Result[str]] = None
             # known_possible_values: List[Result[str]] = field(factory=list)
             # inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
             # affects_cg: bool = False
-            feature = ArgumentFeature(meta, name)
+            feature = ArgumentFeature(uid, name)
             arguments[uid] = feature
+        uid = FeatureId(f'file:{self.file}')
         return LaunchFileFeature(
+            uid,
             self.file,
             arguments=arguments,
-            nodes={ n.meta.name: n for n in self.nodes },
+            nodes={ n.id: n for n in self.nodes },
+            inclusions=set(self.included_files),
         )
         # conflicts: Dict[FeatureId, LogicValue] = field(factory=dict)
 
@@ -206,6 +208,8 @@ class LaunchFeatureModelBuilder:
         arguments: Dict[str, Result[LaunchSubstitution]] = include.arguments
         file: Result = self.scope.resolve(include.file)
         if file.is_resolved:
+            uid = FeatureId(f'file:{file.value}')
+            self.included_files.add(uid)
             try:
                 description = self.system.get_launch_description(file.value)
                 logger.info(f'parsed included launch file: {file.value}')
@@ -218,7 +222,7 @@ class LaunchFeatureModelBuilder:
             path: Path = Path(file.value)
             # FIXME pass arguments down
             model = model_from_description(path, description, self.system)
-            self.nodes.extend(model.nodes)
+            self.nodes.extend(model.nodes.values())
         else:
             logger.warning(f'unknown launch file inclusion')
             return  # FIXME
@@ -251,8 +255,7 @@ class LaunchFeatureModelBuilder:
             output=output,
         )
         uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
-        meta = LaunchFeatureMetadata(uid)
-        feature = NodeFeature(meta, rosnode)
+        feature = NodeFeature(uid, rosnode)
         self.nodes.append(feature)
 
     def parameters_from_list(self, parameters: LaunchNodeParameterList, node: Optional[str] = None) -> Result:

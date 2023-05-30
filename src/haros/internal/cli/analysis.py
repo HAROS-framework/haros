@@ -175,8 +175,12 @@ def _setup_interface(storage: StorageManager, model: ProjectModel) -> AnalysisSy
 
 
 def print_launch_model(model):
-    print('Launch Model:', model.name)
-    for node in model.nodes:
+    print('Launch Model:', model.file)
+    for uid in model.inclusions:
+        print(f'  includes: {uid}')
+    if not model.inclusions:
+        print('  <there are no dependencies>')
+    for node in model.nodes.values():
         print(f'  ROS node: {node.rosname} ({node.node})')
     if not model.nodes:
         print('  <there are no nodes>')
