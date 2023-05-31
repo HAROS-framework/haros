@@ -4,10 +4,18 @@
 const DashboardHeader = {
   template: "#vue-dashboard-header",
   props: {},
-  data() {},
+  data() {
+    return {
+      links: [
+        { text: "Source", route: "/source" },
+        { text: "Runtime", route: "/runtime" },
+        { text: "Issues", route: "/issues" },
+      ]
+    };
+  },
   methods: {
-    onCustomEvent(arg1, arg2) {
-      this.$emit("custom-event", arg1, arg2);
+    onMenuButtonClicked(route) {
+      this.$emit("change-route", route);
     }
   }
 };

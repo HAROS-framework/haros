@@ -22,6 +22,10 @@ const app = createApp({
 
   methods: {
     onSetupDone() {
+    },
+
+    onRouteChanged(route) {
+      alert(`Changed route to: ${route}`);
     }
 
     // refreshSlides() {

@@ -25,7 +25,7 @@
   </head>
   <body>
     <main id="app">
-      <dashboard-header></dashboard-header>
+      <dashboard-header @change-route="onRouteChanged"></dashboard-header>
       <setup-component v-if="isSetupState" :title="title" :text="text"></setup-component>
       <p>Lorem ipsum</p>
       <p>Lorem ipsum</p>
@@ -58,9 +58,13 @@
         <nav class="menu">
           <h1>HAROSviz</h1>
           <ul>
-            <li class="menu-item bg-soft clickable"><a href="#">Home</a></li>
-            <li class="menu-item bg-soft clickable"><a href="#">About</a></li>
-            <li class="menu-item bg-soft clickable"><a href="#">Contact</a></li>
+            <li
+              v-for="link in links"
+              class="menu-item bg-soft clickable"
+              @click.prevent.stop="onMenuButtonClicked(link.route)"
+            >
+              {{ link.text }}
+            </li>
           </ul>
         </nav>
         <nav class="crumbs">
