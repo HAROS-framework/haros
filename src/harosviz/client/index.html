@@ -25,14 +25,13 @@
   </head>
   <body>
     <main id="app">
-      <h1>This Is My Title</h1>
-      <div class="test">
-        <p>This is a paragraph.</p>
-      </div>
+      <setup-component v-if="isSetupState" :title="title" :text="text"></setup-component>
     </main>
 
     <template id="vue-setup-component">
-      <div class="slide">
+      <h1>{{ title }}</h1>
+      <div class="test">
+        <p>{{ text }}</p>
       </div>
     </template>
 
