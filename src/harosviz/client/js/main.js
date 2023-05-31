@@ -38,6 +38,7 @@ const app = createApp({
   }
 });
 
+app.component("DashboardHeader", DashboardHeader);
 app.component("SetupComponent", SetupComponent);
 
 app.mount("#app");
