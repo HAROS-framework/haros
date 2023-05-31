@@ -1,0 +1,143 @@
+/* SPDX-License-Identifier: MIT */
+/* Copyright © 2023 André Santos */
+
+/*******************************************************************************
+  General Styles
+*******************************************************************************/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  position: relative;
+  font-weight: normal;
+  user-select: none;
+
+}
+
+html, body, main {
+  font-family: 'Secular One', sans-serif;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  width: 100%;
+  height: 100%;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.test {
+  margin: 1rem;
+  border-width: .25rem;
+  border-style: solid;
+  padding: .5rem;
+}
+
+
+/*******************************************************************************
+  Colors
+*******************************************************************************/
+
+/*
+  Some ideas taken from here:
+  https://github.com/Nik77x/HordeWatcher/blob/master/frontend/src/assets/base.scss
+*/
+
+body {
+  background-color: #ffffff;
+  color: #2c3e50;
+}
+
+.background-soft {
+  background-color: #f8f8f8;
+}
+
+.background-mute {
+  background-color: #f2f2f2;
+}
+
+div {
+  border-color: rgba(60, 60, 60, 0.12);
+}
+
+div:hover {
+  border-color: rgba(60, 60, 60, 0.29);
+}
+
+h1, h2, h3, h4 {
+  color: #2c3e50;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #181818;
+    color: rgba(235, 235, 235, 0.64);
+  }
+
+  .background-soft {
+    background-color: #222222;
+  }
+
+  .background-mute {
+    background-color: #282828;
+  }
+
+  div {
+    border-color: rgba(84, 84, 84, 0.48);
+  }
+
+  div:hover {
+    border-color: rgba(84, 84, 84, 0.65);
+  }
+
+  h1, h2, h3, h4 {
+    color: #ffffff;
+  }
+}
+
+
+/*******************************************************************************
+  Scroll Bar
+*******************************************************************************/
+
+::-webkit-scrollbar {
+  background-color: #161616;
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-button {
+  background-color: #3473ef;
+  display: none;
+
+}
+
+::-webkit-scrollbar-corner {
+  background-color: #161616;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #282828;
+  border-radius: 50px;
+  border: 3px solid #181818;
+
+  &:hover {
+    background-color: #1c3779;
+  }
+
+}
