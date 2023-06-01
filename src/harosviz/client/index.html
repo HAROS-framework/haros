@@ -27,13 +27,29 @@
     <main id="app">
       <dashboard-header @change-route="onRouteChanged"></dashboard-header>
       <setup-component v-if="isSetupState" :title="title" :text="text"></setup-component>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
+      <p>Dashboard panel that shows Issue summary (total, #source, #runtime); links to issues page.</p>
+      <p>Dashboard panel that shows Source summary (#packages, #files, #nodes); links to source page.</p>
+      <p>Dashboard panel that shows Runtime summary (#launch models); links to runtime page.</p>
+      <p>Bar or Line Chart that displays issues over time.</p>
+      <p>Use Vue's
+        <code>&lt;component :is="currentTab"&gt;</code>
+        (name string of a registered component) to change between tabs/pages.
+        The component will be unmounted when it is switched away from.
+        We can force the inactive components to stay "alive" with the built-in
+        <a href="https://vuejs.org/guide/built-ins/keep-alive.html" target="_blank">
+          <code>&lt;KeepAlive&gt;</code> component
+        </a>.
+      </p>
+      <p>Do routing on top-level elements with
+        <pre>
+    mounted() {
+      window.addEventListener('hashchange', () => {
+        this.currentPath = window.location.hash
+      })
+    }
+        </pre>
+      </p>
+      <p>For more complex routing see <a href="https://github.com/vuejs/router" target="_blank">the Vue Routing library</a>.</p>
       <p>Lorem ipsum</p>
       <p>Lorem ipsum</p>
       <p>Lorem ipsum</p>

@@ -10,9 +10,9 @@
 *::after {
   box-sizing: border-box;
   margin: 0;
-  position: relative;
+  /* position: relative; */
   font-weight: normal;
-  user-select: none;
+  /* user-select: none; */
 
 }
 
