@@ -7,15 +7,15 @@ const DashboardHeader = {
   data() {
     return {
       links: [
-        { text: "Source", route: "/source" },
-        { text: "Runtime", route: "/runtime" },
-        { text: "Issues", route: "/issues" },
+        { text: "Source", route: "#source" },
+        { text: "Runtime", route: "#runtime" },
+        { text: "Issues", route: "#issues" },
       ]
     };
   },
   methods: {
-    onMenuButtonClicked(route) {
-      this.$emit("change-route", route);
-    }
+    // onMenuButtonClicked(route) {
+    //   this.$emit("change-route", route);
+    // }
   }
 };

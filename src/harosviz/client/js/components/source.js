@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2023 André Santos
 
-const SetupComponent = {
-  template: "#vue-setup-component",
+const SourcePage = {
+  template: "#vue-source-page",
   props: {
     title: {
       type: String,

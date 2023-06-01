@@ -26,7 +26,7 @@
   <body>
     <main id="app">
       <dashboard-header @change-route="onRouteChanged"></dashboard-header>
-      <setup-component v-if="isSetupState" :title="title" :text="text"></setup-component>
+      <component :is="currentPage" :title="title" :text="text"></component>
       <p>Dashboard panel that shows Issue summary (total, #source, #runtime); links to issues page.</p>
       <p>Dashboard panel that shows Source summary (#packages, #files, #nodes); links to source page.</p>
       <p>Dashboard panel that shows Runtime summary (#launch models); links to runtime page.</p>
@@ -65,6 +65,7 @@
       <p>Lorem ipsum</p>
     </main>
 
+
 <!----------------------------------------------------------------------------->
 <!-- Header -->
 <!----------------------------------------------------------------------------->
@@ -76,22 +77,70 @@
           <ul>
             <li
               v-for="link in links"
-              class="menu-item bg-soft clickable"
-              @click.prevent.stop="onMenuButtonClicked(link.route)"
+              class="menu-item bg-soft"
             >
-              {{ link.text }}
+            <!-- @click.prevent.stop="onMenuButtonClicked(link.route)" -->
+              <a :href="link.route">{{ link.text }}</a>
             </li>
           </ul>
         </nav>
         <nav class="crumbs">
           <ol>
-            <li class="crumb"><a href="#">Bikes</a></li>
-            <li class="crumb"><a href="#">BMX</a></li>
-            <li class="crumb">Jump Bike 3000</li>
+            <li class="crumb"><a href="#source">Source</a></li>
+            <li class="crumb"><a href="#issues">Issues</a></li>
+            <li class="crumb">Package View</li>
           </ol>
         </nav>
       </header>
     </template>
+
+
+<!----------------------------------------------------------------------------->
+<!-- Dashboard -->
+<!----------------------------------------------------------------------------->
+
+    <template id="vue-dashboard-page">
+      <h1>Dashboard - {{ title }}</h1>
+      <div>
+        <p>{{ text }}</p>
+      </div>
+    </template>
+
+
+<!----------------------------------------------------------------------------->
+<!-- Issues -->
+<!----------------------------------------------------------------------------->
+
+    <template id="vue-issues-page">
+      <h1>Issues - {{ title }}</h1>
+      <div>
+        <p>{{ text }}</p>
+      </div>
+    </template>
+
+<!----------------------------------------------------------------------------->
+<!-- Source -->
+<!----------------------------------------------------------------------------->
+
+    <template id="vue-source-page">
+      <h1>Source - {{ title }}</h1>
+      <div>
+        <p>{{ text }}</p>
+      </div>
+    </template>
+
+
+<!----------------------------------------------------------------------------->
+<!-- Runtime -->
+<!----------------------------------------------------------------------------->
+
+    <template id="vue-runtime-page">
+      <h1>Runtime - {{ title }}</h1>
+      <div>
+        <p>{{ text }}</p>
+      </div>
+    </template>
+
 
 <!----------------------------------------------------------------------------->
 <!-- Template -->
@@ -111,6 +160,10 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="js/components/ui.js"></script>
     <script src="js/components/header.js"></script>
+    <script src="js/components/dashboard.js"></script>
+    <script src="js/components/issues.js"></script>
+    <script src="js/components/source.js"></script>
+    <script src="js/components/runtime.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>

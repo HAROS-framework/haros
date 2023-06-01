@@ -35,7 +35,7 @@ body {
 
 #app {
   width: 100%;
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
 }
@@ -77,15 +77,17 @@ header.top-bar {
   display: inline-block;
   flex: 1 1 auto;
   max-width: 20vw;
-  line-height: 2;
-  text-align: center;
   /* margin: 0 5vw; */
   border-width: thin;
   border-style: solid;
 }
 
 .menu-item a {
+  display: block;
+  width: 100%;
+  line-height: 2;
   color: inherit;
+  text-align: center;
   text-decoration: none;
 }
 
