@@ -16,7 +16,7 @@ const app = createApp({
     return {
       title: "",
       text: "",
-      currentPage: "SetupComponent",
+      currentPage: "DashboardPage",
       ui: {
         state: 1
       }

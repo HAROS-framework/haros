@@ -40,6 +40,13 @@ body {
   flex-direction: column;
 }
 
+#app > .content {
+  width: 100%;
+  padding: .5rem 1rem;
+  position: relative;
+  display: grid;
+}
+
 
 .clickable {
   cursor: pointer;
@@ -111,6 +118,33 @@ header.top-bar {
 
 .crumb a {
   color: inherit;
+}
+
+
+/*******************************************************************************
+  Main Components
+*******************************************************************************/
+
+/*
+  See CSS Grid Layout:
+  https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout/Basic_concepts_of_grid_layout
+
+  This will be useful to put together a panel-based dashboard
+  without too much effort.
+*/
+
+.panel {
+  margin: .25rem;
+  padding: .5rem;
+  border-radius: 4px;
+  /* background-color: #282828; */
+  display: flex;
+  flex-flow: column;
+  position: relative;
+  transition-property: height, width;
+  transition-duration: 0.3s;
+  overflow: hidden;
+  box-shadow: 0px 2px 6px black;
 }
 
 

@@ -42,11 +42,11 @@
       </p>
       <p>Do routing on top-level elements with
         <pre>
-    mounted() {
-      window.addEventListener('hashchange', () => {
-        this.currentPath = window.location.hash
-      })
-    }
+          mounted() {
+            window.addEventListener('hashchange', () => {
+              this.currentPath = window.location.hash
+            })
+          }
         </pre>
       </p>
       <p>For more complex routing see <a href="https://github.com/vuejs/router" target="_blank">the Vue Routing library</a>.</p>
@@ -100,10 +100,12 @@
 <!----------------------------------------------------------------------------->
 
     <template id="vue-dashboard-page">
-      <h1>Dashboard - {{ title }}</h1>
-      <div>
-        <p>{{ text }}</p>
-      </div>
+      <section class="content">
+        <h1>Dashboard - {{ title }}</h1>
+        <div class="panel bg-mute">
+          <p>{{ text }}</p>
+        </div>
+      </section>
     </template>
 
 
@@ -113,7 +115,7 @@
 
     <template id="vue-issues-page">
       <h1>Issues - {{ title }}</h1>
-      <div>
+      <div class="panel bg-mute">
         <p>{{ text }}</p>
       </div>
     </template>
@@ -124,7 +126,7 @@
 
     <template id="vue-source-page">
       <h1>Source - {{ title }}</h1>
-      <div>
+      <div class="panel bg-mute">
         <p>{{ text }}</p>
       </div>
     </template>
@@ -136,7 +138,7 @@
 
     <template id="vue-runtime-page">
       <h1>Runtime - {{ title }}</h1>
-      <div>
+      <div class="panel bg-mute">
         <p>{{ text }}</p>
       </div>
     </template>
