@@ -1,22 +1,51 @@
 // SPDX-License-Identifier: MIT
 // Copyright © 2023 André Santos
 
+// -----------------------------------------------------------------------------
+//  Constants
+// -----------------------------------------------------------------------------
+
 const { createApp } = Vue;
 
 const ROUTES = {
-  "": "DashboardPage",
-  "#dashboard": "DashboardPage",
-  "#issues": "IssuesPage",
-  "#source": "SourcePage",
-  "#runtime": "RuntimePage",
+  "": {
+    component: "DashboardPage",
+    name: "Dashboard",
+    crumbs: [],
+  },
+  "#issues": {
+    component: "IssuesPage",
+    name: "Issues",
+    crumbs: [""],
+  },
+  "#source": {
+    component: "SourcePage",
+    name: "Source",
+    crumbs: [""],
+  },
+  "#runtime": {
+    component: "RuntimePage",
+    name: "Runtime",
+    crumbs: [""],
+  },
 };
+
+// aliasing
+ROUTES["#"] = ROUTES[""];
+ROUTES["#dashboard"] = ROUTES[""];
+
+
+// -----------------------------------------------------------------------------
+//  Application
+// -----------------------------------------------------------------------------
 
 const app = createApp({
   data() {
     return {
       title: "",
       text: "",
-      currentPage: "DashboardPage",
+      currentPage: "",
+      crumbs: [],
       ui: {
         state: 1
       }
@@ -33,16 +62,20 @@ const app = createApp({
     onSetupDone() {
     },
 
-    onRouteChanged(route) {
-      alert(`Changed route to: ${route}`);
-    },
-
     onWindowHashChanged() {
-      const page = ROUTES[window.location.hash];
-      if (page !== undefined) {
-        this.currentPage = page;
-        this.text = `We are viewing the ${page} component.`;
+      const route = ROUTES[window.location.hash] || ROUTES["#dashboard"];
+      this.currentPage = route.component;
+      this.text = `We are viewing the ${route.name} component.`;
+      this.crumbs = [];
+      for (const crumb of route.crumbs) {
+        const h = `#${crumb}`;
+        const r = ROUTES[h];
+        this.crumbs.push({
+          name: r.name,
+          href: h,
+        });
       }
+      this.crumbs.push({ name: route.name });
     }
 
     // refreshSlides() {
@@ -57,8 +90,14 @@ const app = createApp({
     this.title = "Vue Application";
     this.text = "Hello, world!";
     window.addEventListener("hashchange", this.onWindowHashChanged);
+    this.onWindowHashChanged();
   }
 });
+
+
+// -----------------------------------------------------------------------------
+//  Setup
+// -----------------------------------------------------------------------------
 
 app.component("InfoPanel", InfoPanel);
 app.component("DashboardHeader", DashboardHeader);

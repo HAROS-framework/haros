@@ -154,7 +154,9 @@ header.top-bar {
   transition-property: height, width;
   transition-duration: 0.3s;
   overflow: hidden;
-  box-shadow: 0px 2px 6px black;
+  /* box-shadow: 0px 2px 4px black; */
+  border-width: medium;
+  border-style: solid;
 }
 
 .panel.standalone {
@@ -190,11 +192,13 @@ body {
   background-color: #ffffff;
 }
 
-.bg-soft {
+.bg-soft,
+.bg-dynamic:hover {
   background-color: #f8f8f8;
 }
 
-.bg-mute {
+.bg-mute,
+.bg-dynamic {
   background-color: #f2f2f2;
 }
 
@@ -220,11 +224,13 @@ h1, h2, h3, h4 {
     background-color: #181818;
   }
 
-  .bg-soft {
+  .bg-soft,
+  .bg-dynamic:hover {
     background-color: #222222;
   }
 
-  .bg-mute {
+  .bg-mute,
+  .bg-dynamic {
     background-color: #282828;
   }
 

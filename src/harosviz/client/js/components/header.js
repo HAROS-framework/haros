@@ -3,7 +3,12 @@
 
 const DashboardHeader = {
   template: "#vue-dashboard-header",
-  props: {},
+  props: {
+    crumbs: {
+      type: Array,
+      default(rawProps) { return []; },
+    },
+  },
   data() {
     return {
       links: [

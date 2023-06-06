@@ -25,7 +25,7 @@
   </head>
   <body>
     <main id="app">
-      <dashboard-header @change-route="onRouteChanged"></dashboard-header>
+      <dashboard-header :crumbs="crumbs"></dashboard-header>
       <component :is="currentPage" :title="title" :text="text"></component>
       <p>Use Vue's
         <code>&lt;component :is="currentTab"&gt;</code>
@@ -82,9 +82,14 @@
         </nav>
         <nav class="crumbs">
           <ol>
-            <li class="crumb"><a href="#source">Source</a></li>
-            <li class="crumb"><a href="#issues">Issues</a></li>
-            <li class="crumb">Package View</li>
+            <li v-for="(crumb, index) in crumbs" class="crumb">
+              <a v-if="index < crumbs.length - 1" :href="crumb.href">
+                {{ crumb.name }}
+              </a>
+              <template v-else>
+                {{ crumb.name }}
+              </template>
+            </li>
           </ol>
         </nav>
       </header>
@@ -96,7 +101,7 @@
 <!----------------------------------------------------------------------------->
 
     <template id="vue-info-panel">
-      <div class="panel bg-mute">
+      <div class="panel bg-dynamic">
         <h3>{{ title }}</h3>
         <ul>
           <li v-for="item in items">
