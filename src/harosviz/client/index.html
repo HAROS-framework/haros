@@ -27,10 +27,6 @@
     <main id="app">
       <dashboard-header @change-route="onRouteChanged"></dashboard-header>
       <component :is="currentPage" :title="title" :text="text"></component>
-      <p>Dashboard panel that shows Issue summary (total, #source, #runtime); links to issues page.</p>
-      <p>Dashboard panel that shows Source summary (#packages, #files, #nodes); links to source page.</p>
-      <p>Dashboard panel that shows Runtime summary (#launch models); links to runtime page.</p>
-      <p>Bar or Line Chart that displays issues over time.</p>
       <p>Use Vue's
         <code>&lt;component :is="currentTab"&gt;</code>
         (name string of a registered component) to change between tabs/pages.
@@ -99,11 +95,40 @@
 <!-- Dashboard -->
 <!----------------------------------------------------------------------------->
 
+    <template id="vue-info-panel">
+      <div class="panel bg-mute">
+        <h3>{{ title }}</h3>
+        <ul>
+          <li v-for="item in items">
+            <span class="number-badge">
+              {{ item.quantity }}
+            </span>
+            <span :class="item.style || ''">
+              {{ item.name }}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </template>
+
+
     <template id="vue-dashboard-page">
       <section class="content">
         <h1>Dashboard - {{ title }}</h1>
-        <div class="panel bg-mute">
-          <p>{{ text }}</p>
+        <div class="panel-container">
+          <a href="#issues">
+            <info-panel title="Issues" :items="issues"></info-panel>
+          </a>
+          <a href="#source">
+            <info-panel title="Source" :items="source"></info-panel>
+          </a>
+          <a href="#runtime">
+            <info-panel title="Runtime" :items="runtime"></info-panel>
+          </a>
+          <div class="panel standalone bg-mute">
+            <p>{{ text }}</p>
+            <p>Bar or Line Chart that displays issues over time.</p>
+          </div>
         </div>
       </section>
     </template>

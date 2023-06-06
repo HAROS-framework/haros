@@ -60,6 +60,7 @@ const app = createApp({
   }
 });
 
+app.component("InfoPanel", InfoPanel);
 app.component("DashboardHeader", DashboardHeader);
 app.component("DashboardPage", DashboardPage);
 app.component("IssuesPage", IssuesPage);

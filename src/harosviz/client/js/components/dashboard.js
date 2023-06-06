@@ -14,7 +14,23 @@ const DashboardPage = {
     },
     compact: Boolean
   },
-  data() {},
+  data() {
+    return {
+      source: [
+        {name: 'Packages', quantity: 12},
+        {name: 'Files', quantity: 123},
+        {name: 'Nodes', quantity: 4},
+      ],
+      runtime: [
+        {name: 'Launch Models', quantity: 12},
+      ],
+      issues: [
+        {name: 'Total', quantity: 100},
+        {name: 'Source', quantity: 50},
+        {name: 'Runtime', quantity: 50},
+      ],
+    };
+  },
   methods: {
     onCustomEvent(arg1, arg2) {
       this.$emit("custom-event", arg1, arg2);
