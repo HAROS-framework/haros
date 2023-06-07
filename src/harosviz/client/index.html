@@ -20,7 +20,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap">
     <link rel="stylesheet" type="text/css" href="css/styles.css" />
   </head>
   <body>
@@ -183,10 +183,11 @@
           :class="{ bold: isFolder }"
           @click="toggle"
           @dblclick="changeType">
-          {{ model.name }}
           <span v-if="isFolder">[{{ isOpen ? '-' : '+' }}]</span>
+          {{ model.name }}
+          <span class="annotation">Issues: 654</span>
         </div>
-        <ul v-show="isOpen" v-if="isFolder">
+        <ul v-show="isOpen" v-if="isFolder" class="tree-view">
           <tree-item
             v-for="model in model.children"
             :model="model">
