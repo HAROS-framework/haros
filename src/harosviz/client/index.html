@@ -101,7 +101,7 @@
 <!----------------------------------------------------------------------------->
 
     <template id="vue-info-panel">
-      <div class="panel bg-dynamic">
+      <div class="panel stats bg-dynamic">
         <h3>{{ title }}</h3>
         <ul>
           <li v-for="item in items">
@@ -127,12 +127,19 @@
           <a href="#source">
             <info-panel title="Source" :items="source"></info-panel>
           </a>
+          <a href="#nodes">
+            <info-panel title="Nodes" :items="nodes"></info-panel>
+          </a>
           <a href="#runtime">
             <info-panel title="Runtime" :items="runtime"></info-panel>
           </a>
-          <div class="panel standalone bg-mute">
+          <div class="panel large bg-mute">
             <p>{{ text }}</p>
             <p>Bar or Line Chart that displays issues over time.</p>
+          </div>
+          <div class="panel large bg-mute">
+            <p>{{ text }}</p>
+            <p>Bar or Line Chart that displays something else.</p>
           </div>
         </div>
       </section>
@@ -156,6 +163,18 @@
 
     <template id="vue-source-page">
       <h1>Source - {{ title }}</h1>
+      <div class="panel bg-mute">
+        <p>{{ text }}</p>
+      </div>
+    </template>
+
+
+<!----------------------------------------------------------------------------->
+<!-- Nodes -->
+<!----------------------------------------------------------------------------->
+
+    <template id="vue-nodes-page">
+      <h1>Nodes - {{ title }}</h1>
       <div class="panel bg-mute">
         <p>{{ text }}</p>
       </div>
@@ -195,6 +214,7 @@
     <script src="js/components/dashboard.js"></script>
     <script src="js/components/issues.js"></script>
     <script src="js/components/source.js"></script>
+    <script src="js/components/nodes.js"></script>
     <script src="js/components/runtime.js"></script>
     <script src="js/main.js"></script>
   </body>

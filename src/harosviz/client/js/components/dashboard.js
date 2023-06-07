@@ -18,16 +18,15 @@ const DashboardPage = {
     return {
       source: [
         {name: 'Packages', quantity: 12},
-        {name: 'Files', quantity: 123},
-        {name: 'Nodes', quantity: 4},
+      ],
+      nodes: [
+        {name: 'Models', quantity: 12},
       ],
       runtime: [
-        {name: 'Launch Models', quantity: 12},
+        {name: 'Models', quantity: 12},
       ],
       issues: [
         {name: 'Total', quantity: 100},
-        {name: 'Source', quantity: 50},
-        {name: 'Runtime', quantity: 50},
       ],
     };
   },

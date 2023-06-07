@@ -23,6 +23,11 @@ const ROUTES = {
     name: "Source",
     crumbs: [""],
   },
+  "#nodes": {
+    component: "NodesPage",
+    name: "Nodes",
+    crumbs: [""],
+  },
   "#runtime": {
     component: "RuntimePage",
     name: "Runtime",
@@ -104,6 +109,7 @@ app.component("DashboardHeader", DashboardHeader);
 app.component("DashboardPage", DashboardPage);
 app.component("IssuesPage", IssuesPage);
 app.component("SourcePage", SourcePage);
+app.component("NodesPage", NodesPage);
 app.component("RuntimePage", RuntimePage);
 app.component("SetupComponent", SetupComponent);
 
