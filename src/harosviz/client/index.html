@@ -20,13 +20,15 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400&display=swap">
     <link rel="stylesheet" type="text/css" href="css/styles.css" />
   </head>
   <body>
     <main id="app">
       <dashboard-header :crumbs="crumbs"></dashboard-header>
-      <component :is="currentPage" :title="title" :text="text"></component>
+      <section class="content">
+        <component :is="currentPage" :title="title" :text="text"></component>
+      </section>
       <p>Use Vue's
         <code>&lt;component :is="currentTab"&gt;</code>
         (name string of a registered component) to change between tabs/pages.
@@ -100,6 +102,33 @@
 <!-- Dashboard -->
 <!----------------------------------------------------------------------------->
 
+    <template id="vue-dashboard-page">
+      <h1>Dashboard - {{ title }}</h1>
+      <div class="panel-container">
+        <a href="#issues">
+          <info-panel title="Issues" :items="issues"></info-panel>
+        </a>
+        <a href="#source">
+          <info-panel title="Source" :items="source"></info-panel>
+        </a>
+        <a href="#nodes">
+          <info-panel title="Nodes" :items="nodes"></info-panel>
+        </a>
+        <a href="#runtime">
+          <info-panel title="Runtime" :items="runtime"></info-panel>
+        </a>
+        <div class="panel large bg-mute">
+          <p>{{ text }}</p>
+          <p>Bar or Line Chart that displays issues over time.</p>
+        </div>
+        <div class="panel large bg-mute">
+          <p>{{ text }}</p>
+          <p>Bar or Line Chart that displays something else.</p>
+        </div>
+      </div>
+    </template>
+
+
     <template id="vue-info-panel">
       <div class="panel stats bg-dynamic">
         <h3>{{ title }}</h3>
@@ -114,35 +143,6 @@
           </li>
         </ul>
       </div>
-    </template>
-
-
-    <template id="vue-dashboard-page">
-      <section class="content">
-        <h1>Dashboard - {{ title }}</h1>
-        <div class="panel-container">
-          <a href="#issues">
-            <info-panel title="Issues" :items="issues"></info-panel>
-          </a>
-          <a href="#source">
-            <info-panel title="Source" :items="source"></info-panel>
-          </a>
-          <a href="#nodes">
-            <info-panel title="Nodes" :items="nodes"></info-panel>
-          </a>
-          <a href="#runtime">
-            <info-panel title="Runtime" :items="runtime"></info-panel>
-          </a>
-          <div class="panel large bg-mute">
-            <p>{{ text }}</p>
-            <p>Bar or Line Chart that displays issues over time.</p>
-          </div>
-          <div class="panel large bg-mute">
-            <p>{{ text }}</p>
-            <p>Bar or Line Chart that displays something else.</p>
-          </div>
-        </div>
-      </section>
     </template>
 
 
@@ -180,6 +180,7 @@
     <template id="vue-tree-item">
       <li class="item">
         <div
+          class="emph"
           :class="{ bold: isFolder }"
           @click="toggle"
           @dblclick="changeType">
