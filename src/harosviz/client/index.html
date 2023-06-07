@@ -165,7 +165,35 @@
       <h1>Source - {{ title }}</h1>
       <div class="panel bg-mute">
         <p>{{ text }}</p>
+        <tree-view></tree-view>
       </div>
+    </template>
+
+
+    <template id="vue-tree-view">
+      <ul class="tree-view">
+        <tree-item :model="tree"></tree-item>
+      </ul>
+    </template>
+
+
+    <template id="vue-tree-item">
+      <li class="item">
+        <div
+          :class="{ bold: isFolder }"
+          @click="toggle"
+          @dblclick="changeType">
+          {{ model.name }}
+          <span v-if="isFolder">[{{ isOpen ? '-' : '+' }}]</span>
+        </div>
+        <ul v-show="isOpen" v-if="isFolder">
+          <tree-item
+            v-for="model in model.children"
+            :model="model">
+          </tree-item>
+          <li class="add" @click="addChild">+</li>
+        </ul>
+      </li>
     </template>
 
 
