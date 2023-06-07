@@ -118,12 +118,10 @@
           <info-panel title="Runtime" :items="runtime"></info-panel>
         </a>
         <div class="panel large bg-mute">
-          <p>{{ text }}</p>
-          <p>Bar or Line Chart that displays issues over time.</p>
+          <div ref="chartContainer1" class="chart"></div>
         </div>
         <div class="panel large bg-mute">
-          <p>{{ text }}</p>
-          <p>Bar or Line Chart that displays something else.</p>
+          <div ref="chartContainer2" class="chart"></div>
         </div>
       </div>
     </template>
@@ -238,8 +236,10 @@
 <!-- Scripts -->
 <!----------------------------------------------------------------------------->
 
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="js/components/ui.js"></script>
+    <script src="js/components/chart.js"></script>
     <script src="js/components/header.js"></script>
     <script src="js/components/dashboard.js"></script>
     <script src="js/components/issues.js"></script>

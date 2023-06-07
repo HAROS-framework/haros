@@ -34,5 +34,10 @@ const DashboardPage = {
     onCustomEvent(arg1, arg2) {
       this.$emit("custom-event", arg1, arg2);
     }
+  },
+
+  mounted() {
+    d3.select(this.$refs.chartContainer1).append(window.newChart);
+    d3.select(this.$refs.chartContainer2).append(window.newChart);
   }
 };
