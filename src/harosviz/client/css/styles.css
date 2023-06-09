@@ -191,6 +191,18 @@ header.top-bar {
 
 
 /*******************************************************************************
+  Node Model Viewer Page
+*******************************************************************************/
+
+.node-model-viewer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1em;
+  row-gap: 1em;
+}
+
+
+/*******************************************************************************
   Helper Components
 *******************************************************************************/
 
@@ -219,14 +231,6 @@ header.top-bar {
 .dropdown-menu > select {
   display: block;
   width: 100%;
-}
-
-
-.grid-double-column {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 1em;
-  row-gap: 1em;
 }
 
 

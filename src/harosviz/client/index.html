@@ -181,7 +181,7 @@
 
     <template id="vue-nodes-page">
       <h1>Nodes - {{ title }}</h1>
-      <div class="grid-double-column">
+      <div class="node-model-viewer">
         <dropdown-menu
           ref="packageMenu"
           label="Package"
@@ -194,11 +194,11 @@
           :options="nodeList"
           @option-selected="onNodeSelected">
         </dropdown-menu>
-      </div>
-      <div class="panel bg-mute">
-        <p v-if="!!selectedNode">
-          We are viewing the model for the {{ selectedNode }} node.
-        </p>
+        <div class="panel large bg-mute">
+          <p v-if="!!selectedNode">
+            We are viewing the model for the {{ selectedNode }} node.
+          </p>
+        </div>
       </div>
     </template>
 
