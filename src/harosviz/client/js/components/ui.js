@@ -23,6 +23,34 @@ UI.InfoPanel = {
 };
 
 
+UI.DropdownMenu = {
+  template: "#vue-dropdown-menu",
+  props: {
+    label: {
+      type: String,
+      required: true
+    },
+    options: {
+      type: Array,
+      default(rawProps) { return []; },
+    },
+  },
+  methods: {
+    onOptionSelected(e) {
+      this.$emit("optionSelected", e.target.value);
+    },
+
+    getSelectedValue() {
+      return this.$refs.dropdown.value;
+    },
+
+    clearSelection() {
+      this.$refs.dropdown.value = "";
+    }
+  }
+};
+
+
 // -----------------------------------------------------------------------------
 //  Tree View
 // -----------------------------------------------------------------------------

@@ -104,14 +104,17 @@ const app = createApp({
 //  Setup
 // -----------------------------------------------------------------------------
 
-app.component("InfoPanel", UI.InfoPanel);
-app.component("TreeView", UI.TreeView);
+{
+  for (const key of Object.keys(UI)) {
+    app.component(key, UI[key]);
+  }
+}
+
 app.component("DashboardHeader", DashboardHeader);
 app.component("DashboardPage", DashboardPage);
 app.component("IssuesPage", IssuesPage);
 app.component("SourcePage", SourcePage);
 app.component("NodesPage", NodesPage);
 app.component("RuntimePage", RuntimePage);
-app.component("SetupComponent", UI.SetupComponent);
 
 app.mount("#app");

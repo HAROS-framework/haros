@@ -38,29 +38,7 @@
           <code>&lt;KeepAlive&gt;</code> component
         </a>.
       </p>
-      <p>Do routing on top-level elements with
-        <pre>
-          mounted() {
-            window.addEventListener('hashchange', () => {
-              this.currentPath = window.location.hash
-            })
-          }
-        </pre>
-      </p>
       <p>For more complex routing see <a href="https://github.com/vuejs/router" target="_blank">the Vue Routing library</a>.</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
-      <p>Lorem ipsum</p>
     </main>
 
 
@@ -203,8 +181,24 @@
 
     <template id="vue-nodes-page">
       <h1>Nodes - {{ title }}</h1>
+      <div class="grid-double-column">
+        <dropdown-menu
+          ref="packageMenu"
+          label="Package"
+          :options="packageList"
+          @option-selected="onPackageSelected">
+        </dropdown-menu>
+        <dropdown-menu
+          ref="nodeMenu"
+          label="Executable"
+          :options="nodeList"
+          @option-selected="onNodeSelected">
+        </dropdown-menu>
+      </div>
       <div class="panel bg-mute">
-        <p>{{ text }}</p>
+        <p v-if="!!selectedNode">
+          We are viewing the model for the {{ selectedNode }} node.
+        </p>
       </div>
     </template>
 
@@ -224,6 +218,18 @@
 <!----------------------------------------------------------------------------->
 <!-- Template -->
 <!----------------------------------------------------------------------------->
+
+    <template id="vue-dropdown-menu">
+      <label class="dropdown-menu">{{ label }}:
+        <select ref="dropdown" @change="onOptionSelected">
+          <option value="" selected>---</option>
+          <option v-for="option in options"
+            :value="option.value">
+            {{ option.name }}
+          </option>
+        </select>
+      </label>
+    </template>
 
     <template id="vue-setup-component">
       <h1>{{ title }}</h1>
