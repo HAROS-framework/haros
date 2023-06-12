@@ -198,6 +198,9 @@
           <p v-if="!!selectedNode">
             We are viewing the model for the {{ selectedNode }} node.
           </p>
+          <div ref="modelContainer">
+
+          </div>
         </div>
       </div>
     </template>
@@ -246,6 +249,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="js/components/ui.js"></script>
     <script src="js/components/chart.js"></script>
+    <script src="js/components/node-model.js"></script>
     <script src="js/components/header.js"></script>
     <script src="js/components/dashboard.js"></script>
     <script src="js/components/issues.js"></script>

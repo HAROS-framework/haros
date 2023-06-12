@@ -48,6 +48,7 @@ const NodesPage = {
       return this.package != "" && this.node != "";
     }
   },
+
   methods: {
     getNodeList(pkg) {
       const nodes = [];
@@ -77,5 +78,9 @@ const NodesPage = {
         this.selectedNode = null;
       }
     }
+  },
+
+  mounted() {
+    d3.select(this.$refs.modelContainer).append(window.exampleNodeModel);
   }
 };
