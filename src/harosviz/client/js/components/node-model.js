@@ -179,6 +179,11 @@ function NodeTree(data, { // data is either tabular (array of objects) or hierar
   // Compute labels and titles.
   const descendants = root.descendants();
   const L = label == null ? null : descendants.map(d => label(d.data, d));
+  descendants.forEach((d, i) => {
+    d.id = i;
+    d._children = d.children;
+    // if (d.depth) { d.children = null; }
+  });
 
   // Compute the layout.
   const dx = 10;
