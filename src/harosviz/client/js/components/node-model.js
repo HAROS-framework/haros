@@ -254,44 +254,33 @@ function NodeTree(data, { // data is either tabular (array of objects) or hierar
 }
 
 
-const exampleData = {
-  name: "package_name/node_name",
-  children: [
-    {
-      name: "subscribe",
-      children: [
-        {
-          name: "topic_1",
-          children: [],
-        },
-        {
-          name: "topic_2",
-          children: [],
-        },
-      ]
-    },
-    {
-      name: "advertise",
-      children: [
-        {
-          name: "topic_3",
-          children: [],
-        },
-        {
-          name: "topic_4",
-          children: [],
-        },
-      ]
-    },
-  ],
-}
+const NodeModelComponent = {
+  template: "#vue-node-model-component",
 
+  props: {
+    model: Object,
+  },
 
-function exampleNodeModel() {
-  return NodeTree(exampleData, {
-    label: d => d.name,
-    title: (d, n) => `${n.ancestors().reverse().map(d => d.data.name).join(".")}`, // hover text
-    // link: (d, n) => `https://github.com/prefuse/Flare/${n.children ? "tree" : "blob"}/master/flare/src/${n.ancestors().reverse().map(d => d.data.name).join("/")}${n.children ? "" : ".as"}`,
-    width: 1152
-  });
-}
+  data() {},
+
+  watch: {
+    model(newModel, _oldModel) {
+      const container = d3.select(this.$refs.modelContainer);
+      container.selectAll("*").remove();
+      if (newModel != null) {
+        container.append(this.buildModelElement);
+      }
+    }
+  },
+
+  methods: {
+    buildModelElement() {
+      return NodeTree(this.model, {
+        label: d => d.name,
+        title: (d, n) => `${n.ancestors().reverse().map(d => d.data.name).join(".")}`, // hover text
+        // link: (d, n) => `https://github.com/prefuse/Flare/${n.children ? "tree" : "blob"}/master/flare/src/${n.ancestors().reverse().map(d => d.data.name).join("/")}${n.children ? "" : ".as"}`,
+        width: 1152
+      });
+    }
+  }
+};

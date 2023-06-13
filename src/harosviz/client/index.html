@@ -198,11 +198,15 @@
           <p v-if="!!selectedNode">
             We are viewing the model for the {{ selectedNode }} node.
           </p>
-          <div ref="modelContainer">
-
-          </div>
+          <node-model-component :model="nodeModel">
+          </node-model-component>
         </div>
       </div>
+    </template>
+
+
+    <template id="vue-node-model-component">
+      <div ref="modelContainer"></div>
     </template>
 
 

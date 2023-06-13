@@ -24,6 +24,7 @@ const NodesPage = {
       },
       nodeList: [],
       selectedNode: null,
+      nodeModel: null,
     };
   },
   computed: {
@@ -68,19 +69,52 @@ const NodesPage = {
       this.nodeList = this.getNodeList(pkg);
       this.$refs.nodeMenu.clearSelection();
       this.selectedNode = null;
+      this.nodeModel = null;
     },
 
     onNodeSelected(node) {
       if (!!node) {
         const pkg = this.$refs.packageMenu.getSelectedValue();
         this.selectedNode = `${pkg}/${node}`;
+        this.nodeModel = this.getNodeModel(this.selectedNode);
       } else {
         this.selectedNode = null;
+        this.nodeModel = null;
       }
-    }
-  },
+    },
 
-  mounted() {
-    d3.select(this.$refs.modelContainer).append(window.exampleNodeModel);
+    getNodeModel(node) {
+      return {
+        name: node,
+        children: [
+          {
+            name: "subscribe",
+            children: [
+              {
+                name: "topic_1",
+                children: [],
+              },
+              {
+                name: "topic_2",
+                children: [],
+              },
+            ]
+          },
+          {
+            name: "advertise",
+            children: [
+              {
+                name: "topic_3",
+                children: [],
+              },
+              {
+                name: "topic_4",
+                children: [],
+              },
+            ]
+          },
+        ],
+      };
+    },
   }
 };
