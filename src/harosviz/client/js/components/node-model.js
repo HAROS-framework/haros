@@ -186,7 +186,7 @@ function NodeTree(data, { // data is either tabular (array of objects) or hierar
   });
 
   // Compute the layout.
-  const dx = 10;
+  const dx = 16;
   const dy = width / (root.height + padding);
   tree().nodeSize([dx, dy])(root);
 
@@ -210,7 +210,7 @@ function NodeTree(data, { // data is either tabular (array of objects) or hierar
       .attr("height", height)
       .attr("style", "max-width: 100%; height: auto; height: intrinsic;")
       .attr("font-family", "sans-serif")
-      .attr("font-size", 10);
+      .attr("font-size", "1em");
 
   svg.append("g")
       .attr("fill", "none")
@@ -242,7 +242,7 @@ function NodeTree(data, { // data is either tabular (array of objects) or hierar
       .text(d => title(d.data, d));
 
   if (L) node.append("text")
-      .attr("dy", "0.32em")
+      .attr("dy", "1em")
       .attr("x", d => d.children ? -6 : 6)
       .attr("text-anchor", d => d.children ? "end" : "start")
       .attr("paint-order", "stroke")
