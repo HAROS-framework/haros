@@ -113,6 +113,7 @@ const app = createApp({
 app.component("NodeModelComponent", NodeModelComponent);
 app.component("DashboardHeader", DashboardHeader);
 app.component("DashboardPage", DashboardPage);
+app.component("IssueDetails", IssueDetails);
 app.component("IssuesPage", IssuesPage);
 app.component("SourcePage", SourcePage);
 app.component("NodesPage", NodesPage);

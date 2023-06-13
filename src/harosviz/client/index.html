@@ -48,18 +48,17 @@
 
     <template id="vue-dashboard-header">
       <header class="top-bar bg-solid">
-        <nav class="menu">
-          <h1>HAROSviz</h1>
+        <h1>HAROSviz</h1>
+        <!-- <nav class="menu">
           <ul>
             <li
               v-for="link in links"
               class="menu-item bg-soft"
             >
-            <!-- @click.prevent.stop="onMenuButtonClicked(link.route)" -->
               <a :href="link.route">{{ link.text }}</a>
             </li>
           </ul>
-        </nav>
+        </nav> -->
         <nav class="crumbs">
           <ol>
             <li v-for="(crumb, index) in crumbs" class="crumb">
@@ -130,6 +129,22 @@
       <h1>Issues - {{ title }}</h1>
       <div class="panel bg-mute">
         <p>{{ text }}</p>
+        <issue-details
+          v-for="(issue, i) in issues"
+          :key="convertIndexNumber(i)"
+          :message="issue.message"
+          :location="issue.location"
+          :details="issue.details">
+        </issue-details>
+      </div>
+    </template>
+
+
+    <template id="vue-issue-details">
+      <div class="issue">
+        <h3>#{{ issueNumber }} - {{ message }}</h3>
+        <p class="annotation">{{ sourceLocationString }}</p>
+        <p>{{ details }}</p>
       </div>
     </template>
 
