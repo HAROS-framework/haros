@@ -230,9 +230,38 @@
 <!----------------------------------------------------------------------------->
 
     <template id="vue-runtime-page">
-      <h1>Runtime - {{ title }}</h1>
-      <div class="panel bg-mute">
-        <p>{{ text }}</p>
+      <h2>Runtime Model Viewer</h2>
+      <div class="runtime-model-viewer">
+        <div class="panel bg-mute">
+          <h3>Launch Files</h3>
+          <!-- <dropdown-menu
+            ref="packageMenu"
+            label="Package"
+            :options="packageList"
+            @option-selected="onPackageSelected">
+          </dropdown-menu> -->
+          <feature-model-component :model="fm">
+          </feature-model-component>
+        </div>
+        <div class="panel bg-mute">
+          <h3>Computation Graph</h3>
+          <computation-graph-component :model="cg">
+          </computation-graph-component>
+        </div>
+      </div>
+    </template>
+
+
+    <template id="vue-feature-model-component">
+      <div ref="featureModelContainer">
+        <p>This is the Feature Model.</p>
+      </div>
+    </template>
+
+
+    <template id="vue-computation-graph-component">
+      <div ref="computationGraphContainer">
+        <p>This is the Computation Graph.</p>
       </div>
     </template>
 
