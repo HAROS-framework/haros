@@ -156,7 +156,7 @@
       <h1>Source - {{ title }}</h1>
       <div class="panel bg-mute">
         <p>{{ text }}</p>
-        <tree-view></tree-view>
+        <tree-view :tree="tree"></tree-view>
       </div>
     </template>
 
@@ -240,7 +240,7 @@
             :options="packageList"
             @option-selected="onPackageSelected">
           </dropdown-menu> -->
-          <feature-model-component :model="fm">
+          <feature-model-component :model="fm" :tree="tree">
           </feature-model-component>
         </div>
         <div class="panel bg-mute">
@@ -255,6 +255,7 @@
     <template id="vue-feature-model-component">
       <div ref="featureModelContainer">
         <p>This is the Feature Model.</p>
+        <tree-view :tree="tree"></tree-view>
       </div>
     </template>
 

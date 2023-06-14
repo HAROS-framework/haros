@@ -98,31 +98,11 @@ UI.TreeView = {
   components: {
     TreeItem: UI.TreeItem
   },
-  data() {
-    return {
-      tree: {
-        name: 'My Tree',
-        children: [
-          { name: 'hello' },
-          { name: 'wat' },
-          {
-            name: 'child folder',
-            children: [
-              {
-                name: 'child folder',
-                children: [{ name: 'hello' }, { name: 'wat' }]
-              },
-              { name: 'hello' },
-              { name: 'wat' },
-              {
-                name: 'child folder',
-                children: [{ name: 'hello' }, { name: 'wat' }]
-              }
-            ]
-          }
-        ]
-      }
-    };
+  props: {
+    tree: {
+      type: Object,
+      required: true,
+    }
   }
 };
 

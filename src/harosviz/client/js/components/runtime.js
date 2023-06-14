@@ -8,7 +8,8 @@
 const FeatureModelComponent = {
   template: "#vue-feature-model-component",
   props: {
-    model: Object
+    model: Object,
+    tree: Object,
   },
   data() {},
   methods: {}
@@ -44,6 +45,22 @@ const RuntimePage = {
     return {
       fm: null,
       cg: null,
+      tree: {
+        name: 'Feature Model',
+        children: [
+          { name: 'launch file' },
+          {
+            name: 'launch file 2',
+            children: [
+              {
+                name: 'argument 1',
+                children: [{ name: 'value 1' }, { name: 'value 2' }]
+              },
+              { name: 'argument 2' },
+            ]
+          }
+        ]
+      }
     };
   },
   methods: {
