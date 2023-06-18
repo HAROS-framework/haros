@@ -67,17 +67,17 @@ function exampleCG() {
       {
         id: "package_1/node_1",
         group: "package_1",
-        radius: 2,
+        // radius: 2,
       },
       {
         id: "package_1/node_2",
         group: "package_1",
-        radius: 4,
+        // radius: 2,
       },
       {
         id: "package_1/node_3",
         group: "package_1",
-        radius: 2,
+        // radius: 2,
       }
     ],
     links: [
@@ -89,7 +89,7 @@ function exampleCG() {
       {
         source: "package_1/node_1",
         target: "package_1/node_3",
-        value: 10
+        value: 2
       }
     ],
   };
@@ -99,8 +99,12 @@ function exampleCG() {
 
 function buildComputationGraph(data) {
   // Specify the dimensions of the chart.
-  const width = 928;
-  const height = 680;
+  const width = 640;
+  const height = 480;
+  const zoomLevel = 1.0;
+  const zoomFactor = 1.0 / zoomLevel;
+  const zoomWidth = width * zoomFactor;
+  const zoomHeight = height * zoomFactor;
 
   // Specify the color scale.
   const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -119,7 +123,13 @@ function buildComputationGraph(data) {
 
   // Create the SVG container.
   const svg = d3.create("svg")
-      .attr("viewBox", [-width / 2, -height / 2, width, height]);
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .attr("viewBox", [
+        -zoomWidth / 2,   // min X
+        -zoomHeight / 2,  // min Y
+        zoomWidth,        // width
+        zoomHeight        // height
+      ]);
 
   // Add a line for each link, and a circle for each node.
   const link = svg.append("g")
@@ -185,7 +195,7 @@ function buildComputationGraph(data) {
   // When this cell is re-run, stop the previous simulation. (This doesn’t
   // really matter since the target alpha is zero and the simulation will
   // stop naturally, but it’s a good practice.)
-  invalidation.then(() => simulation.stop());
+  // invalidation.then(() => simulation.stop());
 
   return svg.node();
 }
@@ -201,11 +211,10 @@ const ComputationGraphComponent = {
   data() {},
 
   watch: {
-    model(newModel, _oldModel) {
-      const container = d3.select(this.$refs.computationGraphContainer);
-      container.selectAll("*").remove();
-      if (newModel != null) {
-        container.append(this.buildModelElement);
+    model: {
+      flush: "post",
+      handler(_newModel, _oldModel) {
+        this.insertModelElement();
       }
     }
   },
@@ -213,7 +222,19 @@ const ComputationGraphComponent = {
   methods: {
     buildModelElement() {
       return buildComputationGraph(this.model);
+    },
+
+    insertModelElement() {
+      const container = d3.select(this.$refs.computationGraphContainer);
+      container.selectAll("*").remove();
+      if (this.model != null) {
+        container.append(this.buildModelElement);
+      }
     }
+  },
+
+  mounted() {
+    this.insertModelElement();
   }
 };
 
