@@ -71,6 +71,8 @@ const ComputationGraphComponent = {
   data() {
     return {
       zoom: 1.0,
+      svgWidth: 320,
+      svgHeight: 180
     };
   },
 
@@ -80,18 +82,26 @@ const ComputationGraphComponent = {
       handler(_newModel, _oldModel) {
         this.insertModelElement();
       }
+    },
+
+    zoom(newValue, _oldValue) {
+      // Specify the dimensions of the graph.
+      const zoomFactor = 1.0 / newValue;
+      this.svgWidth = 320 * zoomFactor;
+      this.svgHeight = 180 * zoomFactor;
+      const svg = d3.select(this.$refs.computationGraphContainer)
+        .selectAll("svg");
+      svg.attr("viewBox", [
+        -this.svgWidth / 2,     // min X
+        -this.svgHeight / 2,    // min Y
+        this.svgWidth,          // width
+        this.svgHeight          // height
+      ]);
     }
   },
 
   methods: {
     buildModelElement() {
-      // Specify the dimensions of the chart.
-      const width = 320;
-      const height = 180;
-      const zoomFactor = 1.0 / this.zoom;
-      const zoomWidth = width * zoomFactor;
-      const zoomHeight = height * zoomFactor;
-
       // Specify the color scale.
       const color = d3.scaleOrdinal(d3.schemeCategory10);
 
@@ -111,10 +121,10 @@ const ComputationGraphComponent = {
       const svg = d3.create("svg")
         .attr("preserveAspectRatio", "xMidYMid meet")
         .attr("viewBox", [
-          -zoomWidth / 2,   // min X
-          -zoomHeight / 2,  // min Y
-          zoomWidth,        // width
-          zoomHeight        // height
+          -this.svgWidth / 2,     // min X
+          -this.svgHeight / 2,    // min Y
+          this.svgWidth,          // width
+          this.svgHeight          // height
         ]);
 
       // Add a line for each link, and a circle for each node.
@@ -186,6 +196,14 @@ const ComputationGraphComponent = {
       if (this.model != null) {
         container.append(this.buildModelElement);
       }
+    },
+
+    onZoomIn() {
+      this.zoom *= 2.0;
+    },
+
+    onZoomOut() {
+      this.zoom /= 2.0;
     }
   },
 
@@ -243,8 +261,8 @@ const RuntimePage = {
             // radius: 2,
           },
           {
-            id: "package_1/node_3",
-            group: "package_1",
+            id: "package_2/node_1",
+            group: "package_2",
             // radius: 2,
           }
         ],
@@ -256,7 +274,7 @@ const RuntimePage = {
           },
           {
             source: "package_1/node_1",
-            target: "package_1/node_3",
+            target: "package_2/node_1",
             value: 2
           }
         ],

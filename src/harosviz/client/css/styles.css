@@ -259,6 +259,19 @@ header.top-bar {
 }
 
 
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: flex-start;
+  column-gap: 1px;
+}
+
+.action-bar button {
+  border: none;
+}
+
+
 /*******************************************************************************
   Colors
 *******************************************************************************/
@@ -280,6 +293,25 @@ body {
 .bg-mute,
 .bg-dynamic {
   background-color: #f2f2f2;
+}
+
+.action-bar button {
+  background-color: transparent;
+}
+
+.action-bar button:hover,
+.action-bar button:focus {
+  background-color: #e9e9e9;
+}
+
+.action-bar button:focus {
+  outline-color: transparent;
+  outline-style: solid;
+  box-shadow: 0 0 0 1px #9c9c9c;
+}
+
+.action-bar button:active {
+  background-color: #d6d6d6;
 }
 
 * {

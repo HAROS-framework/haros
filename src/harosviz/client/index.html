@@ -250,7 +250,7 @@
         </div>
         <div class="panel bg-mute">
           <h3>Computation Graph</h3>
-          <computation-graph-component :model="cg">
+          <computation-graph-component class="computation-graph" :model="cg">
           </computation-graph-component>
         </div>
       </div>
@@ -266,6 +266,10 @@
 
 
     <template id="vue-computation-graph-component">
+      <div class="action-bar" role="toolbar">
+        <button @click="onZoomOut">-Zoom</button>
+        <button @click="onZoomIn">+Zoom</button>
+      </div>
       <div ref="computationGraphContainer"></div>
     </template>
 
