@@ -50,6 +50,8 @@ const app = createApp({
       title: "",
       text: "",
       currentPage: "",
+      componentWidth: 0,
+      componentHeight: 0,
       crumbs: [],
       ui: {
         state: 1
@@ -81,7 +83,13 @@ const app = createApp({
         });
       }
       this.crumbs.push({ name: route.name });
-    }
+    },
+
+    onWindowResized() {
+      const content = this.$refs.pageComponent;
+      this.componentWidth = content.clientWidth;
+      this.componentHeight = content.clientHeight;
+    },
 
     // refreshSlides() {
     //   const slidesContainer = document.getElementById("slides-container");
@@ -96,6 +104,8 @@ const app = createApp({
     this.text = "Hello, world!";
     window.addEventListener("hashchange", this.onWindowHashChanged);
     this.onWindowHashChanged();
+    window.addEventListener("resize", this.onWindowResized);
+    this.onWindowResized();
   }
 });
 

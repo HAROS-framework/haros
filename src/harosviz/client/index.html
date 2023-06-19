@@ -27,7 +27,12 @@
     <main id="app">
       <dashboard-header :crumbs="crumbs"></dashboard-header>
       <section class="content">
-        <component :is="currentPage" :title="title" :text="text"></component>
+        <component
+          ref="pageComponent"
+          :is="currentPage"
+          :title="title"
+          :text="text">
+        </component>
       </section>
       <p>Use Vue's
         <code>&lt;component :is="currentTab"&gt;</code>

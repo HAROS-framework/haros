@@ -61,46 +61,10 @@ const FeatureModelComponent = {
 //  Computation Graph
 // -----------------------------------------------------------------------------
 
-function exampleCG() {
-  return {
-    nodes: [
-      {
-        id: "package_1/node_1",
-        group: "package_1",
-        // radius: 2,
-      },
-      {
-        id: "package_1/node_2",
-        group: "package_1",
-        // radius: 2,
-      },
-      {
-        id: "package_1/node_3",
-        group: "package_1",
-        // radius: 2,
-      }
-    ],
-    links: [
-      {
-        source: "package_1/node_1",
-        target: "package_1/node_2",
-        value: 2
-      },
-      {
-        source: "package_1/node_1",
-        target: "package_1/node_3",
-        value: 2
-      }
-    ],
-  };
-}
-
-
-
 function buildComputationGraph(data) {
   // Specify the dimensions of the chart.
-  const width = 640;
-  const height = 480;
+  const width = 480;
+  const height = 360;
   const zoomLevel = 1.0;
   const zoomFactor = 1.0 / zoomLevel;
   const zoomWidth = width * zoomFactor;
@@ -157,7 +121,7 @@ function buildComputationGraph(data) {
         .on("start", dragstarted)
         .on("drag", dragged)
         .on("end", dragended));
-  
+
   // Set the position attributes of links and nodes each time the simulation ticks.
   simulation.on("tick", () => {
     link
@@ -253,7 +217,7 @@ const RuntimePage = {
   data() {
     return {
       fm: null,
-      cg: exampleCG(),
+      cg: this.exampleCG(),
       tree: {
         name: 'Feature Model',
         children: [
@@ -273,8 +237,38 @@ const RuntimePage = {
     };
   },
   methods: {
-    onCustomEvent(arg1, arg2) {
-      this.$emit("custom-event", arg1, arg2);
+    exampleCG() {
+      return {
+        nodes: [
+          {
+            id: "package_1/node_1",
+            group: "package_1",
+            // radius: 2,
+          },
+          {
+            id: "package_1/node_2",
+            group: "package_1",
+            // radius: 2,
+          },
+          {
+            id: "package_1/node_3",
+            group: "package_1",
+            // radius: 2,
+          }
+        ],
+        links: [
+          {
+            source: "package_1/node_1",
+            target: "package_1/node_2",
+            value: 2
+          },
+          {
+            source: "package_1/node_1",
+            target: "package_1/node_3",
+            value: 2
+          }
+        ],
+      };
     }
   }
 };
