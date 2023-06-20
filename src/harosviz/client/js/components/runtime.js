@@ -72,7 +72,8 @@ const ComputationGraphComponent = {
     return {
       zoom: 1.0,
       svgWidth: 320,
-      svgHeight: 180
+      svgHeight: 180,
+      selectedNode: null,
     };
   },
 
@@ -102,6 +103,8 @@ const ComputationGraphComponent = {
 
   methods: {
     buildModelElement() {
+      const self = this;
+
       // Specify the color scale.
       const color = d3.scaleOrdinal(d3.schemeCategory10);
 
@@ -142,7 +145,8 @@ const ComputationGraphComponent = {
         .selectAll("circle")
         .data(nodes)
         .join("circle")
-        .attr("r", 5)
+        .attr("r", 10)
+        .attr("stroke-dasharray", d => d.condition == null ? "" : "2 1")
         .attr("fill", d => color(d.group));
 
       node.append("title")
@@ -153,6 +157,22 @@ const ComputationGraphComponent = {
             .on("start", dragstarted)
             .on("drag", dragged)
             .on("end", dragended));
+
+      node.on("click", (e, d) => {
+        e.stopPropagation();
+        const i = d.index;
+        const prev = self.selectedNode;
+        if (prev != null) {
+          const k = prev.index;
+          d3.select(node.nodes()[k]).attr("fill", d => color(d.group));
+          if (k === i) {
+            self.onNodeSelected(null);
+            return;
+          }
+        }
+        self.onNodeSelected(d);
+        d3.select(e.target).attr("fill", "#c9c9c9");
+      });
 
       // Set the position attributes of links and nodes each time the simulation ticks.
       simulation.on("tick", () => {
@@ -204,6 +224,10 @@ const ComputationGraphComponent = {
 
     onZoomOut() {
       this.zoom /= 2.0;
+    },
+
+    onNodeSelected(data) {
+      this.selectedNode = data;
     }
   },
 
@@ -253,17 +277,17 @@ const RuntimePage = {
           {
             id: "package_1/node_1",
             group: "package_1",
-            // radius: 2,
+            condition: null,
           },
           {
             id: "package_1/node_2",
             group: "package_1",
-            // radius: 2,
+            condition: {name: "z"}
           },
           {
             id: "package_2/node_1",
             group: "package_2",
-            // radius: 2,
+            condition: ["and", {name: "x"}, {name: "y"}]
           }
         ],
         links: [

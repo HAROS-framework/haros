@@ -270,6 +270,13 @@
         <button @click="onZoomOut">-Zoom</button>
         <button @click="onZoomIn">+Zoom</button>
       </div>
+      <p>
+        Selected node:
+        {{ !!selectedNode ? selectedNode.id : "none" }}
+        <span v-if="!!selectedNode" class="annotation">
+          {{ !selectedNode.condition ? "always on" : "conditional" }}
+        </span>
+      </p>
       <div ref="computationGraphContainer"></div>
     </template>
 
