@@ -158,9 +158,8 @@ const ComputationGraphComponent = {
             .on("drag", dragged)
             .on("end", dragended));
 
-      node.on("click", (e, d) => {
-        e.stopPropagation();
-        const i = d.index;
+      function nodeClickHandler(el, datum) {
+        const i = datum.index;
         const prev = self.selectedNode;
         if (prev != null) {
           const k = prev.index;
@@ -170,8 +169,27 @@ const ComputationGraphComponent = {
             return;
           }
         }
-        self.onNodeSelected(d);
-        d3.select(e.target).attr("fill", "#c9c9c9");
+        self.onNodeSelected(datum);
+        d3.select(el).attr("fill", "#c9c9c9");
+      }
+
+      node.on("click", (e, d) => {
+        e.stopPropagation();
+        // Drag started event is fired before click, so the click handler
+        // has already run when we get here. This only has to stop
+        // propagation, to prevent the root SVG click handler from firing
+        // also, which would nullify the node selection.
+        // nodeClickHandler(e.target, d);
+      });
+
+      svg.on("click", e => {
+        e.stopPropagation();
+        const prev = self.selectedNode;
+        if (prev != null) {
+          const k = prev.index;
+          d3.select(node.nodes()[k]).attr("fill", d => color(d.group));
+          self.onNodeSelected(null);
+        }
       });
 
       // Set the position attributes of links and nodes each time the simulation ticks.
@@ -191,6 +209,9 @@ const ComputationGraphComponent = {
         if (!event.active) simulation.alphaTarget(0.3).restart();
         event.subject.fx = event.subject.x;
         event.subject.fy = event.subject.y;
+        const e = event.sourceEvent;
+        e.stopPropagation();
+        nodeClickHandler(e.target, event.subject);
       }
 
       // Update the subject (dragged node) position during drag.
