@@ -296,6 +296,7 @@ body {
 }
 
 .action-bar button {
+  color: inherit;
   background-color: transparent;
 }
 
@@ -341,12 +342,12 @@ h1, h2, h3, h4 {
   }
 
   .bg-soft,
-  .bg-dynamic:hover {
+  .bg-dynamic {
     background-color: #222222;
   }
 
   .bg-mute,
-  .bg-dynamic {
+  .bg-dynamic:hover {
     background-color: #282828;
   }
 
@@ -360,6 +361,21 @@ h1, h2, h3, h4 {
 
   h1, h2, h3, h4, .emph {
     color: #ffffff;
+  }
+
+  .action-bar button:hover,
+  .action-bar button:focus {
+    background-color: #3c3c3c;
+  }
+
+  .action-bar button:focus {
+    outline-color: transparent;
+    outline-style: solid;
+    box-shadow: 0 0 0 1px #c9c9c9;
+  }
+
+  .action-bar button:active {
+    background-color: #333333;
   }
 }
 
