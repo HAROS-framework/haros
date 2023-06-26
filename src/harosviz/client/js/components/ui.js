@@ -77,6 +77,7 @@ UI.TreeItem = {
         this.isOpen = !this.isOpen
       }
     },
+
     changeType() {
       if (!this.isFolder) {
         this.model.children = []
@@ -84,11 +85,12 @@ UI.TreeItem = {
         this.isOpen = true
       }
     },
-    addChild() {
-      this.model.children.push({
-        name: 'new stuff'
-      })
-    }
+
+    // addChild() {
+    //   this.model.children.push({
+    //     name: 'new stuff'
+    //   })
+    // }
   }
 };
 

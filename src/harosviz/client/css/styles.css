@@ -194,9 +194,12 @@ header.top-bar {
 .tree-view .item {
   cursor: pointer;
   line-height: 1.5;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .tree-view .item .annotation {
+  cursor: default;
   display: block;
   margin: 0;
   padding-left: .5em;

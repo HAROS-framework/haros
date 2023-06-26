@@ -163,11 +163,10 @@ const ComputationGraphComponent = {
         const prev = self.selectedNode;
         if (prev != null) {
           const k = prev.index;
-          d3.select(node.nodes()[k]).attr("fill", d => color(d.group));
           if (k === i) {
-            self.onNodeSelected(null);
             return;
           }
+          d3.select(node.nodes()[k]).attr("fill", d => color(d.group));
         }
         self.onNodeSelected(datum);
         d3.select(el).attr("fill", "#c9c9c9");
