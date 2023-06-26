@@ -177,11 +177,15 @@
       <li class="item">
         <div
           class="emph"
-          :class="{ bold: isFolder }"
-          @click="toggle"
-          @dblclick="changeType">
-          <span v-if="isFolder">[{{ isOpen ? '-' : '+' }}]</span>
-          {{ model.name }}
+          :class="{ bold: isFolder }">
+          <span v-if="isFolder"
+            @click.stop="toggle">
+            <!-- @dblclick="changeType" -->
+            [{{ isOpen ? '-' : '+' }}]
+          </span>
+          <span @click.stop="onSelect">
+            {{ model.name }}
+          </span>
           <span class="annotation">Issues: 654</span>
         </div>
         <ul v-show="isOpen" v-if="isFolder" class="tree-view">
@@ -277,6 +281,37 @@
         </span>
       </p>
       <div ref="computationGraphContainer"></div>
+    </template>
+
+
+    <template id="vue-feature-tree-view">
+      <ul class="tree-view">
+        <tree-item :model="tree"></tree-item>
+      </ul>
+    </template>
+
+    <template id="vue-feature-tree-item">
+      <li class="item">
+        <div
+          class="emph"
+          :class="{ bold: isFolder }">
+          <span v-if="isFolder"
+            @click.stop="toggle">
+            <!-- @dblclick="changeType" -->
+            [{{ isOpen ? '-' : '+' }}]
+          </span>
+          <span @click.stop="onSelect">
+            {{ model.name }}
+          </span>
+          <span class="annotation">Issues: 654</span>
+        </div>
+        <ul v-show="isOpen" v-if="isFolder" class="tree-view">
+          <tree-item
+            v-for="model in model.children"
+            :model="model">
+          </tree-item>
+        </ul>
+      </li>
     </template>
 
 

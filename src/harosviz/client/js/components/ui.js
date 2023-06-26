@@ -78,13 +78,13 @@ UI.TreeItem = {
       }
     },
 
-    changeType() {
-      if (!this.isFolder) {
-        this.model.children = []
-        this.addChild()
-        this.isOpen = true
-      }
-    },
+    // changeType() {
+    //   if (!this.isFolder) {
+    //     this.model.children = []
+    //     this.addChild()
+    //     this.isOpen = true
+    //   }
+    // },
 
     // addChild() {
     //   this.model.children.push({
