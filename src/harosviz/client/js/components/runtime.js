@@ -46,8 +46,69 @@ grey to color, and subscribe links do the opposite.
 //  Feature Model
 // -----------------------------------------------------------------------------
 
+UI.FeatureTreeItem = {
+  name: 'TreeItem', // necessary for self-reference
+  template: "#vue-feature-tree-item",
+
+  props: {
+    model: Object
+  },
+
+  data() {
+    return {
+      isOpen: false
+    }
+  },
+
+  computed: {
+    hasChildren() {
+      return this.model.children && this.model.children.length
+    }
+  },
+
+  methods: {
+    toggle() {
+      if (this.hasChildren) {
+        this.isOpen = !this.isOpen
+      }
+    },
+
+    // changeType() {
+    //   if (!this.hasChildren) {
+    //     this.model.children = []
+    //     this.addChild()
+    //     this.isOpen = true
+    //   }
+    // },
+
+    // addChild() {
+    //   this.model.children.push({
+    //     name: 'new stuff'
+    //   })
+    // }
+  }
+};
+
+
+UI.FeatureTreeView = {
+  template: "#vue-feature-tree-view",
+  components: {
+    FeatureTreeItem: UI.FeatureTreeItem
+  },
+  props: {
+    tree: {
+      type: Object,
+      required: true,
+    }
+  }
+};
+
+
 const FeatureModelComponent = {
   template: "#vue-feature-model-component",
+  components: {
+    FeatureTreeView: UI.FeatureTreeView
+  },
   props: {
     model: Object,
     tree: Object,
