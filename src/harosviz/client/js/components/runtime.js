@@ -42,6 +42,10 @@ grey to color, and subscribe links do the opposite.
 
 */
 
+const ICON_TRUE = "\u2713";
+const ICON_FALSE = "\u2716"; // "\u00d7";
+const ICON_MAYBE = "";
+
 // -----------------------------------------------------------------------------
 //  Feature Model
 // -----------------------------------------------------------------------------
@@ -51,7 +55,8 @@ UI.FeatureTreeItem = {
   template: "#vue-feature-tree-item",
 
   props: {
-    model: Object
+    model: Object,
+    depth: Number
   },
 
   data() {
@@ -63,6 +68,14 @@ UI.FeatureTreeItem = {
   computed: {
     hasChildren() {
       return this.model.children && this.model.children.length
+    },
+
+    selectionStatus() {
+      return this.model.selected
+        ? ICON_TRUE
+        : (this.model.selected === false
+        ? ICON_FALSE
+        : ICON_MAYBE);
     }
   },
 
@@ -73,13 +86,29 @@ UI.FeatureTreeItem = {
       }
     },
 
-    // changeType() {
-    //   if (!this.hasChildren) {
-    //     this.model.children = []
-    //     this.addChild()
-    //     this.isOpen = true
-    //   }
-    // },
+    onSelect() {
+      // skip the root
+      if (this.depth === 0) { return; }
+      /*switch (this.model.type) {
+        case ROSLAUNCH_TYPE:
+          return this.onSelectRosLaunch();
+          case ARG_TYPE:
+            return this.onSelectArg();
+            case VALUE_TYPE:
+              return this.onSelectValue();
+              default:
+                return;
+              }
+      */
+      if (this.model.selected) {
+        this.model.selected = false;
+      } else if (this.model.selected === false) {
+        this.model.selected = null;
+      } else {
+        console.log("Selected feature:", this.model.name);
+        this.model.selected = true;
+      }
+    },
 
     // addChild() {
     //   this.model.children.push({

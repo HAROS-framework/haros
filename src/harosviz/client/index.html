@@ -270,7 +270,9 @@
 
     <template id="vue-feature-tree-view">
       <ul class="tree-view">
-        <feature-tree-item :model="tree"></feature-tree-item>
+        <feature-tree-item :model="tree"
+          :depth="0">
+        </feature-tree-item>
       </ul>
     </template>
 
@@ -287,12 +289,14 @@
           <span @click.stop="onSelect">
             {{ model.name }}
           </span>
+          &nbsp;
           <span>{{ selectionStatus }}</span>
         </div>
         <ul v-show="!isCollapsed" v-if="hasChildren" class="tree-view">
           <feature-tree-item
             v-for="model in model.children"
-            :model="model">
+            :model="model"
+            :depth="depth + 1">
           </feature-tree-item>
         </ul>
       </li>
