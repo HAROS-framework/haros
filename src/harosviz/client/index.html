@@ -282,14 +282,14 @@
           <span v-if="hasChildren"
             @click.stop="toggle">
             <!-- @dblclick="changeType" -->
-            [{{ isOpen ? '-' : '+' }}]
+            [{{ isCollapsed ? '+' : '-' }}]
           </span>
           <span @click.stop="onSelect">
             {{ model.name }}
           </span>
           <span>{{ selectionStatus }}</span>
         </div>
-        <ul v-show="isOpen" v-if="hasChildren" class="tree-view">
+        <ul v-show="!isCollapsed" v-if="hasChildren" class="tree-view">
           <feature-tree-item
             v-for="model in model.children"
             :model="model">

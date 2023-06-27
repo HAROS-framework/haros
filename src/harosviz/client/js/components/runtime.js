@@ -56,7 +56,7 @@ UI.FeatureTreeItem = {
 
   data() {
     return {
-      isOpen: false
+      isCollapsed: false
     }
   },
 
@@ -69,7 +69,7 @@ UI.FeatureTreeItem = {
   methods: {
     toggle() {
       if (this.hasChildren) {
-        this.isOpen = !this.isOpen
+        this.isCollapsed = !this.isCollapsed
       }
     },
 
