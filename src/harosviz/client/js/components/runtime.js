@@ -46,6 +46,10 @@ const ICON_TRUE = "\u2713";
 const ICON_FALSE = "\u2716"; // "\u00d7";
 const ICON_MAYBE = "";
 
+const FEATURE_TYPE_ROSLAUNCH = 1;
+const FEATURE_TYPE_ARGUMENT = 2;
+const FEATURE_TYPE_VALUE = 3;
+
 // -----------------------------------------------------------------------------
 //  Feature Model
 // -----------------------------------------------------------------------------
@@ -108,6 +112,34 @@ UI.FeatureTreeItem = {
         console.log("Selected feature:", this.model.name);
         this.model.selected = true;
       }
+    },
+
+    onSelectRosLaunch() {
+      if (this.model.implicit) {
+        this.model.implicit = false;
+      } else {
+        this.model.implicit = false;
+        if (this.model.selected) {
+          this.model.selected = false;
+        } else if (this.model.selected === false) {
+          this.model.selected = null;
+        } else {
+          this.model.selected = true;
+        }
+        this.propagateRosLaunchSelection();
+      }
+    },
+
+    onSelectArgument() {
+
+    },
+
+    onSelectValue() {
+
+    },
+
+    propagateRosLaunchSelection() {
+
     },
 
     // addChild() {
@@ -353,34 +385,59 @@ const ComputationGraphComponent = {
 
 const RuntimePage = {
   template: "#vue-runtime-page",
+
   components: {
     FeatureModelComponent,
     ComputationGraphComponent,
   },
+
   props: {},
+
   data() {
     return {
       fm: null,
       cg: this.exampleCG(),
-      tree: {
+      tree: this.exampleFeatureTree(),
+    };
+  },
+
+  methods: {
+    exampleFeatureTree() {
+      return {
         name: 'Feature Model',
         children: [
-          { name: 'launch file' },
+          {
+            name: 'launch file',
+            type: FEATURE_TYPE_ROSLAUNCH,
+          },
           {
             name: 'launch file 2',
+            type: FEATURE_TYPE_ROSLAUNCH,
             children: [
               {
                 name: 'argument 1',
-                children: [{ name: 'value 1' }, { name: 'value 2' }]
+                type: FEATURE_TYPE_ARGUMENT,
+                children: [
+                  {
+                    name: 'value 1',
+                    type: FEATURE_TYPE_VALUE,
+                  },
+                  {
+                    name: 'value 2',
+                    type: FEATURE_TYPE_VALUE,
+                  }
+                ]
               },
-              { name: 'argument 2' },
+              {
+                name: 'argument 2',
+                type: FEATURE_TYPE_ARGUMENT,
+              },
             ]
           }
         ]
-      }
-    };
-  },
-  methods: {
+      };
+    },
+
     exampleCG() {
       return {
         nodes: [
