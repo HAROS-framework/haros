@@ -131,7 +131,30 @@ UI.FeatureTreeItem = {
     },
 
     onSelectArgument() {
-
+      if (this.model.implicit) {
+        this.model.implicit = false;
+        if (this.model.selected) {
+          this.propagateArgSelectionDown();
+        }
+      } else {
+        if (this.model.selected === false) {
+          // console.assert(this.parent.selected === false);
+          return;
+        }
+        if (this.model.selected) {
+          // console.assert(this.parent.selected);
+          this.model.selected = null;
+          this.model.implicit = false;
+        } else {
+          // console.assert(this.parent.selected !== false);
+          // propagate up to the parent and down to the siblings
+          this.propagateArgSelectionUp();
+          // change this selection
+          this.model.selected = true;
+          this.model.implicit = false;
+        }
+        this.propagateArgSelectionDown();
+      }
     },
 
     onSelectValue() {
@@ -139,6 +162,14 @@ UI.FeatureTreeItem = {
     },
 
     propagateRosLaunchSelection() {
+
+    },
+
+    propagateArgSelectionUp() {
+      this.$emit("argumentSelected", this.model.id);
+    },
+
+    propagateArgSelectionDown() {
 
     },
 
@@ -404,31 +435,38 @@ const RuntimePage = {
   methods: {
     exampleFeatureTree() {
       return {
+        id: "root",
         name: 'Feature Model',
         children: [
           {
+            id: "f.1",
             name: 'launch file',
             type: FEATURE_TYPE_ROSLAUNCH,
           },
           {
+            id: "f.2",
             name: 'launch file 2',
             type: FEATURE_TYPE_ROSLAUNCH,
             children: [
               {
+                id: "a.2.1",
                 name: 'argument 1',
                 type: FEATURE_TYPE_ARGUMENT,
                 children: [
                   {
+                    id: "v.2.1.1",
                     name: 'value 1',
                     type: FEATURE_TYPE_VALUE,
                   },
                   {
+                    id: "v.2.1.2",
                     name: 'value 2',
                     type: FEATURE_TYPE_VALUE,
                   }
                 ]
               },
               {
+                id: "a.2.2",
                 name: 'argument 2',
                 type: FEATURE_TYPE_ARGUMENT,
               },
