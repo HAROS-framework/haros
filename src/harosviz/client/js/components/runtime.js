@@ -60,12 +60,27 @@ UI.FeatureTreeItem = {
 
   props: {
     model: Object,
-    depth: Number
+    depth: Number,
+    isParentSelected: Boolean,
   },
 
   data() {
     return {
       isCollapsed: false
+    }
+  },
+
+  watch: {
+    isParentSelected(newValue, oldValue) {
+      if (newValue === false) {
+        // deselect this
+        this.model.selected = false;
+      } else if (oldValue === false) {
+        // liberate selection
+        if (this.model.selected === false) {
+          this.model.selected = null;
+        }
+      }
     }
   },
 
@@ -126,7 +141,7 @@ UI.FeatureTreeItem = {
         } else {
           this.model.selected = true;
         }
-        this.propagateRosLaunchSelection();
+        this.propagateRosLaunchSelectionDown();
       }
     },
 
@@ -161,16 +176,54 @@ UI.FeatureTreeItem = {
 
     },
 
-    propagateRosLaunchSelection() {
-
+    propagateRosLaunchSelectionDown(exclude) {
+      console.assert(this.model.type === FEATURE_TYPE_ROSLAUNCH);
+      // const siblings = source.parent.children || source.parent._children;
+      // for (const d of siblings) {
+      //   // update all, including self
+      //   this.checkFileConflicts(d);
+      // }
+      const children = this.model.children;
+      if (!children) { return; }
+      const v = this.model.selected;
+      if (v) {
+        for (const child of children) {
+          // skip those that are already selected
+          if (child.selected) { continue; }
+          // propagate null`to deselect all values
+          child.selected = null;
+          child.implicit = true;
+          const ok = this.propagateArgSelection(d);
+          // propagating null always works
+          console.assert(ok);
+        }
+      } else {
+        for (const d of children) {
+          // propagate `null` to deselect all values
+          d.ui.selected = null;
+          d.data.selected = null;
+          const ok = this.propagateArgSelection(d);
+          // propagating `null` always works
+          console.assert(ok);
+          d.ui.selected = v;
+          d.data.selected = v;
+        }
+      }
     },
 
     propagateArgSelectionUp() {
-      this.$emit("argumentSelected", this.model.id);
+      this.$emit("argument-selected", this.model.id);
     },
 
     propagateArgSelectionDown() {
 
+    },
+
+    onChildArgumentSelected(id) {
+      console.assert(this.model.type === FEATURE_TYPE_ROSLAUNCH, `type: ${this.model.type}`);
+      this.model.selected = true;
+      this.model.implicit = false;
+      this.propagateRosLaunchSelectionDown([id]);
     },
 
     // addChild() {

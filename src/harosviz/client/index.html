@@ -296,7 +296,9 @@
           <feature-tree-item
             v-for="child in model.children"
             :model="child"
-            :depth="depth + 1">
+            :depth="depth + 1"
+            :is-parent-selected="model.selected"
+            @argument-selected="onChildArgumentSelected">
             <!-- :parent="model" -->
           </feature-tree-item>
         </ul>
