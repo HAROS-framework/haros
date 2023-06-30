@@ -108,28 +108,26 @@ UI.FeatureTreeItem = {
     onSelect() {
       // skip the root
       if (this.depth === 0) { return; }
-      /*switch (this.model.type) {
+      switch (this.model.type) {
         case ROSLAUNCH_TYPE:
           return this.onSelectRosLaunch();
-          case ARG_TYPE:
-            return this.onSelectArg();
-            case VALUE_TYPE:
-              return this.onSelectValue();
-              default:
-                return;
-              }
-      */
-      if (this.model.selected) {
-        this.model.selected = false;
-      } else if (this.model.selected === false) {
-        this.model.selected = null;
-      } else {
-        console.log("Selected feature:", this.model.name);
-        this.model.selected = true;
+        case ARG_TYPE:
+          return this.onSelectArg();
+        case VALUE_TYPE:
+          return this.onSelectValue();
       }
+      // if (this.model.selected) {
+      //   this.model.selected = false;
+      // } else if (this.model.selected === false) {
+      //   this.model.selected = null;
+      // } else {
+      //   console.log("Selected feature:", this.model.name);
+      //   this.model.selected = true;
+      // }
     },
 
     onSelectRosLaunch() {
+      console.assert(this.model.type === ROSLAUNCH_TYPE);
       if (this.model.implicit) {
         this.model.implicit = false;
       } else {
@@ -141,7 +139,9 @@ UI.FeatureTreeItem = {
         } else {
           this.model.selected = true;
         }
-        this.propagateRosLaunchSelectionDown();
+        // propagate roslaunch selection to siblings (conflict handling)
+        this.$emit("roslaunch-selected", this.model.id);
+        // this.propagateRosLaunchSelectionDown();
       }
     },
 
@@ -178,11 +178,6 @@ UI.FeatureTreeItem = {
 
     propagateRosLaunchSelectionDown(exclude) {
       console.assert(this.model.type === FEATURE_TYPE_ROSLAUNCH);
-      // const siblings = source.parent.children || source.parent._children;
-      // for (const d of siblings) {
-      //   // update all, including self
-      //   this.checkFileConflicts(d);
-      // }
       const children = this.model.children;
       if (!children) { return; }
       const v = this.model.selected;
@@ -217,6 +212,14 @@ UI.FeatureTreeItem = {
 
     propagateArgSelectionDown() {
 
+    },
+
+    onChildRosLaunchSelected(id) {
+      // const files = this.model.children;
+      // for (const file of files) {
+      //   // update all, including self
+      //   this.checkFileConflicts(file);
+      // }
     },
 
     onChildArgumentSelected(id) {
