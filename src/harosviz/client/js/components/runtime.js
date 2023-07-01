@@ -72,6 +72,12 @@ UI.FeatureTreeItem = {
 
   watch: {
     isParentSelected(newValue, oldValue) {
+      switch (this.model.type) {
+        case ARG_TYPE:
+          return this.propagateRosLaunchSelectionDown(newValue, oldValue);
+        case VALUE_TYPE:
+          return this.propagateArgSelectionDown(newValue, oldValue);
+      }
       if (newValue === false) {
         // deselect this
         this.model.selected = false;
@@ -127,7 +133,7 @@ UI.FeatureTreeItem = {
     },
 
     onSelectRosLaunch() {
-      console.assert(this.model.type === ROSLAUNCH_TYPE);
+      console.assert(this.model.type === FEATURE_TYPE_ROSLAUNCH);
       if (this.model.implicit) {
         this.model.implicit = false;
       } else {
@@ -140,8 +146,8 @@ UI.FeatureTreeItem = {
           this.model.selected = true;
         }
         // propagate roslaunch selection to siblings (conflict handling)
-        this.$emit("roslaunch-selected", this.model.id);
-        // this.propagateRosLaunchSelectionDown();
+        this.$emit("roslaunch-selected", this.model.id, this.model.selected);
+        // propagation downwards is handled with property watchers
       }
     },
 
@@ -177,7 +183,6 @@ UI.FeatureTreeItem = {
     },
 
     propagateRosLaunchSelectionDown(exclude) {
-      console.assert(this.model.type === FEATURE_TYPE_ROSLAUNCH);
       const children = this.model.children;
       if (!children) { return; }
       const v = this.model.selected;
