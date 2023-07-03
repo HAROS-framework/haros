@@ -271,7 +271,8 @@
     <template id="vue-feature-tree-view">
       <ul class="tree-view">
         <feature-tree-item :model="tree"
-          :depth="0">
+          :depth="0"
+          @roslaunch-selected="onRosLaunchSelected">
         </feature-tree-item>
       </ul>
     </template>

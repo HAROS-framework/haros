@@ -74,7 +74,7 @@ UI.FeatureTreeItem = {
     isParentSelected(newValue, oldValue) {
       switch (this.model.type) {
         case ARG_TYPE:
-          return this.propagateRosLaunchSelectionDown(newValue, oldValue);
+          return this.onRosLaunchParentSelected(newValue, oldValue);
         case VALUE_TYPE:
           return this.propagateArgSelectionDown(newValue, oldValue);
       }
@@ -182,41 +182,31 @@ UI.FeatureTreeItem = {
 
     },
 
-    propagateRosLaunchSelectionDown(exclude) {
-      const children = this.model.children;
-      if (!children) { return; }
-      const v = this.model.selected;
-      if (v) {
-        for (const child of children) {
-          // skip those that are already selected
-          if (child.selected) { continue; }
-          // propagate null`to deselect all values
-          child.selected = null;
-          child.implicit = true;
-          const ok = this.propagateArgSelection(d);
-          // propagating null always works
-          console.assert(ok);
-        }
-      } else {
-        for (const d of children) {
-          // propagate `null` to deselect all values
-          d.ui.selected = null;
-          d.data.selected = null;
-          const ok = this.propagateArgSelection(d);
-          // propagating `null` always works
-          console.assert(ok);
-          d.ui.selected = v;
-          d.data.selected = v;
-        }
-      }
-    },
-
     propagateArgSelectionUp() {
       this.$emit("argument-selected", this.model.id);
     },
 
     propagateArgSelectionDown() {
 
+    },
+
+    // This is called on each argument feature when the selection value
+    // of the parent launch file changes.
+    // This is the launch file selection propagating down the tree.
+    onRosLaunchParentSelected(isSelected, _wasSelected) {
+      if (isSelected) {
+        // skip args that are already selected
+        if (this.model.selected) { return; }
+        // propagate null`to deselect all values
+        // changing this selection should propagate down to values
+        this.model.selected = null;
+        this.model.implicit = true;
+      } else {
+        // propagate `null` to deselect all values
+        // changing this selection should propagate down to values
+        this.model.selected = isSelected;
+        this.model.implicit = true;
+      }
     },
 
     onChildRosLaunchSelected(id) {
@@ -245,13 +235,43 @@ UI.FeatureTreeItem = {
 
 UI.FeatureTreeView = {
   template: "#vue-feature-tree-view",
+
   components: {
     FeatureTreeItem: UI.FeatureTreeItem
   },
+
   props: {
     tree: {
       type: Object,
       required: true,
+    }
+  },
+
+  methods: {
+    onRosLaunchSelected(id, selected) {
+      return;  // FIXME
+      for (const child of this.tree.children) {
+        // update all, including self
+        child.issues = [];
+        if (!child.selected) { return; }
+        for (const lf of this.tree.children) {
+          if (lf === child) { continue; }
+          if (lf.selected === false) { continue; }
+          // `lf.selected` is either `true` or `null` at this point
+          for (const [filename, isCompatible] of Object.entries(lf.conflicts)) {
+            if (isCompatible === true) { continue; }
+            if (filename === child.name) {
+              if (lf.selected && isCompatible === false) {
+                child.issues.push(`This launch file has conflicts with ${lf.name}.`);
+              } else {
+                child.issues.push(`This launch file may conflict with ${lf.name}.`);
+              }
+              // if we already found the file, we can break the loop
+              break;
+            }
+          }
+        }
+      }
     }
   }
 };
