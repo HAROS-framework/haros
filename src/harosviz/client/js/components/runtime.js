@@ -76,7 +76,7 @@ UI.FeatureTreeItem = {
         case ARG_TYPE:
           return this.onRosLaunchParentSelected(newValue, oldValue);
         case VALUE_TYPE:
-          return this.propagateArgSelectionDown(newValue, oldValue);
+          return this.onArgumentParentSelected(newValue, oldValue);
       }
       if (newValue === false) {
         // deselect this
@@ -152,41 +152,33 @@ UI.FeatureTreeItem = {
     },
 
     onSelectArgument() {
+      console.assert(this.model.type === FEATURE_TYPE_ARGUMENT);
       if (this.model.implicit) {
         this.model.implicit = false;
-        if (this.model.selected) {
-          this.propagateArgSelectionDown();
-        }
+        // if (this.model.selected) {
+        //   this.propagateArgSelectionDown();
+        // }
       } else {
         if (this.model.selected === false) {
-          // console.assert(this.parent.selected === false);
+          console.assert(this.isParentSelected === false);
           return;
         }
         if (this.model.selected) {
-          // console.assert(this.parent.selected);
+          console.assert(this.isParentSelected);
           this.model.selected = null;
           this.model.implicit = false;
         } else {
-          // console.assert(this.parent.selected !== false);
+          console.assert(this.isParentSelected !== false);
           // propagate up to the parent and down to the siblings
-          this.propagateArgSelectionUp();
+          this.$emit("argument-selected", this.model.id);
           // change this selection
           this.model.selected = true;
           this.model.implicit = false;
         }
-        this.propagateArgSelectionDown();
       }
     },
 
     onSelectValue() {
-
-    },
-
-    propagateArgSelectionUp() {
-      this.$emit("argument-selected", this.model.id);
-    },
-
-    propagateArgSelectionDown() {
 
     },
 
@@ -209,19 +201,43 @@ UI.FeatureTreeItem = {
       }
     },
 
-    onChildRosLaunchSelected(id) {
-      // const files = this.model.children;
-      // for (const file of files) {
-      //   // update all, including self
-      //   this.checkFileConflicts(file);
-      // }
-    },
-
     onChildArgumentSelected(id) {
       console.assert(this.model.type === FEATURE_TYPE_ROSLAUNCH, `type: ${this.model.type}`);
       this.model.selected = true;
       this.model.implicit = false;
       this.propagateRosLaunchSelectionDown([id]);
+    },
+
+    // This is called on each value feature when the selection value
+    // of the parent argument changes.
+    // This is the argument selection propagating down the tree.
+    onArgumentParentSelected(isSelected, _wasSelected) {
+      if (isSelected) {
+        // if selecting the arg, set all values to false
+        // except for the one that was already selected (if any)
+        if (!this.model.selected) {
+          this.model.selected = false;
+          this.model.implicit = true;
+        }
+        // check (by index) if there was a previously selected value
+        // otherwise, just select the first value
+        let i = source.data.defaultValue || 0;
+        const previous = source.ui.previousValue;
+        if (previous != null) {
+          for (let j = 0; j < children.length; ++j) {
+            if (children[j].id === previous) {
+              i = j;
+              break;
+            }
+          }
+        }
+        const ok = this.setValueSelected(children[i], false);
+        if (ok) { source.ui.previousValue = children[i].id; }
+        return ok;
+      } else {
+        this.model.selected = isSelected;
+        this.model.implicit = true;
+      }
     },
 
     // addChild() {
@@ -270,6 +286,23 @@ UI.FeatureTreeView = {
               break;
             }
           }
+        }
+      }
+    }
+  },
+
+  mounted() {
+    // run some integrity checks on the data structure
+    for (const file of this.tree.children) {
+      file.selected = null;
+      file.implicit = false;
+      for (const arg of file.children) {
+        arg.selected = null;
+        arg.implicit = false;
+        const defaultValue = arg.defaultValue;
+        for (const value of arg.children) {
+          value.selected = value.id === defaultValue;
+          value.implicit = false;
         }
       }
     }
