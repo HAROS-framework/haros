@@ -299,7 +299,9 @@
             :model="child"
             :depth="depth + 1"
             :is-parent-selected="model.selected"
-            @argument-selected="onChildArgumentSelected">
+            :is-default-choice="previousValue === child.id"
+            @argument-selected="onChildArgumentSelected"
+            @value-selected="onChildValueSelected">
             <!-- :parent="model" -->
           </feature-tree-item>
         </ul>

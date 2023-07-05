@@ -62,30 +62,30 @@ UI.FeatureTreeItem = {
     model: Object,
     depth: Number,
     isParentSelected: Boolean,
+    isDefaultChoice: Boolean,
   },
 
   data() {
+    let previousValue = null;
+    if (this.model.defaultValue != null) {
+      previousValue = this.model.defaultValue;
+    } else if (this.model.children.length > 0) {
+      previousValue = this.model.children[0].id;
+    }
     return {
-      isCollapsed: false
+      isCollapsed: false,
+      selected: null,
+      previousValue: previousValue,
     }
   },
 
   watch: {
     isParentSelected(newValue, oldValue) {
       switch (this.model.type) {
-        case ARG_TYPE:
+        case FEATURE_TYPE_ARGUMENT:
           return this.onRosLaunchParentSelected(newValue, oldValue);
-        case VALUE_TYPE:
+        case FEATURE_TYPE_VALUE:
           return this.onArgumentParentSelected(newValue, oldValue);
-      }
-      if (newValue === false) {
-        // deselect this
-        this.model.selected = false;
-      } else if (oldValue === false) {
-        // liberate selection
-        if (this.model.selected === false) {
-          this.model.selected = null;
-        }
       }
     }
   },
@@ -115,11 +115,11 @@ UI.FeatureTreeItem = {
       // skip the root
       if (this.depth === 0) { return; }
       switch (this.model.type) {
-        case ROSLAUNCH_TYPE:
+        case FEATURE_TYPE_ROSLAUNCH:
           return this.onSelectRosLaunch();
-        case ARG_TYPE:
-          return this.onSelectArg();
-        case VALUE_TYPE:
+        case FEATURE_TYPE_ARGUMENT:
+          return this.onSelectArgument();
+        case FEATURE_TYPE_VALUE:
           return this.onSelectValue();
       }
       // if (this.model.selected) {
@@ -134,16 +134,18 @@ UI.FeatureTreeItem = {
 
     onSelectRosLaunch() {
       console.assert(this.model.type === FEATURE_TYPE_ROSLAUNCH);
-      if (this.model.implicit) {
-        this.model.implicit = false;
+      if (this.selected !== this.model.selected) {
+        this.selected = this.model.selected;
       } else {
-        this.model.implicit = false;
         if (this.model.selected) {
           this.model.selected = false;
+          this.selected = false;
         } else if (this.model.selected === false) {
           this.model.selected = null;
+          this.selected = null;
         } else {
           this.model.selected = true;
+          this.selected = true;
         }
         // propagate roslaunch selection to siblings (conflict handling)
         this.$emit("roslaunch-selected", this.model.id, this.model.selected);
@@ -169,7 +171,7 @@ UI.FeatureTreeItem = {
           this.model.implicit = false;
         } else {
           console.assert(this.isParentSelected !== false);
-          // propagate up to the parent and down to the siblings
+          // propagate up to the parent
           this.$emit("argument-selected", this.model.id);
           // change this selection
           this.model.selected = true;
@@ -179,7 +181,26 @@ UI.FeatureTreeItem = {
     },
 
     onSelectValue() {
-
+      console.assert(this.model.type === FEATURE_TYPE_VALUE);
+      if (this.isParentSelected === false) { return; }
+      const selected = this.model.selected;
+      if (selected) { console.assert(this.isParentSelected); }
+      const cancelled = !this.setValueSelected(selected);
+      if (cancelled) {
+        // can only cancel a prompt for unresolved values
+        console.assert(!this.model.resolved);
+        if (selected) {
+          // must have provided a value before
+          console.assert(this.value != null);
+        }
+        // do nothing; retain the previous selection
+        return;
+      }
+      // propagate up to the parent
+      this.$emit("value-selected", this.model.id, true);
+      // ensure that this value is selected (only UI should be necessary)
+      this.selected = true;
+      this.model.selected = true;
     },
 
     // This is called on each argument feature when the selection value
@@ -189,40 +210,76 @@ UI.FeatureTreeItem = {
       if (isSelected) {
         // skip args that are already selected
         if (this.model.selected) { return; }
-        // propagate null`to deselect all values
+        // propagate `null` to deselect all values
         // changing this selection should propagate down to values
         this.model.selected = null;
-        this.model.implicit = true;
+        this.selected = null;
       } else {
         // propagate `null` to deselect all values
         // changing this selection should propagate down to values
         this.model.selected = isSelected;
-        this.model.implicit = true;
+        this.selected = isSelected;
       }
     },
 
     onChildArgumentSelected(id) {
       console.assert(this.model.type === FEATURE_TYPE_ROSLAUNCH, `type: ${this.model.type}`);
       this.model.selected = true;
-      this.model.implicit = false;
-      this.propagateRosLaunchSelectionDown([id]);
+      // propagate roslaunch selection to siblings (conflict handling)
+      this.$emit("roslaunch-selected", this.model.id, this.model.selected);
+      // propagation downwards is handled with property watchers
     },
 
     // This is called on each value feature when the selection value
     // of the parent argument changes.
     // This is the argument selection propagating down the tree.
     onArgumentParentSelected(isSelected, _wasSelected) {
+      console.assert(this.model.type === FEATURE_TYPE_VALUE);
       if (isSelected) {
         // if selecting the arg, set all values to false
-        // except for the one that was already selected (if any)
-        if (!this.model.selected) {
-          this.model.selected = false;
-          this.model.implicit = true;
+        // but check if there was a previously selected value
+        this.model.selected = this.isDefaultChoice;
+      } else {
+        this.model.selected = isSelected;
+        this.selected = isSelected;
+      }
+    },
+
+    onChildValueSelected(id, isSelected) {
+      console.assert(isSelected);
+      // propagate up to the parent
+      this.$emit("argument-selected", this.model.id, true);
+      // change this selection
+      this.model.selected = true;
+      this.selected = true;
+      // the above might not trigger a change (if already true)
+      // ensure that child values are reset
+      for (const value of this.model.children) {
+        if (value.id !== id) {
+          value.selected = false;
+        }
+      }
+      // ensure that this value is selected again
+      this.previousValue = id;
+      // propagation downwards is handled with property watchers
+    },
+
+    propagateArgSelection() {
+      console.assert(this.model.type === FEATURE_TYPE_ARGUMENT);
+      const children = this.model.children;
+      console.assert(children != null);
+      console.assert(children.length > 0);
+      const v = this.model.selected;
+      if (v) {
+        // if selecting the arg, set all values to false
+        for (const d of children) {
+          d.selected = false;
+          d.implicit = true;
         }
         // check (by index) if there was a previously selected value
         // otherwise, just select the first value
-        let i = source.data.defaultValue || 0;
-        const previous = source.ui.previousValue;
+        let i = this.model.defaultValue || 0;
+        const previous = this.previousValue;
         if (previous != null) {
           for (let j = 0; j < children.length; ++j) {
             if (children[j].id === previous) {
@@ -235,9 +292,31 @@ UI.FeatureTreeItem = {
         if (ok) { source.ui.previousValue = children[i].id; }
         return ok;
       } else {
-        this.model.selected = isSelected;
-        this.model.implicit = true;
+        for (const d of children) {
+          d.data.selected = v;
+          d.ui.selected = v;
+        }
       }
+      return true;
+    },
+
+    setValueSelected(ask) {
+      if (!this.model.resolved) {
+        if (ask || this.value == null) {
+          const v = window.prompt(`Value for [${this.model.name}]:`, "true");
+          if (!v) { return false; }
+          this.value = v;
+          this.model.value = v;
+          this.model.name = `$(${v})`;
+          this.selected = true;
+        } else {
+          this.selected = null;
+        }
+      } else {
+        this.selected = true;
+      }
+      this.model.selected = true;
+      return true;
     },
 
     // addChild() {
@@ -296,13 +375,16 @@ UI.FeatureTreeView = {
     for (const file of this.tree.children) {
       file.selected = null;
       file.implicit = false;
+      file.children = file.children || [];
       for (const arg of file.children) {
         arg.selected = null;
         arg.implicit = false;
+        arg.children = arg.children || [];
         const defaultValue = arg.defaultValue;
         for (const value of arg.children) {
           value.selected = value.id === defaultValue;
           value.implicit = false;
+          value.children = [];
         }
       }
     }
@@ -556,6 +638,7 @@ const RuntimePage = {
             id: "f.1",
             name: 'launch file',
             type: FEATURE_TYPE_ROSLAUNCH,
+            children: [],
           },
           {
             id: "f.2",
@@ -571,11 +654,15 @@ const RuntimePage = {
                     id: "v.2.1.1",
                     name: 'value 1',
                     type: FEATURE_TYPE_VALUE,
+                    resolved: true,
+                    children: [],
                   },
                   {
                     id: "v.2.1.2",
-                    name: 'value 2',
+                    name: '$(?)',
                     type: FEATURE_TYPE_VALUE,
+                    resolved: false,
+                    children: [],
                   }
                 ]
               },
@@ -583,6 +670,7 @@ const RuntimePage = {
                 id: "a.2.2",
                 name: 'argument 2',
                 type: FEATURE_TYPE_ARGUMENT,
+                children: [],
               },
             ]
           }
