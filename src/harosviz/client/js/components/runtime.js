@@ -96,9 +96,16 @@ UI.FeatureTreeItem = {
     },
 
     selectionStatus() {
-      return this.model.selected
+      if (this.selected != this.model.selected) {
+        return this.model.selected
+          ? `(${ICON_TRUE})`
+          : (this.model.selected === false
+          ? `(${ICON_FALSE})`
+          : ICON_MAYBE);
+      }
+      return this.selected
         ? ICON_TRUE
-        : (this.model.selected === false
+        : (this.selected === false
         ? ICON_FALSE
         : ICON_MAYBE);
     }
@@ -155,11 +162,8 @@ UI.FeatureTreeItem = {
 
     onSelectArgument() {
       console.assert(this.model.type === FEATURE_TYPE_ARGUMENT);
-      if (this.model.implicit) {
-        this.model.implicit = false;
-        // if (this.model.selected) {
-        //   this.propagateArgSelectionDown();
-        // }
+      if (this.selected !== this.model.selected) {
+        this.selected = this.model.selected;
       } else {
         if (this.model.selected === false) {
           console.assert(this.isParentSelected === false);
@@ -168,14 +172,14 @@ UI.FeatureTreeItem = {
         if (this.model.selected) {
           console.assert(this.isParentSelected);
           this.model.selected = null;
-          this.model.implicit = false;
+          this.selected = null;
         } else {
           console.assert(this.isParentSelected !== false);
           // propagate up to the parent
           this.$emit("argument-selected", this.model.id);
           // change this selection
           this.model.selected = true;
-          this.model.implicit = false;
+          this.selected = true;
         }
       }
     },
@@ -274,7 +278,6 @@ UI.FeatureTreeItem = {
         // if selecting the arg, set all values to false
         for (const d of children) {
           d.selected = false;
-          d.implicit = true;
         }
         // check (by index) if there was a previously selected value
         // otherwise, just select the first value
@@ -294,7 +297,6 @@ UI.FeatureTreeItem = {
       } else {
         for (const d of children) {
           d.data.selected = v;
-          d.ui.selected = v;
         }
       }
       return true;
