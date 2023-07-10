@@ -248,7 +248,9 @@
             :options="packageList"
             @option-selected="onPackageSelected">
           </dropdown-menu> -->
-          <feature-model-component :model="fm" :tree="tree">
+          <feature-model-component :model="tree"
+            :syncing="syncing"
+            @compute-cg="sendComputeCGRequest">
           </feature-model-component>
         </div>
         <div class="panel bg-mute">
@@ -264,19 +266,19 @@
       <div ref="featureModelContainer">
         <div class="action-bar" role="toolbar">
           <button
-            :disabled="disableCompute"
+            :disabled="syncing"
             @click="onComputeCG">
             Compute
           </button>
         </div>
-        <feature-tree-view :tree="tree"></feature-tree-view>
+        <feature-tree-view :model="model"></feature-tree-view>
       </div>
     </template>
 
 
     <template id="vue-feature-tree-view">
       <ul class="tree-view">
-        <feature-tree-item :model="tree"
+        <feature-tree-item :model="model"
           :depth="0"
           @roslaunch-selected="onRosLaunchSelected">
         </feature-tree-item>

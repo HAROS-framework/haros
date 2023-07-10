@@ -338,7 +338,7 @@ UI.FeatureTreeView = {
   },
 
   props: {
-    tree: {
+    model: {
       type: Object,
       required: true,
     }
@@ -347,11 +347,11 @@ UI.FeatureTreeView = {
   methods: {
     onRosLaunchSelected(id, selected) {
       return;  // FIXME
-      for (const child of this.tree.children) {
+      for (const child of this.model.children) {
         // update all, including self
         child.issues = [];
         if (!child.selected) { return; }
-        for (const lf of this.tree.children) {
+        for (const lf of this.model.children) {
           if (lf === child) { continue; }
           if (lf.selected === false) { continue; }
           // `lf.selected` is either `true` or `null` at this point
@@ -374,7 +374,7 @@ UI.FeatureTreeView = {
 
   mounted() {
     // run some integrity checks on the data structure
-    for (const file of this.tree.children) {
+    for (const file of this.model.children) {
       file.selected = null;
       file.implicit = false;
       file.children = file.children || [];
@@ -403,18 +403,14 @@ const FeatureModelComponent = {
 
   props: {
     model: Object,
-    tree: Object,
+    syncing: Boolean,
   },
 
-  data() {
-    return {
-      disableCompute: false,
-    };
-  },
+  data() {},
 
   methods: {
     onComputeCG() {
-      this.disableCompute = true;
+      this.$emit("compute-cg");
     }
   }
 };
@@ -639,10 +635,71 @@ const RuntimePage = {
       fm: null,
       cg: this.exampleCG(),
       tree: this.exampleFeatureTree(),
+      syncing: false,
     };
   },
 
   methods: {
+    sendComputeCGRequest() {
+      if (this.syncing) { return; }
+      console.log("request cg data");
+      this.syncing = true;
+      const $this = this;
+      fetch("/cg/calculate", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(this.cgRequestData())
+      })
+      .then(response => response.json())
+      .then(data => {
+        $this.cg = data;
+        $this.syncing = false;
+      })
+      .catch(error => console.warn(error));
+    },
+
+    cgRequestData() {
+      const fm = this.tree;
+      const data = {
+        project: fm.id,
+        launch: [],
+        discard: []
+      };
+      // iterate over launch files
+      for (const d1 of fm.children) {
+        if (d1.selected == null) { continue; }
+        if (d1.selected) {
+          const args = {};
+          const launch = {
+            name: d1.name,
+            args: args
+          };
+          data.launch.push(launch);
+          // iterate over args
+          for (const d2 of d1.children) {
+            let value = null;
+            if (d2.selected) {
+              // iterate over values
+              for (const d3 of d2.children) {
+                if (d3.selected) {
+                  value = d3.resolved ? d3.name : d3.value;
+                  console.assert(value != null);
+                  break;
+                }
+                console.assert(d3.selected === false);
+              }
+            } else {
+              console.assert(d2.selected == null);
+            }
+            args[d2.name] = value;
+          }
+        } else {
+          data.discard.push(d1.name);
+        }
+      }
+      return data;
+    },
+
     exampleFeatureTree() {
       return {
         id: "root",
