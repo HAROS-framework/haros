@@ -262,7 +262,13 @@
 
     <template id="vue-feature-model-component">
       <div ref="featureModelContainer">
-        <p>This is the Feature Model.</p>
+        <div class="action-bar" role="toolbar">
+          <button
+            :disabled="disableCompute"
+            @click="onComputeCG">
+            Compute
+          </button>
+        </div>
         <feature-tree-view :tree="tree"></feature-tree-view>
       </div>
     </template>

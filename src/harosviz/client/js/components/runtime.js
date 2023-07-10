@@ -396,15 +396,27 @@ UI.FeatureTreeView = {
 
 const FeatureModelComponent = {
   template: "#vue-feature-model-component",
+
   components: {
     FeatureTreeView: UI.FeatureTreeView
   },
+
   props: {
     model: Object,
     tree: Object,
   },
-  data() {},
-  methods: {}
+
+  data() {
+    return {
+      disableCompute: false,
+    };
+  },
+
+  methods: {
+    onComputeCG() {
+      this.disableCompute = true;
+    }
+  }
 };
 
 

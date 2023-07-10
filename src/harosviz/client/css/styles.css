@@ -303,6 +303,14 @@ body {
   background-color: transparent;
 }
 
+.action-bar button:disabled,
+.action-bar button:hover:disabled,
+.action-bar button:focus:disabled,
+.action-bar button:active:disabled {
+  color: inherit;
+  background-color: transparent;
+}
+
 .action-bar button:hover,
 .action-bar button:focus {
   background-color: #e9e9e9;
