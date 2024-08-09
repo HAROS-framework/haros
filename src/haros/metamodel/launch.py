@@ -390,7 +390,7 @@ LaunchNodeParameterList = Result[List[LaunchNodeParameterItem]]
 
 
 def unknown_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
-    return Result(source, type(list))
+    return Result(type(list), source)
 
 
 def empty_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
@@ -453,7 +453,7 @@ class LaunchNode(LaunchEntity):
 
 @frozen
 class LaunchDescription:
-    entities: TupleResult[LaunchEntity]
+    entities: Result[Tuple[Result[LaunchEntity]]]
 
 
 ###############################################################################

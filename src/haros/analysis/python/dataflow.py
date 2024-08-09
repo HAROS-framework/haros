@@ -11,6 +11,7 @@ import enum
 
 from attrs import define, evolve, field, frozen
 
+from haros.errors import DataFlowError
 from haros.metamodel.common import (
     BUILTIN_FUNCTION_TYPE,
     CLASS_TYPE,
@@ -30,6 +31,7 @@ from haros.metamodel.common import (
     UnresolvedString,
     V,
     VariantData,
+    noop,
 )
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
 from haros.parsing.python.ast import (
@@ -221,7 +223,7 @@ class TypeMask(enum.Flag):
 
     @classmethod
     def from_value(cls, value: Any) -> 'TypeMask':
-        if raw_value is None:
+        if value is None:
             return cls.NONE
         if isinstance(value, bool):
             return cls.BOOL
@@ -400,21 +402,21 @@ class PythonTypeToken(TypeToken[V]):
 
 
 TYPE_TOKEN_ANYTHING: Final[PythonTypeToken[Any]] = PythonTypeToken(object)
-TYPE_TOKEN_BOOL: Final[PythonTypeToken[bool]] = PythonTypeToken.of_bool()
-TYPE_TOKEN_INT: Final[PythonTypeToken[int]] = PythonTypeToken.of_int()
-TYPE_TOKEN_FLOAT: Final[PythonTypeToken[float]] = PythonTypeToken.of_float()
-TYPE_TOKEN_COMPLEX: Final[PythonTypeToken[complex]] = PythonTypeToken.of_complex()
-TYPE_TOKEN_STRING: Final[PythonTypeToken[str]] = PythonTypeToken.of_string()
-TYPE_TOKEN_ITERABLE: Final[PythonTypeToken[Iterable]] = PythonTypeToken.of_iterable()
-TYPE_TOKEN_LIST: Final[PythonTypeToken[list]] = PythonTypeToken.of_list()
-TYPE_TOKEN_TUPLE: Final[PythonTypeToken[tuple]] = PythonTypeToken.of_tuple()
-TYPE_TOKEN_SET: Final[PythonTypeToken[set]] = PythonTypeToken.of_set()
-TYPE_TOKEN_MAPPING: Final[PythonTypeToken[Mapping]] = PythonTypeToken.of_mapping()
-TYPE_TOKEN_DICT: Final[PythonTypeToken[dict]] = PythonTypeToken.of_dict()
-TYPE_TOKEN_BUILTIN: Final[PythonTypeToken[BUILTIN_FUNCTION_TYPE]] = PythonTypeToken.of_builtin_function()
-TYPE_TOKEN_FUNCTION: Final[PythonTypeToken[DEF_FUNCTION_TYPE]] = PythonTypeToken.of_def_function()
-TYPE_TOKEN_CLASS: Final[PythonTypeToken[CLASS_TYPE]] = PythonTypeToken.of_class()
-TYPE_TOKEN_EXCEPTION: Final[PythonTypeToken[Exception]] = PythonTypeToken.of_exception()
+TYPE_TOKEN_BOOL: Final[PythonTypeToken[bool]] = PythonTypeToken(bool)
+TYPE_TOKEN_INT: Final[PythonTypeToken[int]] = PythonTypeToken(int)
+TYPE_TOKEN_FLOAT: Final[PythonTypeToken[float]] = PythonTypeToken(float)
+TYPE_TOKEN_COMPLEX: Final[PythonTypeToken[complex]] = PythonTypeToken(complex)
+TYPE_TOKEN_STRING: Final[PythonTypeToken[str]] = PythonTypeToken(str)
+TYPE_TOKEN_ITERABLE: Final[PythonTypeToken[Iterable]] = PythonTypeToken(IterableType)
+TYPE_TOKEN_LIST: Final[PythonTypeToken[list]] = PythonTypeToken(list)
+TYPE_TOKEN_TUPLE: Final[PythonTypeToken[tuple]] = PythonTypeToken(tuple)
+TYPE_TOKEN_SET: Final[PythonTypeToken[set]] = PythonTypeToken(set)
+TYPE_TOKEN_MAPPING: Final[PythonTypeToken[Mapping]] = PythonTypeToken(MappingType)
+TYPE_TOKEN_DICT: Final[PythonTypeToken[dict]] = PythonTypeToken(dict)
+TYPE_TOKEN_BUILTIN: Final[PythonTypeToken[Type[min]]] = PythonTypeToken.of(min)
+TYPE_TOKEN_FUNCTION: Final[PythonTypeToken[Type[noop]]] = PythonTypeToken.of(noop)
+TYPE_TOKEN_CLASS: Final[PythonTypeToken[CLASS_TYPE]] = PythonTypeToken(type)
+TYPE_TOKEN_EXCEPTION: Final[PythonTypeToken[Exception]] = PythonTypeToken(Exception)
 TYPE_TOKEN_OBJECT: Final[PythonTypeToken[Any]] = PythonTypeToken(object, mask=TypeMask.OBJECT)
 
 
