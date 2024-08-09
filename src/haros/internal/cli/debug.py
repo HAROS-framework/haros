@@ -19,6 +19,7 @@ from haros.analysis.launch import get_launch_description
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.settings import Settings
 from haros.metamodel.builder.launch import model_from_description
+from haros.metamodel.launch import LaunchFileFeature, LaunchModel, NodeFeature
 from haros.metamodel.ros import FileModel, NodeModel, PackageModel, ProjectModel
 
 from haros.analysis.python.graph import from_ast
@@ -49,7 +50,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     try:
         path = args['path'].resolve(strict=True)
     except FileNotFoundError:
-        logger.error(f'debug: the file "{path}" does not exist')
+        logger.error(f'debug: the file "{args["path"]}" does not exist')
         return 1
     if not path.is_file():
         logger.error(f'debug: not a file: "{path}"')
@@ -73,19 +74,19 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         parse_launch_description=get_launch_description,
     )
 
-    # launch_description = get_launch_description(path)
-    # model = model_from_description(path, launch_description, system)
-    # print('Launch Model:')
-    # print_launch_model(model)
+    launch_description = get_launch_description(path)
+    model = model_from_description(path, launch_description, system)
+    print('Launch Model:')
+    print_launch_model(model)
 
-    code = path.read_text(encoding='utf-8')
-    ast = parse(code)
-    symbols = {
-        'mymodule.MY_CONSTANT': 44,
-        'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
-    }
-    builder = from_ast(ast, symbols=symbols)
-    # graph, data = builder.subgraph_builder('main').build()
+    # code = path.read_text(encoding='utf-8')
+    # ast = parse(code)
+    # symbols = {
+    #     'mymodule.MY_CONSTANT': 44,
+    #     'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
+    # }
+    # builder = from_ast(ast, symbols=symbols)
+    # # graph, data = builder.subgraph_builder('main').build()
 
     # builder = get_launch_description(path)
     # graph, data = builder.build()
@@ -94,7 +95,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     # print('Variables:')
     # print_variables(data.variables)
     #
-    print_subgraphs(builder)
+    # print_subgraphs(builder)
 
     # qualified_name = 'launch.LaunchDescription'
     # print(f'Find calls to: `{qualified_name}`')
@@ -131,15 +132,19 @@ def debugging_model() -> ProjectModel:
     return project
 
 
-def print_launch_model(model):
-    print('LaunchFileFeature:', model.name)
-    for node in model.nodes:
+def print_launch_model(model: LaunchFileFeature):
+    print('LaunchFileFeature:', model.id)
+    for node in model.nodes.values():
         print_ros_node(node)
     if not model.nodes:
         print('<there are no nodes>')
+    for fid in model.inclusions:
+        print('Include:', fid)
+    if not model.inclusions:
+        print('<there are no inclusions>')
 
 
-def print_ros_node(node):
+def print_ros_node(node: NodeFeature):
     print('ROS node:', node.rosname)
     print('  node:', node.node)
     print('  output:', node.output)

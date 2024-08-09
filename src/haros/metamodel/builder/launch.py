@@ -10,11 +10,12 @@ from typing import Dict, Final, Iterable, List, Mapping, Optional, Set, Tuple
 import logging
 from pathlib import Path
 
-from attrs import define, field, frozen
+from attrs import define, evolve, field, frozen
 
+from haros.analysis.python.dataflow import unknown_value
 from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
-from haros.metamodel.common import Resolved, Result, TrackedCode
+from haros.metamodel.common import Resolved, Result, TrackedCode, UnresolvedMapping
 from haros.metamodel.launch import (
     ArgumentFeature,
     FeatureId,
@@ -280,13 +281,17 @@ class LaunchFeatureModelBuilder:
                 return
             path: Path = Path(file.value)
             # FIXME pass arguments down
-            model = model_from_description(path, description, self.system)
-            self.nodes.extend(model.nodes.values())
+            model: LaunchFileFeature = model_from_description(path, description, self.system)
+            # must change the node ids, otherwise there will be a clash
+            for node in model.nodes.values():
+                uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
+                self.nodes.append(evolve(node, id=uid))
         else:
             logger.warning(f'unknown launch file inclusion')
             return  # FIXME
 
     def launch_node(self, node: LaunchNode):
+        logger.debug(f'launch_node({node!r})')
         package: Result = self.scope.resolve(node.package)
         executable: Result = self.scope.resolve(node.executable)
         # node_id = uid_node(str(package), str(executable))
