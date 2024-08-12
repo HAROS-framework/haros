@@ -327,6 +327,13 @@ class TypeMask(enum.Flag):
 
 
 @frozen
+class FunctionWrapper:
+    function: str
+    module: str
+    call: Callable
+
+
+@frozen
 class PythonTypeToken(TypeToken[V]):
     mask: TypeMask = TypeMask.ANY
 
@@ -568,13 +575,6 @@ def solved_from(raw_value: V, source: Optional[TrackedCode] = None) -> Resolved[
         return Resolved(token, source, raw_value)
     token = PythonTypeToken.of(raw_value, mask=TypeMask.OBJECT)
     return Resolved(token, source, raw_value)
-
-
-@frozen
-class FunctionWrapper:
-    function: str
-    module: str
-    call: Callable
 
 
 def wrap_normal_function(function: Callable) -> Callable:
