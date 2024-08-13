@@ -16,6 +16,7 @@ import logging
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_description
+from haros.analysis.launch.python import _prepare_builtin_symbols
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.settings import Settings
 from haros.metamodel.builder.launch import model_from_description
@@ -74,19 +75,21 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         parse_launch_description=get_launch_description,
     )
 
-    launch_description = get_launch_description(path)
-    model = model_from_description(path, launch_description, system)
-    print('Launch Model:')
-    print_launch_model(model)
+    # launch_description = get_launch_description(path)
+    # model = model_from_description(path, launch_description, system)
+    # print('Launch Model:')
+    # print_launch_model(model)
 
-    # code = path.read_text(encoding='utf-8')
-    # ast = parse(code)
-    # symbols = {
-    #     'mymodule.MY_CONSTANT': 44,
-    #     'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
-    # }
-    # builder = from_ast(ast, symbols=symbols)
-    # # graph, data = builder.subgraph_builder('main').build()
+    code = path.read_text(encoding='utf-8')
+    ast = parse(code)
+    symbols: Dict[str, Any] = _prepare_builtin_symbols()
+    symbols.update({
+        '__file__': str(path),
+        'mymodule.MY_CONSTANT': 44,
+        'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
+    })
+    builder = from_ast(ast, symbols=symbols)
+    # graph, data = builder.subgraph_builder('main').build()
 
     # builder = get_launch_description(path)
     # graph, data = builder.build()
@@ -95,7 +98,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     # print('Variables:')
     # print_variables(data.variables)
     #
-    # print_subgraphs(builder)
+    print_subgraphs(builder)
 
     # qualified_name = 'launch.LaunchDescription'
     # print(f'Find calls to: `{qualified_name}`')
@@ -192,7 +195,9 @@ def print_subgraphs(builder):
         print(f'>> {name}')
 
         subbuilder = builder.subgraph_builder(name)
+        print('test 1')
         subgraph, data = subbuilder.build()
+        print('test 2')
         print(subgraph.pretty())
 
         print(f'\nReachable:')

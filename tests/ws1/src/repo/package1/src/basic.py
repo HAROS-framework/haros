@@ -5,7 +5,8 @@
 # Imports
 ###############################################################################
 
-from mymodule import MY_CONSTANT, my_division
+import os
+from mymodule import MY_CONSTANT, my_division # type: ignore
 
 ###############################################################################
 # Tests
@@ -13,6 +14,7 @@ from mymodule import MY_CONSTANT, my_division
 
 
 THE_X = 42
+FILE_NAME = 'number'
 
 
 def basic_math():
@@ -58,3 +60,19 @@ def two_function_calls():
 
 def imported_function_call():
     return my_division(42 * 2, 2)
+
+
+def file_io():
+    param_file_name = FILE_NAME + '.txt'
+    number_file = os.path.join(
+        __file__,
+        '..',
+        '..',
+        'param',
+        param_file_name)
+    with open(number_file, 'r') as infp:
+        number = infp.read()
+        # number = int(infp.read())
+    return number
+    # params = {'number': number}
+    # return params['number']

@@ -16,6 +16,7 @@ from haros.analysis.python.dataflow import (
     DataScope,
     FunctionWrapper,
     PythonTypeToken,
+    TypeMask,
 )
 from haros.analysis.python.logic import to_condition
 from haros.errors import AnalysisError
@@ -36,6 +37,7 @@ from haros.parsing.python.ast import (
     PythonTryStatement,
     PythonTupleLiteral,
 )
+from haros.parsing.python.ast.statements import PythonWithStatement
 
 ###############################################################################
 # Constants
@@ -285,8 +287,14 @@ class ProgramGraphBuilder:
                 pass  # TODO
 
             elif statement.is_with:
+                assert isinstance(statement, PythonWithStatement)
                 # create and move to a new node
                 self.cfg.jump_to_new_node()
+                # define new variables from context managers
+                for context in statement.managers:
+                    if context.alias:
+                        value = self.data.value_from_expression(context.manager)
+                        self.data.set(context.alias, value, ast=statement)
                 # recursively process the statements
                 for stmt in statement.body:
                     self.add_statement(stmt)
@@ -496,7 +504,9 @@ def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = Non
     if symbols:
         for key, value in symbols.items():
             name, import_base = _split_names(key)
-            if isinstance(value, SimpleNamespace):
+            if name == '__file__' and not import_base:
+                builder.data.set_raw_value(name, value)
+            elif isinstance(value, SimpleNamespace):
                 # full module
                 if not name:
                     assert bool(import_base), f'expected non-empty import base: {key}'
@@ -527,8 +537,16 @@ def _split_names(full_name: str) -> Tuple[str, str]:
         prefix = '.'
         initial = full_name[1:]
     parts = initial.rsplit('.', maxsplit=1)
-    name = parts[-1] if len(parts) > 1 else ''
-    module = f'{prefix}{parts[0]}'
+    if len(parts) > 1:
+        name = parts[-1]
+        module = f'{prefix}{parts[0]}'
+    elif initial.startswith('__') and initial.endswith('__'):
+        # magic variables
+        name = initial
+        module = ''
+    else:
+        name = ''
+        module = f'{prefix}{initial}'
     return name, module
 
 

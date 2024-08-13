@@ -577,6 +577,32 @@ def solved_from(raw_value: V, source: Optional[TrackedCode] = None) -> Resolved[
     return Resolved(token, source, raw_value)
 
 
+@frozen
+class LazyFileHandle:
+    path: Result
+
+    def read(self) -> VariantData[Result]:
+        if self.path.is_resolved:
+            resolved_path: Resolved[str] = self.path
+            with open(resolved_path.value, 'r') as f:
+                text = f.read()
+                return VariantData.with_base_value(text)
+        return unknown_value(type=TYPE_TOKEN_STRING)
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(path={self.path})'
+
+
+def _builtin_open(name: Result[str], mode: Optional[Result[str]] = None) -> VariantData[Result[LazyFileHandle]]:
+    if not name.is_resolved:
+        return unknown_value()
+    if mode is None:
+        mode = solved_from('r')
+    if not mode.is_resolved or mode.value != 'r':
+        return unknown_value()
+    return VariantData.with_base_value(solved(TYPE_TOKEN_OBJECT, LazyFileHandle(name)))
+
+
 def wrap_normal_function(function: Callable) -> Callable:
     # The purpose of this is just to make return values uniform.
     def wrapper(*args, **kwargs) -> VariantData[Result]:
@@ -606,6 +632,8 @@ def wrap_normal_function(function: Callable) -> Callable:
 
 
 def builtin_function_wrapper(name: str, function: Callable) -> FunctionWrapper:
+    if name == 'open':
+        return FunctionWrapper(name, '__builtins__', _builtin_open)
     return library_function_wrapper(name, '__builtins__', function)
 
 
@@ -659,7 +687,8 @@ class Definition:
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
         token = PythonTypeToken(type(raw_value), mask=TypeMask.CLASS)
-        value = Resolved(token, None, raw_value)
+        wrapper = builtin_function_wrapper(name, raw_value)
+        value = Resolved(token, None, wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
@@ -812,7 +841,11 @@ class DataScope:
                 else:
                     self.set_unknown(name, ast=statement, import_base=import_base)
 
-    def add_function_def(self, statement: PythonFunctionDefStatement, fun: FunctionWrapper = None):
+    def add_function_def(
+        self,
+        statement: PythonFunctionDefStatement,
+        fun: Optional[FunctionWrapper] = None,
+    ):
         assert statement.is_statement and statement.is_function_def
         if fun is None:
             self.set_unknown(statement.name, type=TypeMask.FUNCTION, ast=statement)
@@ -1061,7 +1094,7 @@ class DataScope:
         value = self.value_from_expression(call.function)
         if not value.is_resolved:
             return unknown_value(source=tracked(call))
-        if not value.type.mask.can_be_function:
+        if not value.type.mask.can_be_function and not value.type.mask.can_be_class:
             return unknown_value(source=tracked(call))
         function = value.value
         assert isinstance(function, FunctionWrapper), f'not function wrapper: {repr(function)}'
