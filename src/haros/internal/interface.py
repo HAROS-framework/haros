@@ -108,7 +108,7 @@ class AnalysisSystemInterface:
             safe_dir = self._safe_root()
             if safe_dir and not filepath.startswith(safe_dir):
                 raise ValueError(filepath)
-        return Path(filepath).read_text()
+        return Path(filepath).read_text(encoding=encoding)
 
     def read_yaml_file(self, filepath: PathType, encoding: Optional[str] = None) -> Dict[Any, Any]:
         return safe_load(self.read_text_file(filepath, encoding=encoding))
