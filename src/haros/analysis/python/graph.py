@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, NewType, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, NewType, Optional, Tuple
 
 from types import SimpleNamespace
 
@@ -13,28 +13,24 @@ from attrs import define, field, frozen
 
 from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph, ControlNodeId
 from haros.analysis.python.dataflow import (
+    BUILTINS_MODULE,
     DataScope,
     FunctionWrapper,
     PythonTypeToken,
-    TypeMask,
 )
 from haros.analysis.python.logic import to_condition
 from haros.errors import AnalysisError
 from haros.metamodel.common import Result, VariantData
-from haros.metamodel.logic import FALSE, TRUE, LogicValue
+from haros.metamodel.logic import TRUE, LogicValue
 from haros.parsing.python.ast import (
     PythonAst,
     PythonBinaryOperator,
-    PythonBooleanLiteral,
     PythonExceptClause,
     PythonExpression,
-    PythonForStatement,
     PythonFunctionCall,
     PythonFunctionDefStatement,
     PythonModule,
     PythonStatement,
-    PythonWhileStatement,
-    PythonTryStatement,
     PythonTupleLiteral,
 )
 from haros.parsing.python.ast.statements import PythonWithStatement
@@ -248,11 +244,11 @@ class ProgramGraphBuilder:
                 self.data.add_assignment(statement)
 
             elif statement.is_break:  # FIXME
-                self.loop_context.break_from(this_node)
+                # FIXME # self.loop_context.break_from(this_node)
                 self.cfg.start_dead_code()
 
             elif statement.is_continue:  # FIXME
-                self.loop_context.continue_from(this_node)
+                # FIXME # self.loop_context.continue_from(this_node)
                 self.cfg.start_dead_code()
 
             elif statement.is_raise:  # FIXME
@@ -364,7 +360,8 @@ class ProgramGraphBuilder:
         return cfg, self.data
         # return ProgramGraph(g.name)
 
-    def subgraph_builder(self, name: str):  # FIXME make this an external function to operate on 'built' graphs
+    def subgraph_builder(self, name: str) -> 'ProgramGraphBuilder':
+        # FIXME make this an external function to operate on 'built' graphs
         try:
             statement = self.nested_graphs[name]
         except KeyError:
@@ -373,8 +370,11 @@ class ProgramGraphBuilder:
         asynchronous = False if not statement.is_function_def else statement.asynchronous
         builder = ProgramGraphBuilder.from_scratch(name=name, asynchronous=asynchronous)
         builder.data = self.data.duplicate()
-        for stmt in statement.body:
-            builder.add_statement(stmt)
+        try:
+            for stmt in statement.body:
+                builder.add_statement(stmt)
+        except Exception as e:
+            print('BOOM:', e)
         builder.clean_up()
         return builder
 
@@ -504,18 +504,20 @@ def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = Non
     if symbols:
         for key, value in symbols.items():
             name, import_base = _split_names(key)
-            if name == '__file__' and not import_base:
-                builder.data.set_raw_value(name, value)
+            assert bool(import_base), f'expected non-empty import base: {key}'
+            if import_base == BUILTINS_MODULE:
+                if callable(value):
+                    builder.data.set_function(name, value)
+                else:
+                    builder.data.set_raw_value(name, value)
             elif isinstance(value, SimpleNamespace):
                 # full module
                 if not name:
-                    assert bool(import_base), f'expected non-empty import base: {key}'
                     name = import_base
                     import_base = ''
                 builder.add_imported_symbol(name, import_base, value)
             else:
                 assert bool(name), f'expected non-empty name: {key}'
-                assert bool(import_base), f'expected non-empty import base: {key}'
                 if callable(value):
                     builder.add_imported_function(name, import_base, value)
                 else:

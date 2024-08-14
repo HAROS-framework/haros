@@ -8,6 +8,7 @@
 from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, Optional, Set, Tuple, Type
 
 import enum
+import logging
 
 from attrs import define, evolve, field, frozen
 
@@ -54,6 +55,8 @@ from haros.parsing.python.ast import (
 # Constants
 ###############################################################################
 
+logger: Final[logging.Logger] = logging.getLogger(__name__)
+
 BUILTINS_MODULE: Final[str] = '__builtins__'
 
 BUILTIN_FUNCTIONS: Final[List[str]] = [
@@ -93,10 +96,10 @@ BUILTIN_FUNCTIONS: Final[List[str]] = [
     'min',
     'next',
     'oct',
-    'open',
+    # 'open',
     'ord',
     'pow',
-    'print',
+    # 'print',
     'repr',
     'reversed',
     'round',
@@ -107,7 +110,7 @@ BUILTIN_FUNCTIONS: Final[List[str]] = [
     'super',
     'vars',
     'zip',
-    '__import__',
+    # '__import__',
 ]
 
 BUILTIN_CLASSES: Final[List[str]] = [
@@ -330,7 +333,7 @@ class TypeMask(enum.Flag):
 class FunctionWrapper:
     function: str
     module: str
-    call: Callable
+    call: Callable[..., VariantData[Result[Any]]]
 
 
 @frozen
@@ -577,30 +580,35 @@ def solved_from(raw_value: V, source: Optional[TrackedCode] = None) -> Resolved[
     return Resolved(token, source, raw_value)
 
 
-@frozen
-class LazyFileHandle:
-    path: Result
-
-    def read(self) -> VariantData[Result]:
-        if self.path.is_resolved:
-            resolved_path: Resolved[str] = self.path
-            with open(resolved_path.value, 'r') as f:
-                text = f.read()
-                return VariantData.with_base_value(text)
-        return unknown_value(type=TYPE_TOKEN_STRING)
-
-    def __str__(self) -> str:
-        return f'{self.__class__.__name__}(path={self.path})'
+@define
+class MockObject:
+    pass
 
 
-def _builtin_open(name: Result[str], mode: Optional[Result[str]] = None) -> VariantData[Result[LazyFileHandle]]:
-    if not name.is_resolved:
-        return unknown_value()
-    if mode is None:
-        mode = solved_from('r')
-    if not mode.is_resolved or mode.value != 'r':
-        return unknown_value()
-    return VariantData.with_base_value(solved(TYPE_TOKEN_OBJECT, LazyFileHandle(name)))
+# @frozen
+# class LazyFileHandle:
+#     path: Result
+# 
+#     def read(self) -> VariantData[Result]:
+#         if self.path.is_resolved:
+#             resolved_path: Resolved[str] = self.path
+#             with open(resolved_path.value, 'r') as f:
+#                 text = f.read()
+#                 return VariantData.with_base_value(text)
+#         return unknown_value(type=TYPE_TOKEN_STRING)
+# 
+#     def __str__(self) -> str:
+#         return f'{self.__class__.__name__}(path={self.path})'
+
+
+# def _builtin_open(name: Result[str], mode: Optional[Result[str]] = None) -> VariantData[Result[LazyFileHandle]]:
+#     if not name.is_resolved:
+#         return unknown_value()
+#     if mode is None:
+#         mode = solved_from('r')
+#     if not mode.is_resolved or mode.value != 'r':
+#         return unknown_value()
+#     return VariantData.with_base_value(solved(TYPE_TOKEN_OBJECT, LazyFileHandle(name)))
 
 
 def wrap_normal_function(function: Callable) -> Callable:
@@ -608,13 +616,9 @@ def wrap_normal_function(function: Callable) -> Callable:
     def wrapper(*args, **kwargs) -> VariantData[Result]:
         for arg in args:
             if not arg.is_resolved:
-                # print()
-                # print(f'unresolved call to {function}({args}, {kwargs})')
                 return VariantData.with_base_value(unknown_value())
         for arg in kwargs.values():
             if not arg.is_resolved:
-                # print()
-                # print(f'unresolved call to {function}({args}, {kwargs})')
                 return VariantData.with_base_value(unknown_value())
         raw_args = [arg.value for arg in args]
         raw_kwargs = {key: arg.value for key, arg in kwargs.items()}
@@ -632,9 +636,9 @@ def wrap_normal_function(function: Callable) -> Callable:
 
 
 def builtin_function_wrapper(name: str, function: Callable) -> FunctionWrapper:
-    if name == 'open':
-        return FunctionWrapper(name, '__builtins__', _builtin_open)
-    return library_function_wrapper(name, '__builtins__', function)
+    # if name == 'open':
+    #     return FunctionWrapper(name, BUILTINS_MODULE, _builtin_open)
+    return library_function_wrapper(name, BUILTINS_MODULE, function)
 
 
 def library_function_wrapper(name: str, module: str, function: Callable) -> FunctionWrapper:
@@ -646,6 +650,13 @@ def custom_function_wrapper(name: str, module: str, function: Callable) -> Funct
     def wrapper(*args, **kwargs) -> VariantData[Result]:
         raw_value = function(*args, **kwargs)
         return VariantData.with_base_value(solved_from(raw_value))
+    return FunctionWrapper(name, module, wrapper)
+
+
+def result_function_wrapper(name: str, module: str, function: Callable) -> FunctionWrapper:
+    def wrapper(*args, **kwargs) -> VariantData[Result]:
+        result: Result = function(*args, **kwargs)
+        return VariantData.with_base_value(result)
     return FunctionWrapper(name, module, wrapper)
 
 
@@ -782,6 +793,19 @@ class DataScope:
         source: Optional[TrackedCode] = None
         token = PythonTypeToken.of(raw_value, mask=type)
         value = Resolved(token, source, raw_value)
+        return self.set(name, value, ast=ast, import_base=import_base)
+
+    def set_function(
+        self,
+        name: str,
+        function: Callable[..., Result[Any]],
+        ast: Optional[PythonAst] = None,
+        import_base: str = '',
+    ):
+        # TODO TrackedCode from ast
+        source: Optional[TrackedCode] = None
+        wrapper = result_function_wrapper(name, import_base, function)
+        value = Resolved(TYPE_TOKEN_FUNCTION, source, wrapper)
         return self.set(name, value, ast=ast, import_base=import_base)
 
     def set_unknown(
@@ -960,7 +984,12 @@ class DataScope:
                 return unknown_value(source=obj.source)
             value = getattr(obj.value, reference.name)
             if callable(value):
-                value = library_function_wrapper(reference.name, str(type(obj.value)), value)
+                name: str = reference.name
+                module: str = str(type(obj.value))
+                if isinstance(obj.value, MockObject):
+                    value = result_function_wrapper(name, module, value)
+                else:
+                    value = library_function_wrapper(name, module, value)
             return solved_from(value, source=tracked(reference))
         var = self.get(reference.name)
         if not var.has_values or not var.is_deterministic:
@@ -1123,7 +1152,11 @@ class DataScope:
                 elif argument.is_double_star:
                     # kwargs.update(arg)
                     return unknown_value(source=tracked(call))  # FIXME
-        result: VariantData[Result] = function.call(*args, **kwargs)
+        try:
+            result: VariantData[Result] = function.call(*args, **kwargs)
+        except Exception as e:
+            logger.exception(f'exception during function call: {e}')
+            result = VariantData.with_base_value(unknown_value())
         if result.has_values and result.is_deterministic:
             return evolve(result.get(), source=tracked(call))
         return unknown_value(source=tracked(call))
