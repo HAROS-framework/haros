@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, Union
+from typing import Any, Dict, Final, List, Type, Union
 
+import logging
 import os
 from pathlib import Path
 
@@ -16,9 +17,11 @@ from attrs import field, frozen
 # Constants
 ###############################################################################
 
+logger: Final[logging.Logger] = logging.getLogger(__name__)
+
 EXCLUDED_DIRS: Final = ('doc', 'cmake', '__pycache__')
 
-AnyPath: Final = Union[str, Path]
+AnyPath: Final[Type] = Union[str, Path]
 
 ###############################################################################
 # Interface
@@ -176,7 +179,7 @@ class StorageManager:
             packages = crawl_workspace(ws, relative=False)
             self.packages.update(packages)
 
-    def get_file_path(self, pkg: str, relative_path: AnyPath) -> Path:
+    def get_file_path(self, pkg: str, relative_path: Union[str, Path]) -> Path:
         # raise KeyError
         path = self.packages[pkg] / Path(relative_path)
         # raise FileNotFoundError
