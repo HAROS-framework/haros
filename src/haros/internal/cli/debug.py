@@ -17,7 +17,7 @@ from pathlib import Path
 
 from attrs import frozen
 from haros.analysis.launch import get_launch_description
-from haros.analysis.launch.python import _prepare_builtin_symbols
+from haros.analysis.launch.python import LAUNCH_SYMBOLS, _builtin_open, _prepare_builtin_symbols
 from haros.analysis.python.dataflow import (
     BUILTINS_MODULE,
     TYPE_TOKEN_OBJECT,
@@ -60,7 +60,7 @@ def subprogram(argv: List[str], settings: Settings) -> int:
 
 def run(args: Dict[str, Any], settings: Settings) -> int:
     try:
-        path = args['path'].resolve(strict=True)
+        path: Path = args['path'].resolve(strict=True)
     except FileNotFoundError:
         logger.error(f'debug: the file "{args["path"]}" does not exist')
         return 1
@@ -81,27 +81,27 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
             'turtlebot3_navigation2': (repo / 'turtlebot3_navigation2').as_posix(),
             'turtlebot3_node': (repo / 'turtlebot3_node').as_posix(),
             'turtlebot3_teleop': (repo / 'turtlebot3_teleop').as_posix(),
+            'nav2_bringup': (repo / 'nav2_bringup').as_posix(),
         },
         model=debugging_model(),
         parse_launch_description=get_launch_description,
     )
 
-    launch_description = system.get_launch_description(path)
-    model = model_from_description(path, launch_description, system)
-    print('Launch Model:')
-    print_launch_model(model)
+    # launch_description = system.get_launch_description(path)
+    # model = model_from_description(path, launch_description, system)
+    # print('Launch Model:')
+    # print_launch_model(model)
 
-    # code = path.read_text(encoding='utf-8')
-    # ast = parse(code)
-    # symbols: Dict[str, Any] = _prepare_builtin_symbols()
-    # symbols.update({
-    #     f'{BUILTINS_MODULE}.__file__': str(path),
-    #     f'{BUILTINS_MODULE}.open': _builtin_open(system),
-    #     'mymodule.MY_CONSTANT': 44,
-    #     'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
-    # })
-    # builder = from_ast(ast, symbols=symbols)
-    # print_subgraphs(builder)
+    code = path.read_text(encoding='utf-8')
+    ast = parse(code, path=path.as_posix())
+    symbols: Dict[str, Any] = _prepare_builtin_symbols()
+    symbols.update({
+        f'{BUILTINS_MODULE}.__file__': str(path),
+        f'{BUILTINS_MODULE}.open': _builtin_open(system),
+    })
+    symbols.update(LAUNCH_SYMBOLS)
+    builder = from_ast(ast, symbols=symbols)
+    print_subgraphs(builder)
 
     # graph, data = builder.subgraph_builder('main').build()
 
@@ -128,39 +128,6 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 ###############################################################################
 # Helper Functions
 ###############################################################################
-
-
-# @frozen
-# class LazyFileHandle(MockObject):
-#     path: Result[PathType]
-#     system: AnalysisSystemInterface
-# 
-#     def read(self, encoding: Optional[str] = None) -> Result[str]:
-#         try:
-#             if self.path.is_resolved:
-#                 resolved_path: Resolved[str] = self.path
-#                 text = self.system.read_text_file(resolved_path.value, encoding=encoding)
-#                 return solved_from(text)
-#         except ValueError:
-#             pass
-#         return unknown_value(type=TYPE_TOKEN_STRING)
-# 
-#     def __str__(self) -> str:
-#         return f'{self.__class__.__name__}(path={self.path})'
-# 
-# 
-# def _builtin_open(
-#     system: AnalysisSystemInterface
-# ) -> Callable[[Result[str], Optional[Result[str]]], Result[LazyFileHandle]]:
-#     def wrapper(path: Result[str], mode: Optional[Result[str]] = None) -> Result[LazyFileHandle]:
-#         if not path.is_resolved:
-#             return unknown_value()
-#         if mode is None:
-#             mode = solved_from('r')
-#         if not mode.is_resolved or mode.value != 'r':
-#             return unknown_value()
-#         return solved(TYPE_TOKEN_OBJECT, LazyFileHandle(path, system))
-#     return wrapper
 
 
 def debugging_model() -> ProjectModel:

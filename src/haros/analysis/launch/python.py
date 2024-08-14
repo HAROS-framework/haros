@@ -70,7 +70,9 @@ def python_launch_description_source_function(arg_list: Result) -> LaunchSubstit
     return ConcatenationSubstitution(tuple(parts))
 
 
-def launch_description_function(arg_list: Result) -> LaunchDescription:
+def launch_description_function(arg_list: Optional[Result] = None) -> LaunchDescription:
+    if not arg_list:
+        return LaunchDescription(Resolved.from_tuple(()))
     if arg_list.is_resolved:
         values = []
         for arg in arg_list.value:
@@ -316,13 +318,11 @@ def get_python_launch_description(path: Path, system: AnalysisSystemInterface) -
     code = path.read_text(encoding='utf-8')
     ast = parse(code, path=path.as_posix())
 
-    # system = PythonLaunchSystemInterface(path, None)
-
     symbols = {
         f'{BUILTINS_MODULE}.__file__': path.as_posix(),
         f'{BUILTINS_MODULE}.open': _builtin_open(system),
-        'mymodule.MY_CONSTANT': 44,
-        'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
+        # 'mymodule.MY_CONSTANT': 44,
+        # 'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
     }
     symbols.update(_prepare_builtin_symbols())
     symbols.update(LAUNCH_SYMBOLS)
