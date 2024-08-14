@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, List, Optional, Mapping
+from typing import Any, Callable, Final, List, Optional, Mapping
 
 import logging
 import os
@@ -14,9 +14,11 @@ from types import SimpleNamespace
 
 
 #from haros.analysis.python import query
-from haros.analysis.python.dataflow import BUILTINS_MODULE, library_function_wrapper
-from haros.analysis.python.graph import from_ast
+from attrs import frozen
+from haros.analysis.python.dataflow import BUILTINS_MODULE, TYPE_TOKEN_OBJECT, TYPE_TOKEN_STRING, MockObject, library_function_wrapper, solved, solved_from, unknown_value
+from haros.analysis.python.graph import ProgramGraphBuilder, from_ast
 from haros.errors import WrongFileTypeError
+from haros.internal.interface import AnalysisSystemInterface, PathType
 from haros.metamodel.common import Resolved, Result, UnresolvedString, VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
@@ -241,6 +243,39 @@ def _os_path_wrapper(*args) -> str:
     return Path(*args).as_posix()
 
 
+@frozen
+class LazyFileHandle(MockObject):
+    path: Result[PathType]
+    system: AnalysisSystemInterface
+
+    def read(self, encoding: Optional[str] = None) -> Result[str]:
+        try:
+            if self.path.is_resolved:
+                resolved_path: Resolved[str] = self.path
+                text = self.system.read_text_file(resolved_path.value, encoding=encoding)
+                return solved_from(text)
+        except ValueError:
+            pass
+        return unknown_value(type=TYPE_TOKEN_STRING)
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}(path={self.path})'
+
+
+def _builtin_open(
+    system: AnalysisSystemInterface
+) -> Callable[[Result[str], Optional[Result[str]]], Result[LazyFileHandle]]:
+    def wrapper(path: Result[str], mode: Optional[Result[str]] = None) -> Result[LazyFileHandle]:
+        if not path.is_resolved:
+            return unknown_value()
+        if mode is None:
+            mode = solved_from('r')
+        if not mode.is_resolved or mode.value != 'r':
+            return unknown_value()
+        return solved(TYPE_TOKEN_OBJECT, LazyFileHandle(path, system))
+    return wrapper
+
+
 def _dataflow_to_string(value: Result) -> str:
     if value.is_resolved:
         return str(value.value)
@@ -272,7 +307,7 @@ def _dataflow_to_launch_list(arg_list: Optional[Result]) -> List[Result[LaunchSu
     return values
 
 
-def get_python_launch_description(path: Path) -> LaunchDescription:
+def get_python_launch_description(path: Path, system: AnalysisSystemInterface) -> LaunchDescription:
     if not path.is_file():
         raise FileNotFoundError(f'not a file: {path}')
     ext = path.suffix.lower()
@@ -285,6 +320,7 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
 
     symbols = {
         f'{BUILTINS_MODULE}.__file__': path.as_posix(),
+        f'{BUILTINS_MODULE}.open': _builtin_open(system),
         'mymodule.MY_CONSTANT': 44,
         'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
     }
@@ -295,11 +331,11 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
     # TODO node parameters
     # TODO node remaps
 
-    builder = from_ast(ast, symbols=symbols)
+    builder: ProgramGraphBuilder = from_ast(ast, symbols=symbols)
     return launch_description_from_program_graph(builder)
 
 
-def launch_description_from_program_graph(graph: Any) -> LaunchDescription:
+def launch_description_from_program_graph(graph: ProgramGraphBuilder) -> LaunchDescription:
     subgraph, data = graph.subgraph_builder(LAUNCH_ENTRY_POINT).build()  # !!
     for variant_value in data.return_values.possible_values():
         # variant_value: VariantData[Result]

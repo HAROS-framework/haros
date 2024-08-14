@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Dict, Final, List, Optional, Set, Tuple
 
 import logging
 from pathlib import Path
@@ -29,7 +29,7 @@ from haros.metamodel.launch import (
     LaunchSubstitution,
     NodeFeature,
 )
-from haros.metamodel.ros import RosNodeModel, uid_node
+from haros.metamodel.ros import RosNodeModel
 
 ###############################################################################
 # Constants
@@ -363,8 +363,11 @@ class LaunchFeatureModelBuilder:
                         # break the whole dict analysis
                         logger.warning('unable to resolve parameter name')
                         return UnresolvedMapping.unknown_dict(source=key.source)
-                    # TODO how to handle nested dicts and non-string values?
-                    result[name.value] = self.scope.resolve(sub)
+                    if sub.is_resolved and not isinstance(sub.value, LaunchSubstitution):
+                        result[name.value] = Resolved.from_string(str(sub.value), source=sub.source)
+                    else:
+                        # TODO how to handle nested dicts and non-string values?
+                        result[name.value] = self.scope.resolve(sub)
                 return Resolved.from_dict(result, source=item.source)
             else:
                 raise TypeError(f'unexpected parameter: {item!r}')

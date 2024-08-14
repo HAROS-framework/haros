@@ -40,7 +40,8 @@ def uniform_path_string(path: PathType) -> str:
     return path.replace('\\', '/')
 
 
-def fail_to_parse_launch_file(path: PathType) -> LaunchDescription:
+def fail_to_parse_launch_file(path: PathType, system: Any) -> LaunchDescription:
+    logger.debug(f'fail_to_parse_launch_file({path}, {system})')
     raise AnalysisError('no launch file parser has been provided')
 
 
@@ -100,7 +101,7 @@ class AnalysisSystemInterface:
                 raise ValueError(filepath)
         description = self.launch_cache.get(filepath)
         if description is None:
-            description = self.parse_launch_description(Path(filepath))  # !!
+            description = self.parse_launch_description(Path(filepath), self)  # !!
             self.launch_cache[filepath] = description
         return description
 

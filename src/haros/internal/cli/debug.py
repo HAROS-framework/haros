@@ -29,6 +29,7 @@ from haros.analysis.python.dataflow import (
 )
 from haros.internal.interface import AnalysisSystemInterface, PathType
 from haros.internal.settings import Settings
+from haros.metamodel.builder.launch import model_from_description
 from haros.metamodel.common import Resolved, Result
 from haros.metamodel.launch import LaunchFileFeature, NodeFeature
 from haros.metamodel.ros import FileModel, NodeModel, PackageModel, ProjectModel
@@ -85,21 +86,23 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         parse_launch_description=get_launch_description,
     )
 
-    # launch_description = get_launch_description(path)
-    # model = model_from_description(path, launch_description, system)
-    # print('Launch Model:')
-    # print_launch_model(model)
+    launch_description = system.get_launch_description(path)
+    model = model_from_description(path, launch_description, system)
+    print('Launch Model:')
+    print_launch_model(model)
 
-    code = path.read_text(encoding='utf-8')
-    ast = parse(code)
-    symbols: Dict[str, Any] = _prepare_builtin_symbols()
-    symbols.update({
-        f'{BUILTINS_MODULE}.__file__': str(path),
-        f'{BUILTINS_MODULE}.open': _builtin_open(system),
-        'mymodule.MY_CONSTANT': 44,
-        'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
-    })
-    builder = from_ast(ast, symbols=symbols)
+    # code = path.read_text(encoding='utf-8')
+    # ast = parse(code)
+    # symbols: Dict[str, Any] = _prepare_builtin_symbols()
+    # symbols.update({
+    #     f'{BUILTINS_MODULE}.__file__': str(path),
+    #     f'{BUILTINS_MODULE}.open': _builtin_open(system),
+    #     'mymodule.MY_CONSTANT': 44,
+    #     'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
+    # })
+    # builder = from_ast(ast, symbols=symbols)
+    # print_subgraphs(builder)
+
     # graph, data = builder.subgraph_builder('main').build()
 
     # builder = get_launch_description(path)
@@ -109,7 +112,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     # print('Variables:')
     # print_variables(data.variables)
     #
-    print_subgraphs(builder)
+    # print_subgraphs(builder)
 
     # qualified_name = 'launch.LaunchDescription'
     # print(f'Find calls to: `{qualified_name}`')
@@ -127,37 +130,37 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 ###############################################################################
 
 
-@frozen
-class LazyFileHandle(MockObject):
-    path: Result[PathType]
-    system: AnalysisSystemInterface
-
-    def read(self, encoding: Optional[str] = None) -> Result[str]:
-        try:
-            if self.path.is_resolved:
-                resolved_path: Resolved[str] = self.path
-                text = self.system.read_text_file(resolved_path.value, encoding=encoding)
-                return solved_from(text)
-        except ValueError:
-            pass
-        return unknown_value(type=TYPE_TOKEN_STRING)
-
-    def __str__(self) -> str:
-        return f'{self.__class__.__name__}(path={self.path})'
-
-
-def _builtin_open(
-    system: AnalysisSystemInterface
-) -> Callable[[Result[str], Optional[Result[str]]], Result[LazyFileHandle]]:
-    def wrapper(path: Result[str], mode: Optional[Result[str]] = None) -> Result[LazyFileHandle]:
-        if not path.is_resolved:
-            return unknown_value()
-        if mode is None:
-            mode = solved_from('r')
-        if not mode.is_resolved or mode.value != 'r':
-            return unknown_value()
-        return solved(TYPE_TOKEN_OBJECT, LazyFileHandle(path, system))
-    return wrapper
+# @frozen
+# class LazyFileHandle(MockObject):
+#     path: Result[PathType]
+#     system: AnalysisSystemInterface
+# 
+#     def read(self, encoding: Optional[str] = None) -> Result[str]:
+#         try:
+#             if self.path.is_resolved:
+#                 resolved_path: Resolved[str] = self.path
+#                 text = self.system.read_text_file(resolved_path.value, encoding=encoding)
+#                 return solved_from(text)
+#         except ValueError:
+#             pass
+#         return unknown_value(type=TYPE_TOKEN_STRING)
+# 
+#     def __str__(self) -> str:
+#         return f'{self.__class__.__name__}(path={self.path})'
+# 
+# 
+# def _builtin_open(
+#     system: AnalysisSystemInterface
+# ) -> Callable[[Result[str], Optional[Result[str]]], Result[LazyFileHandle]]:
+#     def wrapper(path: Result[str], mode: Optional[Result[str]] = None) -> Result[LazyFileHandle]:
+#         if not path.is_resolved:
+#             return unknown_value()
+#         if mode is None:
+#             mode = solved_from('r')
+#         if not mode.is_resolved or mode.value != 'r':
+#             return unknown_value()
+#         return solved(TYPE_TOKEN_OBJECT, LazyFileHandle(path, system))
+#     return wrapper
 
 
 def debugging_model() -> ProjectModel:
