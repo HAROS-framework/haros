@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 
 #from haros.analysis.python import query
-from haros.analysis.python.dataflow import library_function_wrapper
+from haros.analysis.python.dataflow import BUILTINS_MODULE, library_function_wrapper
 from haros.analysis.python.graph import from_ast
 from haros.errors import WrongFileTypeError
 from haros.metamodel.common import Resolved, Result, UnresolvedString, VariantData
@@ -284,6 +284,7 @@ def get_python_launch_description(path: Path) -> LaunchDescription:
     # system = PythonLaunchSystemInterface(path, None)
 
     symbols = {
+        f'{BUILTINS_MODULE}.__file__': path.as_posix(),
         'mymodule.MY_CONSTANT': 44,
         'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
     }
