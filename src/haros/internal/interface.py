@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Iterable, Mapping, Optional, Union
+from typing import Any, Callable, Dict, Final, Iterable, Mapping, Optional, Union
 
 from errno import EACCES
 import logging
@@ -22,6 +22,8 @@ from haros.metamodel.ros import NodeModel, ProjectModel, uid_node
 ###############################################################################
 # Constants
 ###############################################################################
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 PathType = Union[str, Path]
 
