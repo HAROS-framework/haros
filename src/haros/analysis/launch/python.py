@@ -12,7 +12,6 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
-from attrs import frozen
 
 #from haros.analysis.python import query
 from haros.analysis.python.dataflow import library_function_wrapper
@@ -26,14 +25,9 @@ from haros.metamodel.launch import (
     LaunchArgument,
     LaunchConfiguration,
     LaunchDescription,
-    LaunchEntity,
     LaunchInclusion,
     LaunchNode,
-    LaunchNodeParameterList,
     LaunchSubstitution,
-    PackageShareDirectorySubstitution,
-    PathJoinSubstitution,
-    TextSubstitution,
     ThisDirectorySubstitution,
     unknown_parameter_list,
     unknown_substitution,
