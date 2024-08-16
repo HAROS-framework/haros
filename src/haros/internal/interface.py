@@ -94,11 +94,24 @@ class AnalysisSystemInterface:
         return self.model.nodes.get(uid)
 
     def get_launch_description(self, filepath: PathType) -> LaunchDescription:
+        # share dir replacement
+        filepath = Path(filepath)
+        share = Path(PACKAGE_SHARE_DIR)
+        if share in filepath.parents:
+            relative = filepath.relative_to(share)
+            pkg_name = relative.parts[0]
+            pkg_path = self.get_package_path(pkg_name)
+            if not pkg_path:
+                raise ValueError(str(filepath))
+            relative = relative.relative_to(pkg_name)
+            filepath = Path(pkg_path) / relative
+        # path validation
         filepath = str(filepath)
         if self.strict:
             safe_dir = self._safe_root()
             if safe_dir and not filepath.startswith(safe_dir):
                 raise ValueError(filepath)
+        # file access
         description = self.launch_cache.get(filepath)
         if description is None:
             description = self.parse_launch_description(Path(filepath), self)  # !!
