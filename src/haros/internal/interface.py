@@ -102,7 +102,7 @@ class AnalysisSystemInterface:
             pkg_name = relative.parts[0]
             pkg_path = self.get_package_path(pkg_name)
             if not pkg_path:
-                raise ValueError(str(filepath))
+                raise FileNotFoundError(str(filepath))
             relative = relative.relative_to(pkg_name)
             filepath = Path(pkg_path) / relative
         # path validation

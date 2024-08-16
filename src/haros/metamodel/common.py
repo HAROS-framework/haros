@@ -236,7 +236,7 @@ class TypeToken(Generic[V]):
 
     @property
     def is_iterable(self) -> bool:
-        return issubclass(self.token, IterableType)
+        return not self.is_string and issubclass(self.token, IterableType)
 
     @property
     def is_mapping(self) -> bool:

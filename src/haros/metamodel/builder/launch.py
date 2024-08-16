@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, Final, Iterable, List, Optional, Set, Tuple
 
 import logging
 from pathlib import Path
@@ -356,7 +356,8 @@ class LaunchFeatureModelBuilder:
                     return UnresolvedMapping.unknown_dict(source=path.source)
             elif item.type.is_mapping:
                 result = {}
-                for key, sub in item.value.items():
+                param_dict: Dict[Result[Any], Result[Any]] = item.value
+                for key, sub in param_dict.items():
                     if key.is_resolved and isinstance(key.value, str):
                         name: Result = Resolved.from_string(key.value, source=key.source)
                     else:
@@ -365,11 +366,17 @@ class LaunchFeatureModelBuilder:
                         # break the whole dict analysis
                         logger.warning('unable to resolve parameter name')
                         return UnresolvedMapping.unknown_dict(source=key.source)
-                    if sub.is_resolved and not isinstance(sub.value, LaunchSubstitution):
-                        result[name.value] = Resolved.from_string(str(sub.value), source=sub.source)
+                    if not sub.is_resolved:
+                        result[name.value] = unknown_value()
+                    elif isinstance(sub.value, LaunchSubstitution):
+                        result[name.value] = self.scope.resolve(sub)
+                    elif sub.type.is_string:
+                        result[name.value] = sub
+                    elif sub.type.is_iterable:
+                        result[name.value] = sub
                     else:
                         # TODO how to handle nested dicts and non-string values?
-                        result[name.value] = self.scope.resolve(sub)
+                        result[name.value] = Resolved.from_string(str(sub.value), source=sub.source)
                 return Resolved.from_dict(result, source=item.source)
             else:
                 raise TypeError(f'unexpected parameter: {item!r}')

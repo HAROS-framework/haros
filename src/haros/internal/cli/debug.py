@@ -9,7 +9,7 @@ Module that contains the command line sub-program.
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, List, Optional
+from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, Optional, Union
 
 import argparse
 import logging
@@ -170,7 +170,7 @@ def print_ros_node(node: NodeFeature):
     print_dynamic_collection('remappings', node.remappings)
 
 
-def print_dynamic_collection(name, result):
+def print_dynamic_collection(name: str, result: Result[Any]):
     if result.is_resolved:
         if result.type.is_mapping:
             print(f'  {name}:')
@@ -184,7 +184,7 @@ def print_dynamic_collection(name, result):
         print(f'  {name}: {result}')
 
 
-def print_list_of_values(values, indent=0):
+def print_list_of_values(values: Iterable[Result[Any]], indent: int = 0):
     ws = ' ' * indent
     if values:
         for value in values:
@@ -193,11 +193,15 @@ def print_list_of_values(values, indent=0):
         print(f'{ws}[]')
 
 
-def print_mapping(mapping, indent=0):
+def print_mapping(mapping: Mapping[Result[Any], Result[Any]], indent: int = 0):
     ws = ' ' * indent
     if mapping:
         for key, value in mapping.items():
-            print(f'{ws}{key}: {value}')
+            text_value: str = str(value)
+            if value.is_resolved:
+                if value.type.is_iterable:
+                    text_value = str(list(map(str, value.value)))
+            print(f'{ws}{key}: {text_value}')
     else:
         print(f'{ws}{{}}')
 

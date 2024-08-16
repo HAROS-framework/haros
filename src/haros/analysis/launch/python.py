@@ -19,6 +19,7 @@ from haros.analysis.python.dataflow import (
     TYPE_TOKEN_OBJECT,
     TYPE_TOKEN_STRING,
     MockObject,
+    const_list,
     library_function_wrapper,
     solved,
     solved_from,
@@ -185,6 +186,8 @@ def node_function(
     output: Optional[Result] = None,
     remappings: Optional[Any] = None,  # FIXME
     condition: Optional[Any] = None,  # FIXME
+    respawn: Optional[Any] = None,  # FIXME
+    respawn_delay: Optional[Any] = None,  # FIXME
 ) -> LaunchNode:
     # docs: https://github.com/ros2/launch_ros/blob/rolling/launch_ros/launch_ros/actions/node.py
     # Node.__init__:
@@ -237,8 +240,11 @@ def node_function(
     )
 
 
-def group_action_function(entities: Result[Iterable[Result[LaunchEntity]]]) -> LaunchGroupAction:
-    return LaunchGroupAction(entities)
+def group_action_function(
+    actions: Optional[Result[Iterable[Result[LaunchEntity]]]] = None,
+    condition: Optional[Any] = None,  # FIXME
+) -> LaunchGroupAction:
+    return LaunchGroupAction(actions or const_list([]))
 
 
 def get_package_share_directory_function(package: Result) -> Result[LaunchSubstitution]:
