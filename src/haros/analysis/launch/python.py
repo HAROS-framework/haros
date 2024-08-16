@@ -147,6 +147,7 @@ def launch_configuration_function(
 def include_launch_description_function(
     source: Result,
     launch_arguments: Optional[Result] = None,
+    condition: Optional[Result[Any]] = None,  # FIXME
 ) -> LaunchInclusion:
     _source: Result[LaunchSubstitution] = unknown_substitution(source=source.source)
     if source.is_resolved:
