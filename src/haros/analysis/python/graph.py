@@ -33,7 +33,8 @@ from haros.parsing.python.ast import (
     PythonStatement,
     PythonTupleLiteral,
 )
-from haros.parsing.python.ast.statements import PythonWithStatement
+from haros.parsing.python.ast.expressions import PythonAssignmentExpression
+from haros.parsing.python.ast.statements import PythonExpressionStatement, PythonWithStatement
 
 ###############################################################################
 # Constants
@@ -334,6 +335,14 @@ class ProgramGraphBuilder:
                     cb = self._function_interpreter(statement)
                     self.data.add_function_def(statement, fun=cb)
                 self.nested_graphs[statement.name] = statement
+
+            elif statement.is_expression_statement:
+                assert isinstance(statement, PythonExpressionStatement)
+                # handle method calls and side effects
+                value = self.data.value_from_expression(statement.expression)
+                if statement.expression.is_assignment:
+                    assert isinstance(statement.expression, PythonAssignmentExpression)
+                    self.data.set(statement.expression.name, value, ast=statement)
 
     def clean_up(self):
         self.cfg.clean_up()

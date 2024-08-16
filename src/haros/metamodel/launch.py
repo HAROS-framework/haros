@@ -353,6 +353,10 @@ class LaunchEntity:
     def is_node(self) -> bool:
         return False
 
+    @property
+    def is_group(self) -> bool:
+        return False
+
 
 @frozen
 class LaunchArgument(LaunchEntity):
@@ -448,6 +452,15 @@ class LaunchNode(LaunchEntity):
 
     @property
     def is_node(self) -> bool:
+        return True
+
+
+@frozen
+class LaunchGroupAction(LaunchEntity):
+    entities: Result[Iterable[Result[LaunchEntity]]]
+
+    @property
+    def is_group(self) -> bool:
         return True
 
 

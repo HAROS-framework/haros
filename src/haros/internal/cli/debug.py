@@ -87,21 +87,21 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
         parse_launch_description=get_launch_description,
     )
 
-    # launch_description = system.get_launch_description(path)
-    # model = model_from_description(path, launch_description, system)
-    # print('Launch Model:')
-    # print_launch_model(model)
+    launch_description = system.get_launch_description(path)
+    model = model_from_description(path, launch_description, system)
+    print('Launch Model:')
+    print_launch_model(model)
 
-    code = path.read_text(encoding='utf-8')
-    ast = parse(code, path=path.as_posix())
-    symbols: Dict[str, Any] = _prepare_builtin_symbols()
-    symbols.update({
-        f'{BUILTINS_MODULE}.__file__': str(path),
-        f'{BUILTINS_MODULE}.open': _builtin_open(system),
-    })
-    symbols.update(LAUNCH_SYMBOLS)
-    builder = from_ast(ast, symbols=symbols)
-    print_subgraphs(builder)
+    # code = path.read_text(encoding='utf-8')
+    # ast = parse(code, path=path.as_posix())
+    # symbols: Dict[str, Any] = _prepare_builtin_symbols()
+    # symbols.update({
+    #     f'{BUILTINS_MODULE}.__file__': str(path),
+    #     f'{BUILTINS_MODULE}.open': _builtin_open(system),
+    # })
+    # symbols.update(LAUNCH_SYMBOLS)
+    # builder = from_ast(ast, symbols=symbols)
+    # print_subgraphs(builder)
 
     # graph, data = builder.subgraph_builder('main').build()
 
@@ -209,9 +209,7 @@ def print_subgraphs(builder: ProgramGraphBuilder):
         print(f'>> {name}')
 
         subbuilder = builder.subgraph_builder(name)
-        print('test 1')
         subgraph, data = subbuilder.build()
-        print('test 2')
         print(subgraph.pretty())
 
         print(f'\nReachable:')

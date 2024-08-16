@@ -653,9 +653,14 @@ def custom_function_wrapper(name: str, module: str, function: Callable) -> Funct
     return FunctionWrapper(name, module, wrapper)
 
 
-def result_function_wrapper(name: str, module: str, function: Callable) -> FunctionWrapper:
-    def wrapper(*args, **kwargs) -> VariantData[Result]:
-        result: Result = function(*args, **kwargs)
+def result_function_wrapper(
+    name: str,
+    module: str,
+    function: Callable[..., Result[Any]],
+) -> FunctionWrapper:
+    # args and kwargs are Result[Any]
+    def wrapper(*args, **kwargs) -> VariantData[Result[Any]]:
+        result: Result[Any] = function(*args, **kwargs)
         return VariantData.with_base_value(result)
     return FunctionWrapper(name, module, wrapper)
 
@@ -1133,10 +1138,10 @@ class DataScope:
             if result.has_values and result.is_deterministic:
                 return evolve(result.get(), source=tracked(call))
             return unknown_value(source=tracked(call))
-        args = []
-        kwargs = {}
+        args: List[Result[Any]] = []
+        kwargs: Dict[str, Result[Any]] = {}
         for argument in call.arguments:
-            arg = self.value_from_expression(argument.value)
+            arg: Result[Any] = self.value_from_expression(argument.value)
             if argument.is_positional:
                 args.append(arg)
             elif argument.is_key_value:
@@ -1153,7 +1158,7 @@ class DataScope:
                     # kwargs.update(arg)
                     return unknown_value(source=tracked(call))  # FIXME
         try:
-            result: VariantData[Result] = function.call(*args, **kwargs)
+            result: VariantData[Result[Any]] = function.call(*args, **kwargs)
         except Exception as e:
             logger.exception(f'exception during function call: {e}')
             result = VariantData.with_base_value(unknown_value())

@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, List, Optional, Set, Tuple
+from typing import Dict, Final, Iterable, List, Optional, Set, Tuple
 
 import logging
 from pathlib import Path
@@ -22,7 +22,9 @@ from haros.metamodel.launch import (
     LaunchArgument,
     LaunchArgumentValueType,
     LaunchDescription,
+    LaunchEntity,
     LaunchFileFeature,
+    LaunchGroupAction,
     LaunchInclusion,
     LaunchNode,
     LaunchNodeParameterList,
@@ -179,7 +181,7 @@ class LaunchScope:
     def duplicate(self) -> 'LaunchScope':
         # LaunchArgument is defined globally
         # LaunchConfiguration is scoped
-        return LaunchScope(args=self.args, configs=dict(self.configs))
+        return LaunchScope(self.file_path, args=self.args, configs=dict(self.configs))
 
     def compute_anon_name(self, name: str) -> str:
         # as seen in the official distribution
@@ -437,15 +439,32 @@ def model_from_description(
     description: LaunchDescription,
     system: AnalysisSystemInterface,
 ) -> LaunchFileFeature:
-    logger.info(f'model_from_description({path})')
+    logger.debug(f'model_from_description({path}, {description}, {system})')
     builder = LaunchFeatureModelBuilder.from_file_path(path, system)
     if not description.entities.is_resolved:
         return LaunchFileFeature(path)  # FIXME
-    for entity in description.entities.value:
+    _add_list_of_entities(builder, description.entities.value)
+    return builder.build()
+
+
+def _add_list_of_entities(
+    builder: LaunchFeatureModelBuilder,
+    entities: Iterable[Result[LaunchEntity]],
+):
+    for result in entities:
+        if not result.is_resolved:
+            continue
+        entity: LaunchEntity = result.value
         if entity.is_argument:
             builder.declare_argument(entity)
         elif entity.is_inclusion:
             builder.include_launch(entity)
         elif entity.is_node:
             builder.launch_node(entity)
-    return builder.build()
+        elif entity.is_group:
+            assert isinstance(entity, LaunchGroupAction)
+            if not entity.entities.is_resolved:
+                continue
+            builder.enter_group()
+            _add_list_of_entities(builder, entity.entities.value)
+            builder.exit_group()

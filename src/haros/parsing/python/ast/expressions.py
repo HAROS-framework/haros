@@ -294,9 +294,9 @@ class PythonReference(PythonExpression):
         ws1 = ' ' * indent
         ws2 = ' ' * (indent + step)
         if self.object is None:
-            return f'{ws1}Reference\n{ws2}{name}'
+            return f'{ws1}Reference\n{ws2}{self.name}'
         object = self.object.pretty(indent=(indent+step), step=step)
-        return f'{ws1}Reference\n{ws2}{name}\n{object}'
+        return f'{ws1}Reference\n{ws2}{self.name}\n{object}'
 
 
 @frozen

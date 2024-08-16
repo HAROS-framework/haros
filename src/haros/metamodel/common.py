@@ -269,10 +269,23 @@ TYPE_TOKEN_CLASS: Final[TypeToken[type]] = TypeToken(type)
 TYPE_TOKEN_EXCEPTION: Final[TypeToken[Exception]] = TypeToken(Exception)
 
 
+class BlackHole:
+    def __getattribute__(self, _name: str) -> 'BlackHole':
+        return self
+
+    def __call__(self, *args: Any, **kwds: Any) -> 'BlackHole':
+        return self
+
+
 @frozen
 class Result(Generic[V]):
     type: TypeToken[V]
     source: Optional[TrackedCode]
+
+    @property
+    def value(self) -> V:
+        # return BlackHole()
+        raise ValueError('unknown value')
 
     @property
     def is_resolved(self) -> bool:
@@ -320,7 +333,11 @@ ListResult: Final[Type[Result]] = Result[List[Result[V]]]
 
 @frozen
 class Resolved(Result[V]):
-    value: V
+    _value: V
+
+    @property
+    def value(self) -> V:
+        return self._value
 
     @property
     def is_resolved(self) -> bool:
@@ -405,7 +422,7 @@ class Resolved(Result[V]):
         return cls(TypeToken.of(value), source, value)
 
     def __str__(self) -> str:
-        return str(self.value)
+        return str(self._value)
 
 
 @frozen

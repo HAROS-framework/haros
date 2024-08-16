@@ -5,23 +5,35 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, List, Optional, Mapping
+from typing import Any, Callable, Final, Generic, Iterable, List, Optional, Mapping
 
 import logging
 import os
 from pathlib import Path
 from types import SimpleNamespace
 
-
 #from haros.analysis.python import query
-from attrs import frozen
-from haros.analysis.python.dataflow import BUILTINS_MODULE, TYPE_TOKEN_OBJECT, TYPE_TOKEN_STRING, MockObject, library_function_wrapper, solved, solved_from, unknown_value
+from attrs import define, field, frozen
+from haros.analysis.python.dataflow import (
+    BUILTINS_MODULE,
+    TYPE_TOKEN_OBJECT,
+    TYPE_TOKEN_STRING,
+    MockObject,
+    library_function_wrapper,
+    solved,
+    solved_from,
+    unknown_tuple,
+    unknown_value,
+)
 from haros.analysis.python.graph import ProgramGraphBuilder, from_ast
 from haros.errors import WrongFileTypeError
 from haros.internal.interface import AnalysisSystemInterface, PathType
-from haros.metamodel.common import Resolved, Result, UnresolvedString, VariantData
+from haros.metamodel.common import T, Resolved, Result, UnresolvedString, VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
+    LaunchEntity,
+    LaunchGroupAction,
+    TextSubstitution,
     const_substitution,
     const_text,
     LaunchArgument,
@@ -47,6 +59,34 @@ LAUNCH_ENTRY_POINT: Final[str] = 'generate_launch_description'
 UNKNOWN_TOKEN: Final[str] = '{?}'
 
 ###############################################################################
+# Mocks
+###############################################################################
+
+
+@define
+class HarosMockObject(MockObject, Generic[T]):
+    def _haros_freeze(self) -> T:
+        # use a method name with a low probability of name collision
+        # with one of the mocked object's methods or attributes
+        raise NotImplementedError()
+
+
+@define
+class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
+    entities: Result[List[Result[LaunchEntity]]]
+
+    def add_action(self, action: Result[LaunchEntity]) -> Result[None]:
+        if self.entities.is_resolved:
+            self.entities.value.append(action)
+        return solved_from(None)
+
+    def _haros_freeze(self) -> LaunchDescription:
+        if self.entities.is_resolved:
+            return LaunchDescription(solved_from(tuple(self.entities.value)))
+        return LaunchDescription(unknown_tuple())
+
+
+###############################################################################
 # Interface
 ###############################################################################
 
@@ -54,6 +94,10 @@ UNKNOWN_TOKEN: Final[str] = '{?}'
 def python_launch_description_source_function(arg_list: Result) -> LaunchSubstitution:
     if not arg_list.is_resolved:
         return unknown_substitution(source=arg_list.source)
+    if arg_list.type.is_string:
+        assert isinstance(arg_list.value, str)
+        return TextSubstitution(arg_list.value)
+    assert arg_list.type.is_iterable
     parts = []
     for arg in arg_list.value:
         if not arg.is_resolved:
@@ -70,21 +114,12 @@ def python_launch_description_source_function(arg_list: Result) -> LaunchSubstit
     return ConcatenationSubstitution(tuple(parts))
 
 
-def launch_description_function(arg_list: Optional[Result] = None) -> LaunchDescription:
+def launch_description_function(
+    arg_list: Optional[Result[List[Result[LaunchEntity]]]] = None,
+) -> LaunchDescriptionMock:
     if not arg_list:
-        return LaunchDescription(Resolved.from_tuple(()))
-    if arg_list.is_resolved:
-        values = []
-        for arg in arg_list.value:
-            if arg.is_resolved:
-                value = arg.value
-            else:
-                value = Result.unknown_value(source=arg.source)
-            values.append(value)
-        values = Resolved.from_tuple(tuple(values), source=arg_list.source)
-        return LaunchDescription(values)
-    else:
-        return LaunchDescription(Result.unknown_value(source=arg_list.source))
+        return LaunchDescriptionMock(Resolved.from_list([]))
+    return LaunchDescriptionMock(arg_list)
 
 
 def declare_launch_argument_function(
@@ -147,6 +182,8 @@ def node_function(
     parameters: Optional[Result] = None,
     arguments: Optional[Result] = None,
     output: Optional[Result] = None,
+    remappings: Optional[Any] = None,  # FIXME
+    condition: Optional[Any] = None,  # FIXME
 ) -> LaunchNode:
     # docs: https://github.com/ros2/launch_ros/blob/rolling/launch_ros/launch_ros/actions/node.py
     # Node.__init__:
@@ -199,6 +236,10 @@ def node_function(
     )
 
 
+def group_action_function(entities: Result[Iterable[Result[LaunchEntity]]]) -> LaunchGroupAction:
+    return LaunchGroupAction(entities)
+
+
 def get_package_share_directory_function(package: Result) -> Result[LaunchSubstitution]:
     if not package.is_resolved:
         return UnresolvedString()
@@ -211,6 +252,7 @@ def get_package_share_directory_function(package: Result) -> Result[LaunchSubsti
 LAUNCH_SYMBOLS = {
     'launch.LaunchDescription': launch_description_function,
     'launch.actions.DeclareLaunchArgument': declare_launch_argument_function,
+    'launch.actions.GroupAction': group_action_function,
     'launch.actions.IncludeLaunchDescription': include_launch_description_function,
     'launch.substitutions.LaunchConfiguration': launch_configuration_function,
     'launch_ros.actions.Node': node_function,
@@ -250,11 +292,10 @@ class LazyFileHandle(MockObject):
     path: Result[PathType]
     system: AnalysisSystemInterface
 
-    def read(self, encoding: Optional[str] = None) -> Result[str]:
+    def read(self, encoding: Optional[Result[str]] = None) -> Result[str]:
         try:
             if self.path.is_resolved:
-                resolved_path: Resolved[str] = self.path
-                text = self.system.read_text_file(resolved_path.value, encoding=encoding)
+                text = self.system.read_text_file(self.path.value, encoding=encoding.value)
                 return solved_from(text)
         except ValueError:
             pass
@@ -346,9 +387,9 @@ def launch_description_from_program_graph(graph: ProgramGraphBuilder) -> LaunchD
             logger.error('variant_value is not resolved')
             continue  # FIXME
         launch_description = variant_value.value.value
-        if not isinstance(launch_description, LaunchDescription):
+        if not isinstance(launch_description, LaunchDescriptionMock):
             logger.error(f'variant_value is not a LaunchDescription: {repr(launch_description)}')
             continue  # FIXME
-        return launch_description
+        return launch_description._haros_freeze()
     logger.error('unable to return a complete LaunchDescription')
-    return LaunchDescription(Result.unknown_value())  # FIXME
+    return LaunchDescription(unknown_tuple())  # FIXME
