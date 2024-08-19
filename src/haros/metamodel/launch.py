@@ -14,10 +14,7 @@ from haros.metamodel.common import (
     Resolved,
     Result,
     TrackedCode,
-    TupleResult,
     UnresolvedIterable,
-    UnresolvedMapping,
-    UnresolvedString,
 )
 from haros.metamodel.logic import LogicValue
 from haros.metamodel.ros import RosName, RosNodeModel
@@ -394,11 +391,24 @@ LaunchNodeParameterList = Result[List[LaunchNodeParameterItem]]
 
 
 def unknown_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
-    return Result(type(list), source)
+    return UnresolvedIterable.unknown_list(source=source)
 
 
 def empty_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
-    return Resolved(source, type(list), [])
+    return Resolved.from_list([], source=source)
+
+
+LaunchNodeRemapName = Result[Union[str, LaunchSubstitution]]
+LaunchNodeRemapItem = Result[Tuple[LaunchNodeRemapName, LaunchNodeRemapName]]
+LaunchNodeRemapList = Result[List[LaunchNodeRemapItem]]
+
+
+def unknown_remap_list(source: Optional[TrackedCode] = None) -> LaunchNodeRemapList:
+    return UnresolvedIterable.unknown_list(source=source)
+
+
+def empty_remap_list(source: Optional[TrackedCode] = None) -> LaunchNodeRemapList:
+    return Resolved.from_list([], source=source)
 
 
 @frozen
@@ -439,6 +449,9 @@ class LaunchNode(LaunchEntity):
 
     «Using `ros_arguments` is equivalent to using `arguments` with a
     prepended '--ros-args' item.»
+
+    «`remappings` is an ordered list of ('from', 'to') string pairs to be
+    passed to the node as ROS remapping rules.»
     """
 
     package: Result[LaunchSubstitution]
@@ -446,7 +459,7 @@ class LaunchNode(LaunchEntity):
     name: Optional[Result[LaunchSubstitution]] = None
     namespace: Optional[Result[LaunchSubstitution]] = None
     parameters: LaunchNodeParameterList = field(factory=empty_parameter_list)
-    remaps: Dict[Result[LaunchSubstitution], Result[LaunchSubstitution]] = field(factory=dict)
+    remaps: LaunchNodeRemapList = field(factory=empty_remap_list)
     output: Result[LaunchSubstitution] = const_text('log')
     arguments: Iterable[Result[LaunchSubstitution]] = field(factory=list)
 

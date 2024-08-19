@@ -28,6 +28,9 @@ from haros.metamodel.launch import (
     LaunchInclusion,
     LaunchNode,
     LaunchNodeParameterList,
+    LaunchNodeRemapItem,
+    LaunchNodeRemapList,
+    LaunchNodeRemapName,
     LaunchSubstitution,
     NodeFeature,
 )
@@ -305,6 +308,7 @@ class LaunchFeatureModelBuilder:
             self.scope.resolve(arg) for arg in node.arguments
         ])
         params: Result = self.parameters_from_list(node.parameters, node=name)
+        remaps: Result = self.remappings_from_list(node.remaps)
         if package.is_resolved and executable.is_resolved:
             fsnode = self.system.get_node_model(package, executable)  # FIXME
             if fsnode is None:
@@ -318,6 +322,7 @@ class LaunchFeatureModelBuilder:
             # Resolved.from_string(node_id),
             arguments=args,
             parameters=params,
+            remappings=remaps,
             output=output,
         )
         uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
@@ -420,6 +425,39 @@ class LaunchFeatureModelBuilder:
             if current:
                 params.update(current.get('ros__parameters', {}))
         return Resolved.from_dict(params)
+
+    def remappings_from_list(self, remaps: LaunchNodeRemapList) -> Result[Dict[str, Result[str]]]:
+        if not remaps.is_resolved:
+            return UnresolvedMapping.unknown_dict(source=remaps.source)
+        has_unknown: bool = False
+        remap_dict: Dict[str, Result[str]] = {}
+        for rule in remaps.value:
+            assert isinstance(rule, LaunchNodeRemapItem), f'unexpected launch remap rule: {rule!r}'
+            if not rule.is_resolved:
+                has_unknown = True
+                continue
+            assert isinstance(rule.value, tuple)
+            if len(rule.value) != 2:
+                logger.error(f'invalid remap rule: {rule.value!r}')
+                continue
+            from_name, to_name = rule.value
+            if issubclass(from_name.type.token, LaunchSubstitution) and from_name.is_resolved:
+                from_name = self.scope.resolve(from_name)
+            if issubclass(to_name.type.token, LaunchSubstitution) and to_name.is_resolved:
+                to_name = self.scope.resolve(to_name)
+            if not from_name.type.is_string:
+                logger.warning(f'unable to resolve ROS name in remap rule: {from_name!r}')
+                continue
+            if not to_name.type.is_string:
+                logger.warning(f'unable to resolve ROS name in remap rule: {to_name!r}')
+                continue
+            if from_name.is_resolved:
+                remap_dict[from_name.value] = to_name
+            else:
+                has_unknown = True
+        if has_unknown:
+            return UnresolvedMapping.unknown_dict(known=remap_dict, source=remaps.source)
+        return Resolved.from_dict(remap_dict, source=remaps.source)
 
     def _get_node_name(
         self,
