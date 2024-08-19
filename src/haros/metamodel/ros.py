@@ -23,6 +23,7 @@ from haros.metamodel.common import (
     UnresolvedIterable,
     UnresolvedMapping,
     V,
+    UnresolvedString,
 )
 
 ###############################################################################
