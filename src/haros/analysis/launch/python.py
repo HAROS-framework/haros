@@ -34,6 +34,7 @@ from haros.metamodel.launch import (
     ConcatenationSubstitution,
     LaunchEntity,
     LaunchGroupAction,
+    LaunchNodeRemapList,
     TextSubstitution,
     const_substitution,
     const_text,
@@ -45,6 +46,7 @@ from haros.metamodel.launch import (
     LaunchSubstitution,
     ThisDirectorySubstitution,
     unknown_parameter_list,
+    unknown_remap_list,
     unknown_substitution,
 )
 from haros.parsing.python import parse
@@ -184,7 +186,7 @@ def node_function(
     parameters: Optional[Result] = None,
     arguments: Optional[Result] = None,
     output: Optional[Result] = None,
-    remappings: Optional[Any] = None,  # FIXME
+    remappings: Optional[Result[Iterable[Result[Any]]]] = None,
     condition: Optional[Any] = None,  # FIXME
     respawn: Optional[Any] = None,  # FIXME
     respawn_delay: Optional[Any] = None,  # FIXME
@@ -230,11 +232,24 @@ def node_function(
                 break
     else:
         params = unknown_parameter_list(source=parameters.source)
+    if remappings is None:
+        remaps = Resolved.from_list([])
+    elif remappings.is_resolved:
+        remaps: LaunchNodeRemapList = Resolved.from_list([])
+        for item in remappings.value:
+            if item.is_resolved:
+                remaps.value.append(item)
+            else:
+                remaps = unknown_remap_list(source=remappings.source)
+                break
+    else:
+        remaps = unknown_remap_list(source=remappings.source)
     return LaunchNode(
         _dataflow_to_launch_substitution(package),
         _dataflow_to_launch_substitution(executable),
         name=_dataflow_to_launch_substitution(name),
         parameters=params,
+        remaps=remaps,
         output=_dataflow_to_launch_substitution(output, default='log'),
         arguments=_dataflow_to_launch_list(arguments),
     )
