@@ -960,16 +960,14 @@ class DataScope:
             return const_string(literal.value, source=tracked(literal))
         if literal.is_tuple and not literal.is_comprehension:
             values = tuple(self.value_from_expression(v) for v in literal.values)
-            if all(v.is_resolved for v in values):
-                values = tuple(v.value for v in values)
-                return const_tuple(values, source=tracked(literal))
+            # if all(v.is_resolved for v in values):
+            #     values = tuple(v.value for v in values)
+            return const_tuple(values, source=tracked(literal))
         if literal.is_list and not literal.is_comprehension:
             values = list(self.value_from_expression(v) for v in literal.values)
-            if all(v.is_resolved for v in values):
-                # values = list(v.value for v in values)
-                return const_list(values, source=tracked(literal))
-            else:
-                return const_list(values, source=tracked(literal))
+            # if all(v.is_resolved for v in values):
+            #     values = list(v.value for v in values)
+            return const_list(values, source=tracked(literal))
         if literal.is_dict and not literal.is_comprehension:
             entries = dict(
                 (self.value_from_expression(e.key), self.value_from_expression(e.value))
