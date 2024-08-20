@@ -432,7 +432,7 @@ class LaunchFeatureModelBuilder:
         has_unknown: bool = False
         remap_dict: Dict[str, Result[str]] = {}
         for rule in remaps.value:
-            assert isinstance(rule, LaunchNodeRemapItem), f'unexpected launch remap rule: {rule!r}'
+            assert isinstance(rule, Result), f'unexpected launch remap rule: {rule!r}'
             if not rule.is_resolved:
                 has_unknown = True
                 continue
