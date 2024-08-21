@@ -9,33 +9,22 @@ Module that contains the command line sub-program.
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, Optional, Union
+from typing import Any, Dict, Final, Iterable, List, Mapping
 
 import argparse
 import logging
 from pathlib import Path
 
-from attrs import frozen
 from haros.analysis.launch import get_launch_description
-from haros.analysis.launch.python import LAUNCH_SYMBOLS, _builtin_open, _prepare_builtin_symbols
-from haros.analysis.python.dataflow import (
-    BUILTINS_MODULE,
-    TYPE_TOKEN_OBJECT,
-    TYPE_TOKEN_STRING,
-    MockObject,
-    solved,
-    solved_from,
-    unknown_value,
-)
-from haros.internal.interface import AnalysisSystemInterface, PathType
+from haros.analysis.python.dataflow import BUILTINS_MODULE
+from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.settings import Settings
 from haros.metamodel.builder.launch import model_from_description
-from haros.metamodel.common import Resolved, Result
+from haros.metamodel.common import Result
 from haros.metamodel.launch import LaunchFileFeature, NodeFeature
 from haros.metamodel.ros import FileModel, NodeModel, PackageModel, ProjectModel
 
-from haros.analysis.python.graph import ProgramGraphBuilder, from_ast
-from haros.parsing.python import parse
+from haros.analysis.python.graph import ProgramGraphBuilder
 
 ###############################################################################
 # Constants
@@ -198,10 +187,15 @@ def print_mapping(mapping: Mapping[Result[Any], Result[Any]], indent: int = 0):
     if mapping:
         for key, value in mapping.items():
             text_value: str = str(value)
-            if value.is_resolved:
-                if value.type.is_iterable:
-                    text_value = str(list(map(str, value.value)))
-            print(f'{ws}{key}: {text_value}')
+            try:
+                if value.is_resolved:
+                    if value.type.is_mapping:
+                        text_value = str({str(k): str(v) for k, v in value.value.items()})
+                    elif value.type.is_iterable:
+                        text_value = str(list(map(str, value.value)))
+                print(f'{ws}{key}: {text_value}')
+            except AttributeError:
+                logger.error(f'expected Result value for {key!r}: {value!r}')
     else:
         print(f'{ws}{{}}')
 
