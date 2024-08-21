@@ -7,6 +7,7 @@
 
 from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, NewType, Optional, Tuple
 
+import logging
 from types import SimpleNamespace
 
 from attrs import define, field, frozen
@@ -39,6 +40,8 @@ from haros.parsing.python.ast.statements import PythonExpressionStatement, Pytho
 ###############################################################################
 # Constants
 ###############################################################################
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 ProgramNodeId = NewType('ProgramNodeId', int)
 ExpressionNodeId = NewType('ExpressionNodeId', int)
@@ -383,7 +386,8 @@ class ProgramGraphBuilder:
             for stmt in statement.body:
                 builder.add_statement(stmt)
         except Exception as e:
-            print('BOOM:', e)
+            logger.exception(f'error processing statement of "{name}"')
+            logger.error(f'add_statement({stmt!r})')
         builder.clean_up()
         return builder
 
