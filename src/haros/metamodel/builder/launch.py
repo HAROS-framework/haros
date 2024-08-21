@@ -487,7 +487,7 @@ def model_from_description(
     logger.debug(f'model_from_description({path}, {description}, {system})')
     builder = LaunchFeatureModelBuilder.from_file_path(path, system)
     if not description.entities.is_resolved:
-        return LaunchFileFeature(path)  # FIXME
+        return LaunchFileFeature(FeatureId(f'file:{path}'), path)
     _add_list_of_entities(builder, description.entities.value)
     return builder.build()
 
