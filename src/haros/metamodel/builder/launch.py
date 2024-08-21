@@ -344,8 +344,9 @@ class LaunchFeatureModelBuilder:
             if new_params.is_resolved:
                 param_dict.update(new_params.value)
             else:
+                # FIXME what to do with lost information?
                 result = new_params
-                param_dict = result.known
+                param_dict = {}
         return result
 
     def process_parameter_item(self, item: Result, node: Optional[str] = None) -> Result:
@@ -424,6 +425,7 @@ class LaunchFeatureModelBuilder:
             current = data.get('/**', {})  # FIXME there might be other patterns
             if current:
                 params.update(current.get('ros__parameters', {}))
+        params = {key: Resolved.from_value(value) for key, value in params.items()}
         return Resolved.from_dict(params)
 
     def remappings_from_list(self, remaps: LaunchNodeRemapList) -> Result[Dict[str, Result[str]]]:
