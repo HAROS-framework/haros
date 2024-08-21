@@ -20,6 +20,7 @@ from haros.analysis.python.dataflow import (
     TYPE_TOKEN_STRING,
     MockObject,
     const_list,
+    const_none,
     library_function_wrapper,
     solved,
     solved_from,
@@ -317,6 +318,7 @@ class LazyFileHandle(MockObject):
     def read(self, encoding: Optional[Result[str]] = None) -> Result[str]:
         try:
             if self.path.is_resolved:
+                encoding = encoding or const_none()
                 text = self.system.read_text_file(self.path.value, encoding=encoding.value)
                 return solved_from(text)
         except ValueError:
