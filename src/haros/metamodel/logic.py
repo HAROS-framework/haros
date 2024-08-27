@@ -95,7 +95,7 @@ class LogicValue(object):
     def simplify(self) -> 'LogicValue':
         return self
 
-    def variables(self) -> None:
+    def variables(self):
         yield from ()
 
     def replace(self, valuation: Mapping[str, bool]) -> 'LogicValue':
@@ -230,7 +230,7 @@ class LogicVariable(LogicValue):
     def is_variable(self) -> bool:
         return True
 
-    def variables(self) -> None:
+    def variables(self):
         yield self
 
     def replace(self, valuation: Mapping[str, bool]) -> LogicValue:
@@ -290,7 +290,7 @@ class LogicNot(LogicValue):
             return LogicAnd(operands)
         return self
 
-    def variables(self) -> None:
+    def variables(self):
         yield from self.operand.variables()
 
     def replace(self, valuation: Mapping[str, bool]) -> LogicValue:
@@ -353,7 +353,7 @@ class LogicAnd(LogicValue):
         self._trim_larger_ors(operands)
         return LogicAnd(operands) if len(operands) > 1 else operands[0]
 
-    def variables(self) -> None:
+    def variables(self):
         for x in self.operands:
             yield from x.variables()
 
@@ -466,7 +466,7 @@ class LogicOr(LogicValue):
         self._trim_larger_ands(operands)
         return LogicOr(operands) if len(operands) > 1 else operands[0]
 
-    def variables(self) -> None:
+    def variables(self):
         for x in self.operands:
             yield from x.variables()
 
