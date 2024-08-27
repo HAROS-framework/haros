@@ -12,10 +12,8 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
-#from haros.analysis.python import query
-from attrs import define, field, frozen
+from attrs import define, frozen
 from haros.analysis.python.dataflow import (
-    BUILTINS_MODULE,
     TYPE_TOKEN_OBJECT,
     TYPE_TOKEN_STRING,
     MockObject,
@@ -27,8 +25,6 @@ from haros.analysis.python.dataflow import (
     unknown_tuple,
     unknown_value,
 )
-from haros.analysis.python.graph import ProgramGraphBuilder, from_ast
-from haros.errors import WrongFileTypeError
 from haros.internal.interface import AnalysisSystemInterface, PathType
 from haros.metamodel.common import T, Resolved, Result, UnresolvedString, VariantData
 from haros.metamodel.launch import (
@@ -50,7 +46,6 @@ from haros.metamodel.launch import (
     unknown_remap_list,
     unknown_substitution,
 )
-from haros.parsing.python import parse
 
 ###############################################################################
 # Constants
@@ -285,7 +280,7 @@ LAUNCH_SYMBOLS = {
 }
 
 
-def _prepare_builtin_symbols() -> Mapping[str, Any]:
+def prepare_builtin_symbols() -> Mapping[str, Any]:
     symbols = {}
     ns = SimpleNamespace()
     ns.path = SimpleNamespace()
@@ -329,7 +324,7 @@ class LazyFileHandle(MockObject):
         return f'{self.__class__.__name__}(path={self.path})'
 
 
-def _builtin_open(
+def builtin_open(
     system: AnalysisSystemInterface
 ) -> Callable[[Result[str], Optional[Result[str]]], Result[LazyFileHandle]]:
     def wrapper(path: Result[str], mode: Optional[Result[str]] = None) -> Result[LazyFileHandle]:
@@ -341,6 +336,11 @@ def _builtin_open(
             return unknown_value()
         return solved(TYPE_TOKEN_OBJECT, LazyFileHandle(path, system))
     return wrapper
+
+
+###############################################################################
+# Helper Functions
+###############################################################################
 
 
 def _dataflow_to_string(value: Result) -> str:
@@ -373,47 +373,3 @@ def _dataflow_to_launch_list(arg_list: Optional[Result]) -> List[Result[LaunchSu
             values.append(unknown_substitution())  # FIXME
     return values
 
-
-def get_python_launch_description(path: Path, system: AnalysisSystemInterface) -> LaunchDescription:
-    if not path.is_file():
-        raise FileNotFoundError(f'not a file: {path}')
-    ext = path.suffix.lower()
-    if ext != '.py':
-        raise WrongFileTypeError(f'not a valid launch file: {path}')
-    code = path.read_text(encoding='utf-8')
-    ast = parse(code, path=path.as_posix())
-
-    symbols = {
-        f'{BUILTINS_MODULE}.__file__': path.as_posix(),
-        f'{BUILTINS_MODULE}.open': _builtin_open(system),
-        # 'mymodule.MY_CONSTANT': 44,
-        # 'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
-    }
-    symbols.update(_prepare_builtin_symbols())
-    symbols.update(LAUNCH_SYMBOLS)
-
-    # TODO include launch arguments
-    # TODO node parameters
-    # TODO node remaps
-
-    builder: ProgramGraphBuilder = from_ast(ast, symbols=symbols)
-    return launch_description_from_program_graph(builder)
-
-
-def launch_description_from_program_graph(graph: ProgramGraphBuilder) -> LaunchDescription:
-    subgraph, data = graph.subgraph_builder(LAUNCH_ENTRY_POINT).build()  # !!
-    for variant_value in data.return_values.possible_values():
-        # variant_value: VariantData[Result]
-        if not variant_value.condition.is_true:
-            logger.error('variant_value is not true')
-            continue  # FIXME
-        if not variant_value.value.is_resolved:
-            logger.error('variant_value is not resolved')
-            continue  # FIXME
-        launch_description = variant_value.value.value
-        if not isinstance(launch_description, LaunchDescriptionMock):
-            logger.error(f'variant_value is not a LaunchDescription: {repr(launch_description)}')
-            continue  # FIXME
-        return launch_description._haros_freeze()
-    logger.error('unable to return a complete LaunchDescription')
-    return LaunchDescription(unknown_tuple())  # FIXME
