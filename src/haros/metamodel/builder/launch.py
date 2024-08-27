@@ -12,15 +12,17 @@ from pathlib import Path
 
 from attrs import define, evolve, field, frozen
 
-from haros.analysis.python.dataflow import unknown_value
+from haros.analysis.python.dataflow import unknown_bool, unknown_value
 from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
 from haros.metamodel.common import Resolved, Result, TrackedCode, UnresolvedMapping
 from haros.metamodel.launch import (
     ArgumentFeature,
     FeatureId,
+    IfCondition,
     LaunchArgument,
     LaunchArgumentValueType,
+    LaunchCondition,
     LaunchDescription,
     LaunchEntity,
     LaunchFileFeature,
@@ -28,12 +30,12 @@ from haros.metamodel.launch import (
     LaunchInclusion,
     LaunchNode,
     LaunchNodeParameterList,
-    LaunchNodeRemapItem,
     LaunchNodeRemapList,
-    LaunchNodeRemapName,
     LaunchSubstitution,
     NodeFeature,
+    UnlessCondition,
 )
+from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
 from haros.metamodel.ros import RosNodeModel
 
 ###############################################################################
@@ -43,6 +45,10 @@ from haros.metamodel.ros import RosNodeModel
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 BOOL_VALUES: Final[Tuple[str]] = ('true', 'false')
+
+TRUE_VALUES: Final[Tuple[str]] = ('true', '1')
+
+FALSE_VALUES: Final[Tuple[str]] = ('false', '0')
 
 ###############################################################################
 # Interface
@@ -132,6 +138,33 @@ class LaunchScope:
         if not result.is_resolved:
             return Result.unknown_value(source=result.source)
         return self.substitute(result.value, source=result.source)
+
+    def resolve_condition(self, condition: Optional[Result[LaunchCondition]]) -> Result[bool]:
+        if condition is None:
+            return Resolved.from_bool(True)
+        if condition.is_resolved:
+            if condition.value.is_if_condition:
+                assert isinstance(condition.value, IfCondition), repr(condition.value)
+                result = self.resolve(condition.value.expression)
+                if result.is_resolved:
+                    value = result.value.lower()
+                    if value in TRUE_VALUES:
+                        return Resolved.from_bool(True, source=condition.source)
+                    if value in FALSE_VALUES:
+                        return Resolved.from_bool(False, source=condition.source)
+            elif condition.value.is_unless_condition:
+                assert isinstance(condition.value, UnlessCondition), repr(condition.value)
+                result = self.resolve(condition.value.expression)
+                if result.is_resolved:
+                    value = result.value.lower()
+                    if value in TRUE_VALUES:
+                        return Resolved.from_bool(False, source=condition.source)
+                    if value in FALSE_VALUES:
+                        return Resolved.from_bool(True, source=condition.source)
+            # TODO LaunchConfigurationEquals
+            # TODO LaunchConfigurationNotEquals
+            # FIXME https://github.com/ros2/launch/blob/rolling/launch/launch/conditions/launch_configuration_equals.py
+        return unknown_bool(source=condition.source)
 
     def substitute(
         self,
@@ -326,7 +359,8 @@ class LaunchFeatureModelBuilder:
             output=output,
         )
         uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
-        feature = NodeFeature(uid, rosnode)
+        condition = self.scope.resolve_condition(node.condition)
+        feature = NodeFeature(uid, rosnode, condition=_logic_value_from_result(condition))
         self.nodes.append(feature)
 
     def parameters_from_list(self, parameters: LaunchNodeParameterList, node: Optional[str] = None) -> Result:
@@ -515,3 +549,9 @@ def _add_list_of_entities(
             builder.enter_group()
             _add_list_of_entities(builder, entity.entities.value)
             builder.exit_group()
+
+
+def _logic_value_from_result(condition: Result[bool]) -> LogicValue:
+    if condition.is_resolved:
+        return TRUE if condition.value else FALSE
+    return LogicVariable(data=condition)

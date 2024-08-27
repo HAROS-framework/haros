@@ -448,6 +448,10 @@ def unknown_value(
     return Result(type, source)
 
 
+def unknown_bool(source: Optional[TrackedCode] = None) -> Result[bool]:
+    return Result(TYPE_TOKEN_BOOL, source)
+
+
 def unknown_int(source: Optional[TrackedCode] = None) -> UnresolvedInt:
     return UnresolvedInt(TYPE_TOKEN_INT, source)
 

@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, Generic, Iterable, List, Optional, Mapping
+from typing import Any, Callable, Final, Generic, Iterable, List, Optional, Mapping, Union
 
 import logging
 import os
@@ -29,10 +29,13 @@ from haros.internal.interface import AnalysisSystemInterface, PathType
 from haros.metamodel.common import T, Resolved, Result, UnresolvedString, VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
+    IfCondition,
+    LaunchCondition,
     LaunchEntity,
     LaunchGroupAction,
     LaunchNodeRemapList,
     TextSubstitution,
+    UnlessCondition,
     const_substitution,
     const_text,
     LaunchArgument,
@@ -88,6 +91,18 @@ class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
 ###############################################################################
 # Interface
 ###############################################################################
+
+
+def if_condition_function(expr: Result[Union[str, LaunchSubstitution]]) -> IfCondition:
+    if expr.is_resolved and expr.type.is_string:
+        expr = const_text(expr.value, source=expr.source)
+    return IfCondition(expr)
+
+
+def unless_condition_function(expr: Result[Union[str, LaunchSubstitution]]) -> UnlessCondition:
+    if expr.is_resolved and expr.type.is_string:
+        expr = const_text(expr.value, source=expr.source)
+    return UnlessCondition(expr)
 
 
 def python_launch_description_source_function(arg_list: Result) -> LaunchSubstitution:
@@ -146,7 +161,7 @@ def launch_configuration_function(
 def include_launch_description_function(
     source: Result,
     launch_arguments: Optional[Result] = None,
-    condition: Optional[Result[Any]] = None,  # FIXME
+    condition: Optional[Result[LaunchCondition]] = None,
 ) -> LaunchInclusion:
     _source: Result[LaunchSubstitution] = unknown_substitution(source=source.source)
     if source.is_resolved:
@@ -172,7 +187,7 @@ def include_launch_description_function(
                     _arguments[key] = unknown
                 else:
                     _arguments[key] = value
-    return LaunchInclusion(file=_source, arguments=_arguments)
+    return LaunchInclusion(file=_source, arguments=_arguments, condition=condition)
 
 
 def node_function(
@@ -183,7 +198,7 @@ def node_function(
     arguments: Optional[Result] = None,
     output: Optional[Result] = None,
     remappings: Optional[Result[Iterable[Result[Any]]]] = None,
-    condition: Optional[Any] = None,  # FIXME
+    condition: Optional[LaunchCondition] = None,
     respawn: Optional[Any] = None,  # FIXME
     respawn_delay: Optional[Any] = None,  # FIXME
 ) -> LaunchNode:
@@ -248,14 +263,15 @@ def node_function(
         remaps=remaps,
         output=_dataflow_to_launch_substitution(output, default='log'),
         arguments=_dataflow_to_launch_list(arguments),
+        condition=condition,
     )
 
 
 def group_action_function(
     actions: Optional[Result[Iterable[Result[LaunchEntity]]]] = None,
-    condition: Optional[Any] = None,  # FIXME
+    condition: Optional[LaunchCondition] = None,
 ) -> LaunchGroupAction:
-    return LaunchGroupAction(actions or const_list([]))
+    return LaunchGroupAction(actions or const_list([]), condition=condition)
 
 
 def get_package_share_directory_function(package: Result) -> Result[LaunchSubstitution]:
@@ -272,6 +288,10 @@ LAUNCH_SYMBOLS = {
     'launch.actions.DeclareLaunchArgument': declare_launch_argument_function,
     'launch.actions.GroupAction': group_action_function,
     'launch.actions.IncludeLaunchDescription': include_launch_description_function,
+    'launch.conditions.IfCondition': if_condition_function,
+    'launch.conditions.if_condition.IfCondition': if_condition_function,
+    'launch.conditions.UnlessCondition': unless_condition_function,
+    'launch.conditions.unless_condition.UnlessCondition': unless_condition_function,
     'launch.substitutions.LaunchConfiguration': launch_configuration_function,
     'launch_ros.actions.Node': node_function,
     'ament_index_python.packages.get_package_share_directory': get_package_share_directory_function,

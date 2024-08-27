@@ -16,7 +16,7 @@ from haros.metamodel.common import (
     TrackedCode,
     UnresolvedIterable,
 )
-from haros.metamodel.logic import LogicValue
+from haros.metamodel.logic import TRUE, LogicValue
 from haros.metamodel.ros import RosName, RosNodeModel
 
 ###############################################################################
@@ -332,6 +332,42 @@ class PathJoinSubstitution(LaunchSubstitution):
 
 
 ###############################################################################
+# ROS Launch Conditions
+###############################################################################
+
+
+@frozen
+class LaunchCondition:
+    pass
+
+    @property
+    def is_if_condition(self) -> bool:
+        return False
+
+    @property
+    def is_unless_condition(self) -> bool:
+        return False
+
+
+@frozen
+class IfCondition(LaunchCondition):
+    expression: Result[LaunchSubstitution]
+
+    @property
+    def is_if_condition(self) -> bool:
+        return True
+
+
+@frozen
+class UnlessCondition(LaunchCondition):
+    expression: Result[LaunchSubstitution]
+
+    @property
+    def is_unless_condition(self) -> bool:
+        return True
+
+
+###############################################################################
 # ROS Launch Entities
 ###############################################################################
 
@@ -360,6 +396,7 @@ class LaunchArgument(LaunchEntity):
     name: str
     default_value: Optional[Result[LaunchSubstitution]] = None
     description: Optional[Result[LaunchSubstitution]] = None
+    condition: Optional[Result[LaunchCondition]] = None
 
     @property
     def is_argument(self) -> bool:
@@ -379,6 +416,7 @@ class LaunchInclusion(LaunchEntity):
     file: Result[LaunchSubstitution]
     namespace: Optional[Result[LaunchSubstitution]] = None
     arguments: Dict[str, Result[LaunchSubstitution]] = field(factory=dict)
+    condition: Optional[Result[LaunchCondition]] = None
 
     @property
     def is_inclusion(self) -> bool:
@@ -462,6 +500,7 @@ class LaunchNode(LaunchEntity):
     remaps: LaunchNodeRemapList = field(factory=empty_remap_list)
     output: Result[LaunchSubstitution] = const_text('log')
     arguments: Iterable[Result[LaunchSubstitution]] = field(factory=list)
+    condition: Optional[Result[LaunchCondition]] = None
 
     @property
     def is_node(self) -> bool:
@@ -471,6 +510,7 @@ class LaunchNode(LaunchEntity):
 @frozen
 class LaunchGroupAction(LaunchEntity):
     entities: Result[Iterable[Result[LaunchEntity]]]
+    condition: Optional[Result[LaunchCondition]] = None
 
     @property
     def is_group(self) -> bool:
@@ -542,6 +582,7 @@ class ArgumentFeature(LaunchFeature):
 @frozen
 class NodeFeature(LaunchFeature):
     rosnode: RosNodeModel
+    condition: LogicValue = field(default=TRUE)
     # argument_dependencies: Set[FeatureId] = field(factory=set)
 
     @property
