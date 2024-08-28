@@ -29,11 +29,13 @@ from haros.internal.interface import AnalysisSystemInterface, PathType
 from haros.metamodel.common import T, Resolved, Result, UnresolvedString, VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
+    EqualsSubstitution,
     IfCondition,
     LaunchCondition,
     LaunchEntity,
     LaunchGroupAction,
     LaunchNodeRemapList,
+    NotEqualsSubstitution,
     TextSubstitution,
     UnlessCondition,
     const_substitution,
@@ -255,9 +257,12 @@ def node_function(
                 break
     else:
         remaps = unknown_remap_list(source=remappings.source)
+    pkg = _dataflow_to_launch_substitution(package)
+    exe = _dataflow_to_launch_substitution(executable)
+    logger.warning(f'LaunchNode {pkg}/{exe} condition: {condition}')
     return LaunchNode(
-        _dataflow_to_launch_substitution(package),
-        _dataflow_to_launch_substitution(executable),
+        pkg,
+        exe,
         name=_dataflow_to_launch_substitution(name),
         parameters=params,
         remaps=remaps,
@@ -297,6 +302,8 @@ LAUNCH_SYMBOLS = {
     'ament_index_python.packages.get_package_share_directory': get_package_share_directory_function,
     'launch.launch_description_sources.PythonLaunchDescriptionSource': python_launch_description_source_function,
     'launch.substitutions.ThisLaunchFileDir': ThisDirectorySubstitution,
+    'launch.substitutions.EqualsSubstitution': EqualsSubstitution,
+    'launch.substitutions.NotEqualsSubstitution': NotEqualsSubstitution,
 }
 
 

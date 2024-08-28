@@ -12,12 +12,13 @@ from pathlib import Path
 
 from attrs import define, evolve, field, frozen
 
-from haros.analysis.python.dataflow import unknown_bool, unknown_value
+from haros.analysis.python.dataflow import unknown_bool, unknown_string, unknown_value
 from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
 from haros.metamodel.common import Resolved, Result, TrackedCode, UnresolvedMapping
 from haros.metamodel.launch import (
     ArgumentFeature,
+    EqualsSubstitution,
     FeatureId,
     IfCondition,
     LaunchArgument,
@@ -33,6 +34,7 @@ from haros.metamodel.launch import (
     LaunchNodeRemapList,
     LaunchSubstitution,
     NodeFeature,
+    NotEqualsSubstitution,
     UnlessCondition,
 )
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
@@ -212,7 +214,27 @@ class LaunchScope:
                     return Result.unknown_value(source=source)
                 path = path / str(value)
             return Resolved.from_string(path.as_posix(), source=source)
-        return unknown_value(source=source)
+        if sub.is_equals:
+            assert isinstance(sub, EqualsSubstitution), repr(sub)
+            a = self.resolve(sub.argument1)
+            b = self.resolve(sub.argument2)
+            if a.is_resolved and b.is_resolved:
+                if a.value == b.value:  # FIXME
+                    return Resolved.from_string('true', source=source)
+                else:
+                    return Resolved.from_string('false', source=source)
+            return unknown_string(source=source)
+        if sub.is_not_equals:
+            assert isinstance(sub, NotEqualsSubstitution), repr(sub)
+            a = self.resolve(sub.argument1)
+            b = self.resolve(sub.argument2)
+            if a.is_resolved and b.is_resolved:
+                if a.value != b.value:  # FIXME
+                    return Resolved.from_string('true', source=source)
+                else:
+                    return Resolved.from_string('false', source=source)
+            return unknown_string(source=source)
+        return unknown_string(source=source)
 
     def duplicate(self) -> 'LaunchScope':
         # LaunchArgument is defined globally
@@ -359,6 +381,7 @@ class LaunchFeatureModelBuilder:
             output=output,
         )
         uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
+        logger.warning(f'{uid} condition: {node.condition}')
         condition = self.scope.resolve_condition(node.condition)
         feature = NodeFeature(uid, rosnode, condition=_logic_value_from_result(condition))
         self.nodes.append(feature)

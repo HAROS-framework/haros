@@ -153,6 +153,7 @@ def print_launch_model(model: LaunchFileFeature):
 def print_ros_node(node: NodeFeature):
     print('ROS node:', node.rosname)
     print('  node:', node.node)
+    print('  condition:', node.condition)
     print('  output:', node.output)
     print_dynamic_collection('arguments', node.arguments)
     print_dynamic_collection('parameters', node.parameters)

@@ -10,6 +10,7 @@ from typing import Dict, Iterable, List, NewType, Optional, Set, Tuple, Union
 from attrs import field, frozen
 from enum import Enum, unique
 
+from haros.analysis.python.dataflow import TYPE_TOKEN_OBJECT
 from haros.metamodel.common import (
     Resolved,
     Result,
@@ -83,6 +84,14 @@ class LaunchSubstitution:
 
     @property
     def is_path_join(self) -> bool:
+        return False
+
+    @property
+    def is_equals(self) -> bool:
+        return False
+
+    @property
+    def is_not_equals(self) -> bool:
         return False
 
     def __str__(self) -> str:
@@ -331,6 +340,62 @@ class PathJoinSubstitution(LaunchSubstitution):
         return f'$(join {" ".join(map(str, self.parts))})'
 
 
+def _to_sub(arg: Result[Union[None, str, LaunchSubstitution]]) -> Result[LaunchSubstitution]:
+    if not arg.is_resolved:
+        return arg
+    if arg.value is None:
+        return Resolved.from_value(TextSubstitution(''))
+    if isinstance(arg.value, LaunchSubstitution):
+        return arg
+    if isinstance(arg.value, str):
+        return Resolved.from_value(TextSubstitution(arg.value), source=arg.source)
+    return Result.unknown_value(type=TYPE_TOKEN_OBJECT, source=arg.source)
+
+
+@frozen
+class EqualsSubstitution(LaunchSubstitution):
+    # https://github.com/ros2/launch/blob/rolling/launch/launch/substitutions/equals_substitution.py
+    argument1: Result[LaunchSubstitution] = field(converter=_to_sub)
+    argument2: Result[LaunchSubstitution] = field(converter=_to_sub)
+
+    @property
+    def is_equals(self) -> bool:
+        return True
+
+    @property
+    def a(self) -> Result[LaunchSubstitution]:
+        return self.argument1
+
+    @property
+    def b(self) -> Result[LaunchSubstitution]:
+        return self.argument2
+
+    def __str__(self) -> str:
+        return f'$(eq {self.argument1} {self.argument2})'
+
+
+@frozen
+class NotEqualsSubstitution(LaunchSubstitution):
+    # https://github.com/ros2/launch/blob/rolling/launch/launch/substitutions/not_equals_substitution.py
+    argument1: Result[LaunchSubstitution] = field(converter=_to_sub)
+    argument2: Result[LaunchSubstitution] = field(converter=_to_sub)
+
+    @property
+    def is_not_equals(self) -> bool:
+        return True
+
+    @property
+    def a(self) -> Result[LaunchSubstitution]:
+        return self.argument1
+
+    @property
+    def b(self) -> Result[LaunchSubstitution]:
+        return self.argument2
+
+    def __str__(self) -> str:
+        return f'$(neq {self.argument1} {self.argument2})'
+
+
 ###############################################################################
 # ROS Launch Conditions
 ###############################################################################
@@ -357,6 +422,9 @@ class IfCondition(LaunchCondition):
     def is_if_condition(self) -> bool:
         return True
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}({self.expression})'
+
 
 @frozen
 class UnlessCondition(LaunchCondition):
@@ -365,6 +433,9 @@ class UnlessCondition(LaunchCondition):
     @property
     def is_unless_condition(self) -> bool:
         return True
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}({self.expression})'
 
 
 ###############################################################################
