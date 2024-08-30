@@ -10,8 +10,9 @@ from typing import Dict, Iterable, List, NewType, Optional, Set, Tuple, Union
 from attrs import field, frozen
 from enum import Enum, unique
 
-from haros.analysis.python.dataflow import TYPE_TOKEN_OBJECT
+from haros.analysis.python.dataflow import TYPE_TOKEN_LIST, TYPE_TOKEN_OBJECT
 from haros.metamodel.common import (
+    IterableType,
     Resolved,
     Result,
     TrackedCode,
@@ -109,6 +110,35 @@ def const_substitution(
     return Resolved(type(sub), source, sub)
 
 
+def _to_sub(arg: Result[Union[None, str, LaunchSubstitution]]) -> Result[LaunchSubstitution]:
+    if not arg.is_resolved:
+        return arg.cast_to(TYPE_TOKEN_OBJECT)
+    if arg.value is None:
+        return Resolved.from_value(TextSubstitution(''))
+    if isinstance(arg.value, LaunchSubstitution):
+        return arg
+    if isinstance(arg.value, str):
+        return Resolved.from_value(TextSubstitution(arg.value), source=arg.source)
+    return Result.unknown_value(type=TYPE_TOKEN_OBJECT, source=arg.source)
+
+
+def _to_sub_list(
+    arg: Result[Union[None, str, LaunchSubstitution, Iterable[Result[Union[None, str, LaunchSubstitution]]]]],
+) -> Result[Iterable[Result[LaunchSubstitution]]]:
+    if not arg.is_resolved:
+        return arg.cast_to(TYPE_TOKEN_LIST)
+    if arg.value is None:
+        return Resolved.from_value(TextSubstitution(''))
+    if isinstance(arg.value, str):
+        arg = Resolved.from_value(TextSubstitution(arg.value), source=arg.source)
+    if isinstance(arg.value, IterableType):
+        values = [_to_sub(item) for item in arg.value]
+        return Resolved.from_list(values, source=arg.source)
+    if isinstance(arg.value, LaunchSubstitution):
+        return Resolved.from_list([arg], source=arg.source)
+    return Result.unknown_value(type=TYPE_TOKEN_LIST, source=arg.source)
+
+
 @frozen
 class TextSubstitution(LaunchSubstitution):
     value: str
@@ -169,14 +199,27 @@ class LaunchArgumentSubstitution(LaunchSubstitution):
         return f'$(arg {self.name})'
 
 
+def _default_python_modules() -> Result[Iterable[Result[LaunchSubstitution]]]:
+    math = Resolved.from_value(TextSubstitution('math'))
+    return Resolved.from_tuple((math,))
+
+
 @frozen
 class PythonExpressionSubstitution(LaunchSubstitution):
     """
-    This substitution will evaluate a python expression
-    and get the result as a string.
+    Substitution that can access contextual local variables.
+
+    The expression may contain Substitutions, but must return something that can
+    be converted to a string with `str()`.
+    It also may contain math symbols and functions.
     """
 
-    expression: str
+    # https://github.com/ros2/launch/blob/rolling/launch/launch/substitutions/python_expression.py
+    expression: Result[Iterable[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
+    modules: Result[Iterable[Result[LaunchSubstitution]]] = field(
+        converter=_to_sub_list,
+        factory=_default_python_modules,
+    )
 
     @property
     def is_python_expression(self) -> bool:
@@ -338,18 +381,6 @@ class PathJoinSubstitution(LaunchSubstitution):
 
     def __str__(self) -> str:
         return f'$(join {" ".join(map(str, self.parts))})'
-
-
-def _to_sub(arg: Result[Union[None, str, LaunchSubstitution]]) -> Result[LaunchSubstitution]:
-    if not arg.is_resolved:
-        return arg
-    if arg.value is None:
-        return Resolved.from_value(TextSubstitution(''))
-    if isinstance(arg.value, LaunchSubstitution):
-        return arg
-    if isinstance(arg.value, str):
-        return Resolved.from_value(TextSubstitution(arg.value), source=arg.source)
-    return Result.unknown_value(type=TYPE_TOKEN_OBJECT, source=arg.source)
 
 
 @frozen

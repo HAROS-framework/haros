@@ -7,8 +7,10 @@
 
 from typing import Any, Dict, Final, Iterable, List, Optional, Set, Tuple
 
+import importlib
 import logging
 from pathlib import Path
+from types import ModuleType
 
 from attrs import define, evolve, field, frozen
 
@@ -35,6 +37,7 @@ from haros.metamodel.launch import (
     LaunchSubstitution,
     NodeFeature,
     NotEqualsSubstitution,
+    PythonExpressionSubstitution,
     UnlessCondition,
 )
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
@@ -235,6 +238,33 @@ class LaunchScope:
                 else:
                     return Resolved.from_string('false', source=source)
             return unknown_string(source=source)
+        if sub.is_python_expression:
+            assert isinstance(sub, PythonExpressionSubstitution), repr(sub)
+            if not sub.expression.is_resolved or not sub.modules.is_resolved:
+                return unknown_string(source=source)
+            parts: List[str] = []
+            for part in sub.expression.value:
+                value = self.resolve(part)
+                if not value.is_resolved:
+                    return unknown_string(source=source)
+                parts.append(value.value)
+            expression = ''.join(parts)
+            # FIXME avoid eval if possible
+            expression_locals: Dict[str, Any] = {}
+            for item in sub.modules.value:
+                value = self.resolve(item)
+                if not value.is_resolved:
+                    return unknown_string(source=source)
+                name: str = value.value
+                module: ModuleType = importlib.import_module(name)
+                expression_locals[module.__name__] = module
+                if module.__name__ == 'math':
+                    expression_locals.update(vars(module))
+            try:
+                end_result = str(eval(expression, {}, expression_locals))
+                return Resolved.from_string(end_result, source=source)
+            except:
+                pass
         return unknown_string(source=source)
 
     def duplicate(self, join_condition: LogicValue = TRUE) -> 'LaunchScope':

@@ -36,6 +36,7 @@ from haros.metamodel.launch import (
     LaunchGroupAction,
     LaunchNodeRemapList,
     NotEqualsSubstitution,
+    PythonExpressionSubstitution,
     TextSubstitution,
     UnlessCondition,
     const_substitution,
@@ -304,6 +305,7 @@ LAUNCH_SYMBOLS = {
     'launch.substitutions.ThisLaunchFileDir': ThisDirectorySubstitution,
     'launch.substitutions.EqualsSubstitution': EqualsSubstitution,
     'launch.substitutions.NotEqualsSubstitution': NotEqualsSubstitution,
+    'launch.substitutions.PythonExpression': PythonExpressionSubstitution,
 }
 
 
