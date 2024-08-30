@@ -260,7 +260,7 @@ class LogicVariable(LogicValue):
         }
 
     def __str__(self) -> str:
-        return self.name or self.text
+        return self.name
 
 
 @frozen
