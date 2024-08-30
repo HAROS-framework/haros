@@ -111,9 +111,10 @@ class ArgumentFeatureBuilder:
 @frozen
 class LaunchScope:
     file_path: Path
+    condition: LogicValue = field(default=TRUE)
     args: Dict[str, ArgumentFeatureBuilder] = field(factory=dict)
     configs: Dict[str, Result] = field(factory=dict)
-    anonymous: Dict[str, str] = field(factory=dict)
+    anonymous: Dict[str, str] = field(factory=dict, eq=False)
 
     def get(self, name: str) -> Result:
         value = self.configs.get(name)
@@ -236,10 +237,16 @@ class LaunchScope:
             return unknown_string(source=source)
         return unknown_string(source=source)
 
-    def duplicate(self) -> 'LaunchScope':
+    def duplicate(self, join_condition: LogicValue = TRUE) -> 'LaunchScope':
         # LaunchArgument is defined globally
         # LaunchConfiguration is scoped
-        return LaunchScope(self.file_path, args=self.args, configs=dict(self.configs))
+        join_condition = self.condition.join(join_condition)
+        return LaunchScope(
+            self.file_path,
+            condition=join_condition,
+            args=self.args,
+            configs=dict(self.configs),
+        )
 
     def compute_anon_name(self, name: str) -> str:
         # as seen in the official distribution
@@ -298,8 +305,10 @@ class LaunchFeatureModelBuilder:
         )
         # conflicts: Dict[FeatureId, LogicValue] = field(factory=dict)
 
-    def enter_group(self):
-        self.scope_stack.append(self.scope.duplicate())
+    def enter_group(self, condition: Optional[Result[LaunchCondition]]):
+        boolean: Result[bool] = self.scope.resolve_condition(condition)
+        phi: LogicValue = _logic_value_from_result(boolean)
+        self.scope_stack.append(self.scope.duplicate(join_condition=phi))
 
     def exit_group(self):
         self.scope_stack.pop()
@@ -382,8 +391,10 @@ class LaunchFeatureModelBuilder:
         )
         uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
         logger.warning(f'{uid} condition: {node.condition}')
-        condition = self.scope.resolve_condition(node.condition)
-        feature = NodeFeature(uid, rosnode, condition=_logic_value_from_result(condition))
+        boolean: Result[bool] = self.scope.resolve_condition(node.condition)
+        condition: LogicValue = _logic_value_from_result(boolean)
+        condition = self.scope.condition.join(condition)
+        feature = NodeFeature(uid, rosnode, condition=condition)
         self.nodes.append(feature)
 
     def parameters_from_list(self, parameters: LaunchNodeParameterList, node: Optional[str] = None) -> Result:
@@ -569,7 +580,7 @@ def _add_list_of_entities(
             assert isinstance(entity, LaunchGroupAction)
             if not entity.entities.is_resolved:
                 continue
-            builder.enter_group()
+            builder.enter_group(entity.condition)
             _add_list_of_entities(builder, entity.entities.value)
             builder.exit_group()
 
