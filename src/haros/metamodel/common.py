@@ -306,7 +306,7 @@ class Result(Generic[V]):
     def cast_to(self, new_type: TypeToken[V]) -> 'Result':
         return evolve(self, type=new_type)
 
-    def track_from(self, source: Optional[TrackedCode]) -> 'Result':
+    def trace_to(self, source: Optional[TrackedCode]) -> 'Result':
         return evolve(self, source=source)
 
     def pretty(self) -> str:
