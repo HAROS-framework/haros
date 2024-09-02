@@ -373,10 +373,10 @@ class LaunchFeatureModelBuilder:
                 description = self.system.get_launch_description(file.value)
                 logger.info(f'parsed included launch file: {file.value}')
             except FileNotFoundError as e:
-                logger.warning(str(e))
+                logger.warning(f'file not found: {e}')
                 return
             except (AnalysisError, ParseError) as e:
-                logger.warning(str(e))
+                logger.warning(f'analysis error: {e}')
                 return
             path: Path = Path(file.value)
             # FIXME pass arguments down
@@ -420,7 +420,6 @@ class LaunchFeatureModelBuilder:
             output=output,
         )
         uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
-        logger.warning(f'{uid} condition: {node.condition}')
         boolean: Result[bool] = self.scope.resolve_condition(node.condition)
         condition: LogicValue = _logic_value_from_result(boolean)
         condition = self.scope.condition.join(condition)

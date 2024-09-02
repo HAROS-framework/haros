@@ -260,7 +260,6 @@ def node_function(
         remaps = unknown_remap_list(source=remappings.source)
     pkg = _dataflow_to_launch_substitution(package)
     exe = _dataflow_to_launch_substitution(executable)
-    logger.warning(f'LaunchNode {pkg}/{exe} condition: {condition}')
     return LaunchNode(
         pkg,
         exe,
