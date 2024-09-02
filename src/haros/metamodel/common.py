@@ -208,7 +208,7 @@ class TypeToken(Generic[V]):
 
     @property
     def is_number(self) -> bool:
-        return self.can_be_int or self.can_be_float or self.can_be_complex
+        return self.is_int or self.is_float or self.is_complex
 
     @property
     def is_string(self) -> bool:
@@ -216,7 +216,7 @@ class TypeToken(Generic[V]):
 
     @property
     def is_primitive(self) -> bool:
-        return self.can_be_bool or self.can_be_number or self.can_be_string
+        return self.is_bool or self.is_number or self.is_string
 
     @property
     def is_function(self) -> bool:
@@ -232,7 +232,7 @@ class TypeToken(Generic[V]):
 
     @property
     def is_definition(self) -> bool:
-        return self.can_be_function or self.can_be_class
+        return self.is_function or self.is_class
 
     @property
     def is_iterable(self) -> bool:
