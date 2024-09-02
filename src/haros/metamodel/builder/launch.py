@@ -235,7 +235,6 @@ class LaunchFeatureModelBuilder:
         feature = ArgumentFeatureBuilder(
             FeatureId(f'arg:{len(self.root.args)}'),
             name,
-            default_value=substitute(arg.default_value, self.scope),
             description=substitute(arg.description, self.scope),
         )
         if arg.default_value is not None:
