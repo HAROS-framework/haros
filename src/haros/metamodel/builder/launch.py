@@ -7,20 +7,17 @@
 
 from typing import Any, Dict, Final, Iterable, List, Optional, Set, Tuple
 
-import importlib
 import logging
 from pathlib import Path
-from types import ModuleType
 
 from attrs import define, evolve, field, frozen
 
-from haros.analysis.python.dataflow import unknown_bool, unknown_string, unknown_value
+from haros.analysis.python.dataflow import unknown_bool, unknown_value
 from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
-from haros.metamodel.common import Resolved, Result, TrackedCode, UnresolvedMapping
+from haros.metamodel.common import Resolved, Result, UnresolvedMapping
 from haros.metamodel.launch import (
     ArgumentFeature,
-    EqualsSubstitution,
     FeatureId,
     IfCondition,
     LaunchArgument,
@@ -34,11 +31,11 @@ from haros.metamodel.launch import (
     LaunchNode,
     LaunchNodeParameterList,
     LaunchNodeRemapList,
+    LaunchScopeContext,
     LaunchSubstitution,
     NodeFeature,
-    NotEqualsSubstitution,
-    PythonExpressionSubstitution,
     UnlessCondition,
+    substitute,
 )
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
 from haros.metamodel.ros import RosNodeModel
@@ -112,38 +109,27 @@ class ArgumentFeatureBuilder:
 
 
 @frozen
-class LaunchScope:
+class LaunchScope(LaunchScopeContext):
     file_path: Path
     condition: LogicValue = field(default=TRUE)
     args: Dict[str, ArgumentFeatureBuilder] = field(factory=dict)
     configs: Dict[str, Result] = field(factory=dict)
     anonymous: Dict[str, str] = field(factory=dict, eq=False)
 
-    def get(self, name: str) -> Result:
+    def get(self, name: str) -> Optional[Result]:
         value = self.configs.get(name)
         if value is None:
             arg = self.args.get(name)
             value = None if arg is None else arg.value
-        if value is None:
-            return Result.unknown_value()  # FIXME maybe raise error
         return value
+
+    def get_arg(self, name: str) -> Optional[Result]:
+        arg = self.args.get(name)
+        return None if arg is None else arg.value
 
     def set(self, name: str, value: Result):
         # if name not in self.configs:
         self.configs[name] = value
-
-    def set_unknown(self, name: str):
-        return self.set(name, Result.unknown_value())
-
-    def set_text(self, name: str, text: str):
-        return self.set(name, Resolved.from_string(text))
-
-    def resolve(self, result: Optional[Result[LaunchSubstitution]]) -> Result[str]:
-        if result is None:
-            return Result.unknown_value()
-        if not result.is_resolved:
-            return Result.unknown_value(source=result.source)
-        return self.substitute(result.value, source=result.source)
 
     def resolve_condition(self, condition: Optional[Result[LaunchCondition]]) -> Result[bool]:
         if condition is None:
@@ -151,7 +137,7 @@ class LaunchScope:
         if condition.is_resolved:
             if condition.value.is_if_condition:
                 assert isinstance(condition.value, IfCondition), repr(condition.value)
-                result = self.resolve(condition.value.expression)
+                result = substitute(condition.value.expression, self, source=condition.source)
                 if result.is_resolved:
                     value = result.value.lower()
                     if value in TRUE_VALUES:
@@ -160,7 +146,7 @@ class LaunchScope:
                         return Resolved.from_bool(False, source=condition.source)
             elif condition.value.is_unless_condition:
                 assert isinstance(condition.value, UnlessCondition), repr(condition.value)
-                result = self.resolve(condition.value.expression)
+                result = substitute(condition.value.expression, self, source=condition.source)
                 if result.is_resolved:
                     value = result.value.lower()
                     if value in TRUE_VALUES:
@@ -171,101 +157,6 @@ class LaunchScope:
             # TODO LaunchConfigurationNotEquals
             # FIXME https://github.com/ros2/launch/blob/rolling/launch/launch/conditions/launch_configuration_equals.py
         return unknown_bool(source=condition.source)
-
-    def substitute(
-        self,
-        sub: LaunchSubstitution,
-        source: Optional[TrackedCode] = None,
-    ) -> Result[str]:
-        if sub.is_text:
-            return Resolved.from_string(sub.value, source=source)
-        if sub.is_configuration:
-            name = sub.name
-            value = self.configs.get(name)
-            if value is None:
-                arg = self.args.get(name)
-                value = None if arg is None else arg.value
-            if value is None:
-                value = self.resolve(sub.default_value)
-                self.set(name, value)
-            return value
-        if sub.is_anon_name:
-            value = self.resolve(sub.name)
-            if value.is_resolved:
-                name = self.anonymous.get(value.value)
-                if name is None:
-                    name = self.compute_anon_name(value.value)
-                    self.anonymous[value.value] = name
-                return Resolved.from_string(name, source=source)
-            return value
-        if sub.is_this_file:
-            return Resolved.from_string(self.get_this_launch_file(), source=source)
-        if sub.is_this_dir:
-            return Resolved.from_string(self.get_this_launch_file_dir(), source=source)
-        if sub.is_concatenation:
-            parts = []
-            for part in sub.parts:
-                value = self.resolve(part)
-                if not value.is_resolved:
-                    return Result.unknown_value(source=source)
-                parts.append(value)
-            return Resolved.from_string(''.join(map(str, parts)), source=source)
-        if sub.is_path_join:
-            path = Path()
-            for part in sub.parts:
-                value = self.resolve(part)
-                if not value.is_resolved:
-                    return Result.unknown_value(source=source)
-                path = path / str(value)
-            return Resolved.from_string(path.as_posix(), source=source)
-        if sub.is_equals:
-            assert isinstance(sub, EqualsSubstitution), repr(sub)
-            a = self.resolve(sub.argument1)
-            b = self.resolve(sub.argument2)
-            if a.is_resolved and b.is_resolved:
-                if a.value == b.value:  # FIXME
-                    return Resolved.from_string('true', source=source)
-                else:
-                    return Resolved.from_string('false', source=source)
-            return unknown_string(source=source)
-        if sub.is_not_equals:
-            assert isinstance(sub, NotEqualsSubstitution), repr(sub)
-            a = self.resolve(sub.argument1)
-            b = self.resolve(sub.argument2)
-            if a.is_resolved and b.is_resolved:
-                if a.value != b.value:  # FIXME
-                    return Resolved.from_string('true', source=source)
-                else:
-                    return Resolved.from_string('false', source=source)
-            return unknown_string(source=source)
-        if sub.is_python_expression:
-            assert isinstance(sub, PythonExpressionSubstitution), repr(sub)
-            if not sub.expression.is_resolved or not sub.modules.is_resolved:
-                return unknown_string(source=source)
-            parts: List[str] = []
-            for part in sub.expression.value:
-                value = self.resolve(part)
-                if not value.is_resolved:
-                    return unknown_string(source=source)
-                parts.append(value.value)
-            expression = ''.join(parts)
-            # FIXME avoid eval if possible
-            expression_locals: Dict[str, Any] = {}
-            for item in sub.modules.value:
-                value = self.resolve(item)
-                if not value.is_resolved:
-                    return unknown_string(source=source)
-                name: str = value.value
-                module: ModuleType = importlib.import_module(name)
-                expression_locals[module.__name__] = module
-                if module.__name__ == 'math':
-                    expression_locals.update(vars(module))
-            try:
-                end_result = str(eval(expression, {}, expression_locals))
-                return Resolved.from_string(end_result, source=source)
-            except:
-                pass
-        return unknown_string(source=source)
 
     def duplicate(self, join_condition: LogicValue = TRUE) -> 'LaunchScope':
         # LaunchArgument is defined globally
@@ -279,15 +170,11 @@ class LaunchScope:
         )
 
     def compute_anon_name(self, name: str) -> str:
-        # as seen in the official distribution
-        import os
-        import random
-        import socket
-        import sys
-        name = f'{name}_{socket.gethostname()}_{os.getpid()}_{random.randint(0, sys.maxsize)}'
-        name = name.replace('.', '_')
-        name = name.replace('-', '_')
-        return name.replace(':', '_')
+        value = self.anonymous.get(name)
+        if not value:
+            value = super().compute_anon_name(name)
+            self.anonymous[name] = value
+        return value
 
     def get_this_launch_file(self) -> str:
         return self.file_path.as_posix()
@@ -348,11 +235,11 @@ class LaunchFeatureModelBuilder:
         feature = ArgumentFeatureBuilder(
             FeatureId(f'arg:{len(self.root.args)}'),
             name,
-            default_value=self.scope.resolve(arg.default_value),
-            description=self.scope.resolve(arg.description),
+            default_value=substitute(arg.default_value, self.scope),
+            description=substitute(arg.description, self.scope),
         )
         if arg.default_value is not None:
-            feature.set(self.scope.resolve(arg.default_value))
+            feature.set(substitute(arg.default_value, self.scope))
         self.root.args[name] = feature
         # FIXME raise error if argument name already exists?
 
@@ -363,9 +250,9 @@ class LaunchFeatureModelBuilder:
         if include.namespace is None:
             namespace: Result = Resolved.from_string('/')
         else:
-            namespace: Result = self.scope.resolve(include.namespace)
+            namespace: Result = substitute(include.namespace, self.scope)
         arguments: Dict[str, Result[LaunchSubstitution]] = include.arguments
-        file: Result = self.scope.resolve(include.file)
+        file: Result = substitute(include.file, self.scope)
         if file.is_resolved:
             uid = FeatureId(f'file:{file.value}')
             self.included_files.add(uid)
@@ -391,15 +278,15 @@ class LaunchFeatureModelBuilder:
 
     def launch_node(self, node: LaunchNode):
         logger.debug(f'launch_node({node!r})')
-        package: Result = self.scope.resolve(node.package)
-        executable: Result = self.scope.resolve(node.executable)
+        package: Result = substitute(node.package, self.scope)
+        executable: Result = substitute(node.executable, self.scope)
         # node_id = uid_node(str(package), str(executable))
         name: str = self._get_node_name(node.name, package, executable)
         # namespace: Optional[LaunchSubstitution]
         # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
-        output: Result = self.scope.resolve(node.output)
+        output: Result = substitute(node.output, self.scope)
         args: Result = Resolved.from_list([
-            self.scope.resolve(arg) for arg in node.arguments
+            substitute(arg, self.scope) for arg in node.arguments
         ])
         params: Result = self.parameters_from_list(node.parameters, node=name)
         remaps: Result = self.remappings_from_list(node.remaps)
@@ -451,7 +338,7 @@ class LaunchFeatureModelBuilder:
             if item.type.is_string or issubclass(item.type.token, Path):
                 return self._parameters_from_yaml(item.value, node=node)
             elif issubclass(item.type.token, LaunchSubstitution):
-                path: Result = self.scope.resolve(item)
+                path: Result = substitute(item, self.scope)
                 if path.is_resolved:
                     return self._parameters_from_yaml(path.value, node=node)
                 else:
@@ -464,7 +351,7 @@ class LaunchFeatureModelBuilder:
                     if key.is_resolved and isinstance(key.value, str):
                         name: Result = Resolved.from_string(key.value, source=key.source)
                     else:
-                        name: Result = self.scope.resolve(key)
+                        name: Result = substitute(key, self.scope)
                     if not name.is_resolved:
                         # break the whole dict analysis
                         logger.warning('unable to resolve parameter name')
@@ -472,7 +359,7 @@ class LaunchFeatureModelBuilder:
                     if not sub.is_resolved:
                         result[name.value] = unknown_value()
                     elif isinstance(sub.value, LaunchSubstitution):
-                        result[name.value] = self.scope.resolve(sub)
+                        result[name.value] = substitute(sub, self.scope)
                     elif sub.type.is_string:
                         result[name.value] = sub
                     elif sub.type.is_iterable:
@@ -541,9 +428,9 @@ class LaunchFeatureModelBuilder:
                 continue
             from_name, to_name = rule.value
             if issubclass(from_name.type.token, LaunchSubstitution) and from_name.is_resolved:
-                from_name = self.scope.resolve(from_name)
+                from_name = substitute(from_name, self.scope)
             if issubclass(to_name.type.token, LaunchSubstitution) and to_name.is_resolved:
-                to_name = self.scope.resolve(to_name)
+                to_name = substitute(to_name, self.scope)
             if not from_name.type.is_string:
                 logger.warning(f'unable to resolve ROS name in remap rule: {from_name!r}')
                 continue
@@ -574,7 +461,7 @@ class LaunchFeatureModelBuilder:
             if name is None:
                 return executable.value  # FIXME
             return str(name)
-        value: Result = self.scope.resolve(name)
+        value: Result = substitute(name, self.scope)
         return value.value if value.is_resolved else '$(?)'
 
 

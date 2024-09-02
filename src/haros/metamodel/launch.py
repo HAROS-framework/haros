@@ -5,25 +5,80 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Iterable, List, NewType, Optional, Set, Tuple, Union
+from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
+
+import importlib
+import logging
+from pathlib import Path
+from types import ModuleType
 
 from attrs import field, frozen
 from enum import Enum, unique
 
-from haros.analysis.python.dataflow import TYPE_TOKEN_LIST, TYPE_TOKEN_OBJECT
 from haros.metamodel.common import (
+    TYPE_TOKEN_ANYTHING,
+    TYPE_TOKEN_LIST,
+    TYPE_TOKEN_STRING,
     IterableType,
     Resolved,
     Result,
     TrackedCode,
     UnresolvedIterable,
+    UnresolvedString,
 )
 from haros.metamodel.logic import TRUE, LogicValue
 from haros.metamodel.ros import RosName, RosNodeModel
 
 ###############################################################################
+# Constants
+###############################################################################
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
+
+###############################################################################
 # ROS Launch Substitutions
 ###############################################################################
+
+
+@frozen
+class LaunchScopeContext:
+    def get(self, name: str) -> Optional[Result]:
+        logger.debug(f'{self.__class__.__name__}.get({name!r})')
+        raise NotImplementedError()
+
+    def get_arg(self, name: str) -> Optional[Result]:
+        logger.debug(f'{self.__class__.__name__}.get_arg({name!r})')
+        raise NotImplementedError()
+
+    def set(self, name: str, value: Result):
+        logger.debug(f'{self.__class__.__name__}.set({name!r}, {value!r})')
+        raise NotImplementedError()
+
+    def set_unknown(self, name: str, source: Optional[TrackedCode] = None):
+        return self.set(name, Result.unknown_value(source=source))
+
+    def set_text(self, name: str, text: str, source: Optional[TrackedCode] = None):
+        return self.set(name, Resolved.from_string(text, source=source))
+
+    def compute_anon_name(self, name: str) -> str:
+        # as seen in the official distribution
+        import os
+        import random
+        import socket
+        import sys
+        name = f'{name}_{socket.gethostname()}_{os.getpid()}_{random.randint(0, sys.maxsize)}'
+        name = name.replace('.', '_')
+        name = name.replace('-', '_')
+        return name.replace(':', '_')
+
+    def get_this_launch_file(self) -> str:
+        logger.debug(f'{self.__class__.__name__}.get_this_launch_file()')
+        raise NotImplementedError()
+
+    def get_this_launch_file_dir(self) -> str:
+        logger.debug(f'{self.__class__.__name__}.get_this_launch_file_dir()')
+        raise NotImplementedError()
+
 
 # For a full list of substitutions see
 # https://github.com/ros2/launch/tree/galactic/launch/launch/substitutions
@@ -95,6 +150,14 @@ class LaunchSubstitution:
     def is_not_equals(self) -> bool:
         return False
 
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        logger.debug(f'{self.__class__.__name__}.resolve({ctx!r}, {source!r})')
+        raise NotImplementedError
+
     def __str__(self) -> str:
         return '$(?)'
 
@@ -110,16 +173,28 @@ def const_substitution(
     return Resolved(type(sub), source, sub)
 
 
+def substitute(
+    substitution: Optional[Result[LaunchSubstitution]],
+    context: LaunchScopeContext,
+    source: Optional[TrackedCode] = None,
+) -> Result[str]:
+    if substitution is None:
+        return unknown_substitution(source=source)
+    if substitution.is_resolved:
+        return substitution.value.resolve(context, source=(source or substitution.source))
+    return substitution.cast_to(TYPE_TOKEN_STRING)
+
+
 def _to_sub(arg: Result[Union[None, str, LaunchSubstitution]]) -> Result[LaunchSubstitution]:
     if not arg.is_resolved:
-        return arg.cast_to(TYPE_TOKEN_OBJECT)
+        return arg.cast_to(TYPE_TOKEN_ANYTHING)
     if arg.value is None:
         return Resolved.from_value(TextSubstitution(''))
     if isinstance(arg.value, LaunchSubstitution):
         return arg
     if isinstance(arg.value, str):
         return Resolved.from_value(TextSubstitution(arg.value), source=arg.source)
-    return Result.unknown_value(type=TYPE_TOKEN_OBJECT, source=arg.source)
+    return Result.unknown_value(type=TYPE_TOKEN_ANYTHING, source=arg.source)
 
 
 def _to_sub_list(
@@ -147,6 +222,13 @@ class TextSubstitution(LaunchSubstitution):
     def is_text(self) -> bool:
         return True
 
+    def resolve(
+        self,
+        _ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        return Resolved.from_string(self.value, source=source)
+
     def __str__(self) -> str:
         return self.value
 
@@ -164,6 +246,18 @@ class LaunchConfiguration(LaunchSubstitution):
     def is_configuration(self) -> bool:
         return True
 
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        value = ctx.get(self.name)
+        if value is not None:
+            return value
+        value = substitute(self.default_value, ctx, source=source)
+        ctx.set(self.name, value)
+        return value
+
     def __str__(self) -> str:
         return f'$(var {self.name} {self.default_value})'
 
@@ -177,6 +271,13 @@ class PackageShareDirectorySubstitution(LaunchSubstitution):
     @property
     def is_package_share(self) -> bool:
         return True
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        return super().resolve(ctx, source)
 
     def __str__(self) -> str:
         return f'$(share {self.package})'
@@ -194,6 +295,13 @@ class LaunchArgumentSubstitution(LaunchSubstitution):
     @property
     def is_argument(self) -> bool:
         return True
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        _source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        return ctx.get_arg(self.name)
 
     def __str__(self) -> str:
         return f'$(arg {self.name})'
@@ -225,6 +333,43 @@ class PythonExpressionSubstitution(LaunchSubstitution):
     def is_python_expression(self) -> bool:
         return True
 
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        if not self.expression.is_resolved or not self.modules.is_resolved:
+            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=source)
+        known_parts: List[str] = []
+        all_parts: List[Optional[str]] = []
+        for part in self.expression.value:
+            value = substitute(part, ctx, source=source)
+            if value.is_resolved:
+                known_parts.append(value.value)
+                all_parts.append(value.value)
+            else:
+                all_parts.append(None)
+        if len(known_parts) != len(all_parts):
+            return UnresolvedString.unknown_value(parts=all_parts, source=self.expression.source)
+        expression = ''.join(known_parts)
+        # FIXME avoid eval if possible
+        expression_locals: Dict[str, Any] = {}
+        for item in self.modules.value:
+            value = substitute(item, ctx, source=source)
+            if not value.is_resolved:
+                return value
+            name: str = value.value
+            module: ModuleType = importlib.import_module(name)
+            expression_locals[module.__name__] = module
+            if module.__name__ == 'math':
+                expression_locals.update(vars(module))
+        try:
+            end_result = str(eval(expression, {}, expression_locals))
+            return Resolved.from_string(end_result, source=source)
+        except:
+            pass
+        return Result.unknown_value(type=TYPE_TOKEN_STRING, source=source)
+
     def __str__(self) -> str:
         return f'$(python {self.expression})'
 
@@ -241,6 +386,13 @@ class EnvironmentSubstitution(LaunchSubstitution):
     @property
     def is_environment(self) -> bool:
         return True
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        return super().resolve(ctx, source)
 
     def __str__(self) -> str:
         return f'$(env {self.name})'
@@ -259,6 +411,13 @@ class FindExecutableSubstitution(LaunchSubstitution):
     def is_find_executable(self) -> bool:
         return True
 
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        return super().resolve(ctx, source)
+
     def __str__(self) -> str:
         return f'$(find {self.name})'
 
@@ -276,6 +435,13 @@ class LocalSubstitution(LaunchSubstitution):
     @property
     def is_local(self) -> bool:
         return True
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        return super().resolve(ctx, source)
 
     def __str__(self) -> str:
         return f'$(local {self.expression})'
@@ -310,6 +476,13 @@ class CommandSubstitution(LaunchSubstitution):
     def is_command(self) -> bool:
         return True
 
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        return super().resolve(ctx, source)
+
     def __str__(self) -> str:
         return f'$(cmd {self.command})'
 
@@ -328,6 +501,17 @@ class AnonymousNameSubstitution(LaunchSubstitution):
     def is_anon_name(self) -> bool:
         return True
 
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        value = substitute(self.name, ctx, source=source)
+        if value.is_resolved:
+            name = ctx.compute_anon_name(value.value)
+            value = Resolved.from_string(name, source=source)
+        return value
+
     def __str__(self) -> str:
         return f'$(anon {self.name})'
 
@@ -339,6 +523,13 @@ class ThisLaunchFileSubstitution(LaunchSubstitution):
     @property
     def is_this_file(self) -> bool:
         return True
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        return Resolved.from_string(ctx.get_this_launch_file(), source=source)
 
     def __str__(self) -> str:
         return '$(this-launch-file)'
@@ -355,17 +546,42 @@ class ThisDirectorySubstitution(LaunchSubstitution):
     def is_this_dir(self) -> bool:
         return True
 
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        return Resolved.from_string(ctx.get_this_launch_file_dir(), source=source)
+
     def __str__(self) -> str:
         return '$(this-launch-file-dir)'
 
 
 @frozen
 class ConcatenationSubstitution(LaunchSubstitution):
-    parts: Tuple[Result[LaunchSubstitution]]
+    parts: Iterable[Result[LaunchSubstitution]]
 
     @property
     def is_concatenation(self) -> bool:
         return True
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        known_parts: List[str] = []
+        all_parts: List[Optional[str]] = []
+        for part in self.parts:
+            value = substitute(part, ctx, source=source)
+            if value.is_resolved:
+                known_parts.append(value.value)
+                all_parts.append(value.value)
+            else:
+                all_parts.append(None)
+        if len(known_parts) != len(all_parts):
+            return UnresolvedString.unknown_value(all_parts, source=source)
+        return Resolved.from_string(''.join(known_parts), source=source)
 
     def __str__(self) -> str:
         return ''.join(map(str, self.parts))
@@ -373,11 +589,31 @@ class ConcatenationSubstitution(LaunchSubstitution):
 
 @frozen
 class PathJoinSubstitution(LaunchSubstitution):
-    parts: Tuple[Result[LaunchSubstitution]]
+    parts: Iterable[Result[LaunchSubstitution]]
 
     @property
     def is_path_join(self) -> bool:
         return True
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        path = Path()
+        is_unknown: bool = False
+        all_parts: List[Optional[str]] = []
+        for part in self.parts:
+            value = substitute(part, ctx, source=source)
+            if value.is_resolved:
+                path = path / str(value)
+                all_parts.append(value.value)
+            else:
+                is_unknown = True
+                all_parts.append(None)
+        if is_unknown:
+            return UnresolvedString.unknown_value(parts=all_parts, source=source)
+        return Resolved.from_string(path.as_posix(), source=source)
 
     def __str__(self) -> str:
         return f'$(join {" ".join(map(str, self.parts))})'
@@ -401,6 +637,21 @@ class EqualsSubstitution(LaunchSubstitution):
     def b(self) -> Result[LaunchSubstitution]:
         return self.argument2
 
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        a = substitute(self.argument1, ctx, source=source)
+        b = substitute(self.argument2, ctx, source=source)
+        if not a.is_resolved:
+            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=a.source)
+        if not b.is_resolved:
+            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=b.source)
+        if a.value == b.value:  # FIXME
+            return Resolved.from_string('true', source=source)
+        return Resolved.from_string('false', source=source)
+
     def __str__(self) -> str:
         return f'$(eq {self.argument1} {self.argument2})'
 
@@ -422,6 +673,21 @@ class NotEqualsSubstitution(LaunchSubstitution):
     @property
     def b(self) -> Result[LaunchSubstitution]:
         return self.argument2
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        a = substitute(self.argument1, ctx, source=source)
+        b = substitute(self.argument2, ctx, source=source)
+        if not a.is_resolved:
+            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=a.source)
+        if not b.is_resolved:
+            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=b.source)
+        if a.value != b.value:  # FIXME
+            return Resolved.from_string('true', source=source)
+        return Resolved.from_string('false', source=source)
 
     def __str__(self) -> str:
         return f'$(neq {self.argument1} {self.argument2})'
