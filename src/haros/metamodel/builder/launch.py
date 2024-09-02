@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, Final, Iterable, List, Mapping, Optional, Set, Tuple
 
 import logging
 from pathlib import Path
@@ -15,7 +15,7 @@ from attrs import define, evolve, field, frozen
 from haros.analysis.python.dataflow import unknown_bool, unknown_value
 from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
-from haros.metamodel.common import Resolved, Result, UnresolvedMapping
+from haros.metamodel.common import TYPE_TOKEN_STRING, Resolved, Result, UnresolvedMapping
 from haros.metamodel.launch import (
     ArgumentFeature,
     FeatureId,
@@ -36,6 +36,7 @@ from haros.metamodel.launch import (
     NodeFeature,
     UnlessCondition,
     substitute,
+    substitute_optional,
 )
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
 from haros.metamodel.ros import RosNodeModel
@@ -183,6 +184,10 @@ class LaunchScope(LaunchScopeContext):
         return self.file_path.parent.as_posix()
 
 
+def _empty_args() -> Result[Mapping[str, Result[str]]]:
+    return Resolved.from_dict({})
+
+
 @define
 class LaunchFeatureModelBuilder:
     file: str
@@ -190,15 +195,18 @@ class LaunchFeatureModelBuilder:
     nodes: List[NodeFeature] = field(factory=list)
     scope_stack: List[LaunchScope] = field(factory=list)
     included_files: Set[FeatureId] = field(factory=set)
+    passed_args: Result[Mapping[str, Result[str]]] = field(factory=_empty_args)
 
     @classmethod
     def from_file_path(
         cls,
         file_path: Path,
         system: AnalysisSystemInterface,
+        args: Optional[Result[Mapping[str, Result[str]]]] = None,
     ) -> 'LaunchFeatureModelBuilder':
+        passed_args = args if args is not None else Resolved.from_dict({})
         scopes = [LaunchScope(file_path)]
-        return cls(str(file_path), system=system, scope_stack=scopes)
+        return cls(str(file_path), system=system, scope_stack=scopes, passed_args=passed_args)
 
     @property
     def scope(self) -> LaunchScope:
@@ -232,13 +240,20 @@ class LaunchFeatureModelBuilder:
 
     def declare_argument(self, arg: LaunchArgument):
         name: str = arg.name
+        default_value = substitute_optional(arg.default_value, self.scope)
         feature = ArgumentFeatureBuilder(
             FeatureId(f'arg:{len(self.root.args)}'),
             name,
+            default_value=default_value,
             description=substitute(arg.description, self.scope),
         )
-        if arg.default_value is not None:
-            feature.set(substitute(arg.default_value, self.scope))
+        if self.passed_args.is_resolved:
+            # discard None
+            default_value = default_value or Resolved.from_string('')
+            value = self.passed_args.value.get(name, default_value)
+        else:
+            value = Result.unknown_value(type=TYPE_TOKEN_STRING, source=self.passed_args.source)
+        feature.set(value)
         self.root.args[name] = feature
         # FIXME raise error if argument name already exists?
 
@@ -247,33 +262,47 @@ class LaunchFeatureModelBuilder:
 
     def include_launch(self, include: LaunchInclusion):
         if include.namespace is None:
-            namespace: Result = Resolved.from_string('/')
+            namespace: Result[str] = Resolved.from_string('/')
         else:
-            namespace: Result = substitute(include.namespace, self.scope)
-        arguments: Dict[str, Result[LaunchSubstitution]] = include.arguments
-        file: Result = substitute(include.file, self.scope)
-        if file.is_resolved:
-            uid = FeatureId(f'file:{file.value}')
-            self.included_files.add(uid)
-            try:
-                description = self.system.get_launch_description(file.value)
-                logger.info(f'parsed included launch file: {file.value}')
-            except FileNotFoundError as e:
-                logger.warning(f'file not found: {e}')
-                return
-            except (AnalysisError, ParseError) as e:
-                logger.warning(f'analysis error: {e}')
-                return
-            path: Path = Path(file.value)
-            # FIXME pass arguments down
-            model: LaunchFileFeature = model_from_description(path, description, self.system)
-            # must change the node ids, otherwise there will be a clash
-            for node in model.nodes.values():
-                uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
-                self.nodes.append(evolve(node, id=uid))
-        else:
+            namespace: Result[str] = substitute(include.namespace, self.scope)
+        file: Result[str] = substitute(include.file, self.scope)
+        if not file.is_resolved:
             logger.warning(f'unknown launch file inclusion')
             return  # FIXME
+        uid = FeatureId(f'file:{file.value}')
+        self.included_files.add(uid)
+        try:
+            description = self.system.get_launch_description(file.value)
+            logger.info(f'parsed included launch file: {file.value}')
+        except FileNotFoundError as e:
+            logger.warning(f'file not found: {e}')
+            return
+        except (AnalysisError, ParseError) as e:
+            logger.warning(f'analysis error: {e}')
+            return
+        path: Path = Path(file.value)
+        # pass arguments down (order might be unreliable)
+        arguments = self._get_include_arguments(include)
+        model = model_from_description(path, description, self.system, args=arguments)
+        # must change the node ids, otherwise there will be a clash
+        for node in model.nodes.values():
+            uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
+            self.nodes.append(evolve(node, id=uid))
+
+    def _get_include_arguments(self, include: LaunchInclusion) -> Result[Dict[str, Result[str]]]:
+        arguments = {}
+        for passed_arg in include.arguments:
+            if not passed_arg.is_resolved:
+                # reset everything we know
+                return UnresolvedMapping.unknown_dict(source=passed_arg.source)
+            # the tuple itself is resolved
+            key = substitute(passed_arg.value[0], self.scope)
+            if not key.is_resolved:
+                # reset everything we know
+                return UnresolvedMapping.unknown_dict(source=key.source)
+            value = substitute(passed_arg.value[1], self.scope)
+            arguments[key.value] = value
+        return Resolved.from_dict(arguments)
 
     def launch_node(self, node: LaunchNode):
         logger.debug(f'launch_node({node!r})')
@@ -468,9 +497,10 @@ def model_from_description(
     path: Path,
     description: LaunchDescription,
     system: AnalysisSystemInterface,
+    args: Optional[Result[Mapping[str, Result[str]]]] = None,
 ) -> LaunchFileFeature:
-    logger.debug(f'model_from_description({path}, {description}, {system})')
-    builder = LaunchFeatureModelBuilder.from_file_path(path, system)
+    logger.debug(f'model_from_description({path}, {description}, {system}, args={args})')
+    builder = LaunchFeatureModelBuilder.from_file_path(path, system, args=args)
     if not description.entities.is_resolved:
         return LaunchFileFeature(FeatureId(f'file:{path}'), path)
     _add_list_of_entities(builder, description.entities.value)

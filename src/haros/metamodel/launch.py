@@ -179,7 +179,19 @@ def substitute(
     source: Optional[TrackedCode] = None,
 ) -> Result[str]:
     if substitution is None:
-        return unknown_substitution(source=source)
+        return Result.unknown_value(type=TYPE_TOKEN_STRING, source=source)
+    if substitution.is_resolved:
+        return substitution.value.resolve(context, source=(source or substitution.source))
+    return substitution.cast_to(TYPE_TOKEN_STRING)
+
+
+def substitute_optional(
+    substitution: Optional[Result[LaunchSubstitution]],
+    context: LaunchScopeContext,
+    source: Optional[TrackedCode] = None,
+) -> Result[str]:
+    if substitution is None:
+        return None
     if substitution.is_resolved:
         return substitution.value.resolve(context, source=(source or substitution.source))
     return substitution.cast_to(TYPE_TOKEN_STRING)
@@ -779,11 +791,14 @@ class LaunchArgument(LaunchEntity):
         return f'<arg {" ".join(parts)} />'
 
 
+LaunchArgumentKeyValuePair = Result[Tuple[Result[LaunchSubstitution], Result[LaunchSubstitution]]]
+
+
 @frozen
 class LaunchInclusion(LaunchEntity):
     file: Result[LaunchSubstitution]
     namespace: Optional[Result[LaunchSubstitution]] = None
-    arguments: Dict[str, Result[LaunchSubstitution]] = field(factory=dict)
+    arguments: Iterable[LaunchArgumentKeyValuePair] = field(factory=list)
     condition: Optional[Result[LaunchCondition]] = None
 
     @property

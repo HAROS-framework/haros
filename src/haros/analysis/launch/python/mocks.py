@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, Generic, Iterable, List, Optional, Mapping, Union
+from typing import Any, Callable, Final, Generic, Iterable, List, Optional, Mapping, Tuple, Union
 
 import logging
 import os
@@ -31,6 +31,7 @@ from haros.metamodel.launch import (
     ConcatenationSubstitution,
     EqualsSubstitution,
     IfCondition,
+    LaunchArgumentKeyValuePair,
     LaunchCondition,
     LaunchEntity,
     LaunchGroupAction,
@@ -161,35 +162,28 @@ def launch_configuration_function(
     )
 
 
+StringOrSubstitution = Result[Union[str, LaunchSubstitution]]
+LaunchArgumentKeyValue = Result[Tuple[StringOrSubstitution, StringOrSubstitution]]
+
+
 def include_launch_description_function(
     source: Result,
-    launch_arguments: Optional[Result] = None,
+    launch_arguments: Optional[Result[Iterable[LaunchArgumentKeyValue]]] = None,
     condition: Optional[Result[LaunchCondition]] = None,
 ) -> LaunchInclusion:
     _source: Result[LaunchSubstitution] = unknown_substitution(source=source.source)
     if source.is_resolved:
         if isinstance(source.value, LaunchSubstitution):
             _source = const_substitution(source.value, source=source.source)
-    _arguments = {}
-    if launch_arguments is not None:
-        if launch_arguments.is_resolved:
-            assert launch_arguments.type.mask.can_be_iterable
-            for item in launch_arguments.value:
-                if isinstance(item, tuple):
-                    key: Result[LaunchSubstitution] = _dataflow_to_launch_substitution(item[0])
-                    value: Result[LaunchSubstitution] = _dataflow_to_launch_substitution(item[1])
-                elif item.is_resolved:
-                    assert item.type.mask.can_be_iterable
-                    key: Result[LaunchSubstitution] = _dataflow_to_launch_substitution(item.value[0])
-                    value: Result[LaunchSubstitution] = _dataflow_to_launch_substitution(item.value[1])
-                else:
-                    continue  # FIXME
-                if not key.is_resolved:
-                    unknown = _arguments.get(key, [])
-                    unknown.append(value)
-                    _arguments[key] = unknown
-                else:
-                    _arguments[key] = value
+    _arguments: List[LaunchArgumentKeyValuePair] = []
+    if launch_arguments is not None and launch_arguments.is_resolved:
+        assert launch_arguments.type.is_iterable, repr(launch_arguments)
+        for item in launch_arguments.value:
+            assert item.type.is_iterable, repr(item)
+            if item.is_resolved:
+                key = _dataflow_to_launch_substitution(item.value[0])
+                value = _dataflow_to_launch_substitution(item.value[1])
+                _arguments.append(Resolved.from_tuple((key, value), source=item.source))
     return LaunchInclusion(file=_source, arguments=_arguments, condition=condition)
 
 
