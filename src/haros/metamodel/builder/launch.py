@@ -203,9 +203,10 @@ class LaunchFeatureModelBuilder:
         file_path: Path,
         system: AnalysisSystemInterface,
         args: Optional[Result[Mapping[str, Result[str]]]] = None,
+        condition: LogicValue = TRUE,
     ) -> 'LaunchFeatureModelBuilder':
         passed_args = args if args is not None else Resolved.from_dict({})
-        scopes = [LaunchScope(file_path)]
+        scopes = [LaunchScope(file_path, condition=condition)]
         return cls(str(file_path), system=system, scope_stack=scopes, passed_args=passed_args)
 
     @property
@@ -261,16 +262,22 @@ class LaunchFeatureModelBuilder:
         self.root.args[name].set(value)
 
     def include_launch(self, include: LaunchInclusion):
-        if include.namespace is None:
-            namespace: Result[str] = Resolved.from_string('/')
-        else:
-            namespace: Result[str] = substitute(include.namespace, self.scope)
         file: Result[str] = substitute(include.file, self.scope)
         if not file.is_resolved:
             logger.warning(f'unknown launch file inclusion')
             return  # FIXME
         uid = FeatureId(f'file:{file.value}')
+        boolean: Result[bool] = self.scope.resolve_condition(include.condition)
+        phi: LogicValue = _logic_value_from_result(boolean)
+        if phi.is_false:
+            logger.warning(f'discarded launch file inclusion: {file.value}')
+            return
         self.included_files.add(uid)
+        self.scope_stack.append(self.scope.duplicate(join_condition=phi))
+        if include.namespace is None:
+            namespace: Result[str] = Resolved.from_string('/')
+        else:
+            namespace: Result[str] = substitute(include.namespace, self.scope)
         try:
             description = self.system.get_launch_description(file.value)
             logger.info(f'parsed included launch file: {file.value}')
@@ -283,7 +290,7 @@ class LaunchFeatureModelBuilder:
         path: Path = Path(file.value)
         # pass arguments down (order might be unreliable)
         arguments = self._get_include_arguments(include)
-        model = model_from_description(path, description, self.system, args=arguments)
+        model = _model_from_description(path, description, self.system, args=arguments)
         # must change the node ids, otherwise there will be a clash
         for node in model.nodes.values():
             uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
@@ -497,9 +504,31 @@ def model_from_description(
     path: Path,
     description: LaunchDescription,
     system: AnalysisSystemInterface,
-    args: Optional[Result[Mapping[str, Result[str]]]] = None,
+    cmd_args: Optional[Mapping[str, Optional[str]]] = None,
 ) -> LaunchFileFeature:
-    logger.debug(f'model_from_description({path}, {description}, {system}, args={args})')
+    logger.debug(f'model_from_description({path}, {description}, {system}, cmd_args={cmd_args})')
+    args: Dict[str, Result[str]] = {}
+    if cmd_args is not None:
+        for key, value in cmd_args.items():
+            if value is None:
+                args[key] = Result.unknown_value(type=TYPE_TOKEN_STRING)
+            else:
+                args[key] = Resolved.from_string(value)
+    return _model_from_description(path, description, system, args=Resolved.from_dict(args))
+
+
+def _model_from_description(
+    path: Path,
+    description: LaunchDescription,
+    system: AnalysisSystemInterface,
+    args: Optional[Result[Mapping[str, Result[str]]]] = None,
+    condition: LogicValue = TRUE,
+) -> LaunchFileFeature:
+    assert not condition.is_false
+    logger.debug(
+        f'model_from_description({path}, {description}, {system}, '
+        f'args={args}), condition={condition}'
+    )
     builder = LaunchFeatureModelBuilder.from_file_path(path, system, args=args)
     if not description.entities.is_resolved:
         return LaunchFileFeature(FeatureId(f'file:{path}'), path)
