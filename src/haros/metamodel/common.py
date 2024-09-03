@@ -400,6 +400,8 @@ class Resolved(Result[V]):
         #     return cls.from_complex(value, source=source)
         # if isinstance(value, str):
         #     return cls.from_string(value, source=source)
+        if isinstance(value, Result):
+            raise ValueError('doubly wrapped Result')
         if isinstance(value, BaseException):
             return cls(TYPE_TOKEN_EXCEPTION, source, value)
         if isinstance(value, CLASS_TYPE):
