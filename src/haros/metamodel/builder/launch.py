@@ -248,7 +248,7 @@ class LaunchFeatureModelBuilder:
             description=substitute(arg.description, self.scope),
         )
         if self.passed_args.is_resolved:
-            # discard None
+            # discard default_value=None
             default_value = default_value or Resolved.from_string('')
             value = self.passed_args.value.get(name, default_value)
         else:

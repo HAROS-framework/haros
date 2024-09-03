@@ -182,10 +182,7 @@ def include_launch_description_function(
         for item in launch_arguments.value:
             # handle non-deeply transformed values from dataflow
             if isinstance(item, tuple):
-                item = Resolved.from_tuple((
-                    Resolved.from_value(item[0], source=launch_arguments.source),
-                    Resolved.from_value(item[1], source=launch_arguments.source),
-                ))
+                item = Resolved.from_tuple(item)
             assert item.type.is_iterable, repr(item)
             if item.is_resolved:
                 key = _dataflow_to_launch_substitution(item.value[0])
