@@ -325,6 +325,46 @@ class DynamicResult(Generic[V]):
         return f'$({self.__value})'
 
 
+@frozen
+class DynamicResult2(Generic[V]):
+    type: TypeToken[V]
+    value: V
+    source: Optional[TrackedCode]
+
+    @classmethod
+    def unknown_value(cls) -> 'DynamicResult2':
+        return cls()
+
+    @classmethod
+    def from_value(cls, value: V) -> 'DynamicResult2':
+        return cls()
+
+    @property
+    def is_resolved(self) -> bool:
+        return not isinstance(self.value, BlackHole)
+
+    def get_attr(self, name: str) -> 'DynamicResult2':
+        try:
+            return DynamicResult2.from_value(getattr(self.value, name))
+        except AttributeError:
+            return DynamicResult2.unknown_value()
+
+    def get_item(self, key: Any) -> 'DynamicResult2':
+        try:
+            return DynamicResult2.from_value(self.value[key])
+        except KeyError:
+            return DynamicResult2.unknown_value()
+
+    def call(self, *args: Any, **kwds: Any) -> 'DynamicResult2':
+        try:
+            return DynamicResult2.from_value(self.value(*args, **kwds))
+        except:
+            return DynamicResult2.unknown_value()
+
+    def __str__(self) -> str:
+        return f'$({self.value})'
+
+
 # UNKNOWN = DynamicResult(BlackHole())
 # a = DynamicResult([1,2,3])
 # print('UNKNOWN._DynamicResult__is_resolved:', UNKNOWN._DynamicResult__is_resolved)
