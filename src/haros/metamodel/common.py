@@ -270,11 +270,71 @@ TYPE_TOKEN_EXCEPTION: Final[TypeToken[Exception]] = TypeToken(Exception)
 
 
 class BlackHole:
-    def __getattribute__(self, _name: str) -> 'BlackHole':
+    def __getattr__(self, _name: str) -> 'BlackHole':
+        # could be __getattribute__ instead, if needed
+        return self
+
+    def __getitem__(self, _key: Any) -> 'BlackHole':
         return self
 
     def __call__(self, *args: Any, **kwds: Any) -> 'BlackHole':
         return self
+
+    def __str__(self) -> str:
+        return '?'
+
+
+@frozen
+class DynamicResult(Generic[V]):
+    __type: TypeToken[V]
+    __value: V
+    __source: Optional[TrackedCode]
+
+    @classmethod
+    def unknown_value(cls) -> 'DynamicResult':
+        return cls()
+
+    @property
+    def __is_resolved(self) -> bool:
+        return not isinstance(self.__value, BlackHole)
+
+    def __getattr__(self, name: str) -> 'DynamicResult':
+        print(f'__getattr__({name!r})')
+        try:
+            return DynamicResult(getattr(self.__value, name))
+        except AttributeError:
+            return DynamicResult.unknown_value()
+
+    def __getitem__(self, key: Any) -> 'DynamicResult':
+        print(f'__getitem__({key!r})')
+        try:
+            return DynamicResult(self.__value[key])
+        except KeyError:
+            return DynamicResult.unknown_value()
+
+    def __call__(self, *args: Any, **kwds: Any) -> 'DynamicResult':
+        try:
+            return DynamicResult(self.__value(*args, **kwds))
+        except:
+            return DynamicResult.unknown_value()
+
+    def __len__(self) -> int:
+        return len(self.__value)
+
+    def __str__(self) -> str:
+        return f'$({self.__value})'
+
+
+# UNKNOWN = DynamicResult(BlackHole())
+# a = DynamicResult([1,2,3])
+# print('UNKNOWN._DynamicResult__is_resolved:', UNKNOWN._DynamicResult__is_resolved)
+# print('a._DynamicResult__is_resolved:', a._DynamicResult__is_resolved)
+# print('len(a):', len(a))
+# print("getattr(a, 'reverse'):", getattr(a, 'reverse'))
+# print('a[0]:', a[0])
+# for b in a:
+#     print('b in a:', b)
+# print('end')
 
 
 @frozen
