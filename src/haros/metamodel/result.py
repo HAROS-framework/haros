@@ -22,36 +22,10 @@ from typing import (
 )
 
 from collections.abc import Iterable as IterableType, Mapping as MappingType
-import enum
 
-from attrs import asdict, evolve, field, frozen
+from attrs import evolve, frozen
 
-
-###############################################################################
-# Source Code
-###############################################################################
-
-
-@frozen
-class SourceCodeLocation:
-    file: Optional[str] = None
-    package: Optional[str] = None
-    line: int = 0
-    column: int = 0
-    language: Optional[str] = None
-
-    def serialize(self) -> Mapping[str, Any]:
-        return asdict(self)
-
-
-@frozen
-class TrackedCode:
-    snippet: Any
-    location: SourceCodeLocation
-
-    @classmethod
-    def unknown(cls) -> 'TrackedCode':
-        return cls(None, SourceCodeLocation())
+from haros.metamodel.common import TrackedCode
 
 
 ###############################################################################
@@ -77,71 +51,71 @@ class TypeToken(Generic[V]):
     token: Type[V]
 
     @classmethod
-    def of(cls, value: V) -> 'TypeToken':
+    def of(cls, value: V) -> 'TypeToken[V]':
         return cls(type(value))
 
     @classmethod
-    def of_anything(cls) -> 'TypeToken':
+    def of_anything(cls) -> 'TypeToken[Any]':
         return cls(object)
 
     @classmethod
-    def of_bool(cls) -> 'TypeToken':
+    def of_bool(cls) -> 'TypeToken[bool]':
         return cls(bool)
 
     @classmethod
-    def of_int(cls) -> 'TypeToken':
+    def of_int(cls) -> 'TypeToken[int]':
         return cls(int)
 
     @classmethod
-    def of_float(cls) -> 'TypeToken':
+    def of_float(cls) -> 'TypeToken[float]':
         return cls(float)
 
     @classmethod
-    def of_complex(cls) -> 'TypeToken':
+    def of_complex(cls) -> 'TypeToken[complex]':
         return cls(complex)
 
     @classmethod
-    def of_string(cls) -> 'TypeToken':
+    def of_string(cls) -> 'TypeToken[str]':
         return cls(str)
 
     @classmethod
-    def of_builtin_function(cls) -> 'TypeToken':
+    def of_builtin_function(cls) -> 'TypeToken[Type[min]]':
         return cls(BUILTIN_FUNCTION_TYPE)
 
     @classmethod
-    def of_def_function(cls) -> 'TypeToken':
+    def of_def_function(cls) -> 'TypeToken[Type[noop]]':
         return cls(DEF_FUNCTION_TYPE)
 
     @classmethod
-    def of_class(cls) -> 'TypeToken':
+    def of_class(cls) -> 'TypeToken[type]':
         return cls(CLASS_TYPE)
 
     @classmethod
-    def of_exception(cls) -> 'TypeToken':
+    def of_exception(cls) -> 'TypeToken[BaseException]':
         return cls(Exception)
 
     @classmethod
-    def of_iterable(cls) -> 'TypeToken':
+    def of_iterable(cls) -> 'TypeToken[IterableType]':
         return cls(IterableType)
 
     @classmethod
-    def of_list(cls) -> 'TypeToken':
+    def of_list(cls) -> 'TypeToken[List[T]]':
         return cls(list)
 
     @classmethod
-    def of_tuple(cls) -> 'TypeToken':
+    def of_tuple(cls) -> 'TypeToken[Tuple[T]]':
         return cls(tuple)
 
     @classmethod
-    def of_set(cls) -> 'TypeToken':
+    def of_set(cls) -> 'TypeToken[Set[T]]':
         return cls(set)
 
     @classmethod
-    def of_mapping(cls) -> 'TypeToken':
+    def of_mapping(cls) -> 'TypeToken[MappingType]':
         return cls(MappingType)
 
     @classmethod
-    def of_dict(cls) -> 'TypeToken':
+    def of_dict(cls) -> 'TypeToken[Dict[K, T]]':
         return cls(dict)
 
     @property
@@ -223,151 +197,22 @@ TYPE_TOKEN_CLASS: Final[TypeToken[type]] = TypeToken(type)
 TYPE_TOKEN_EXCEPTION: Final[TypeToken[Exception]] = TypeToken(Exception)
 
 
-
-class TypeMask(enum.Flag):
-    NONE = enum.auto()
-    BOOL = enum.auto()
-    INT = enum.auto()
-    FLOAT = enum.auto()
-    COMPLEX = enum.auto()
-    STRING = enum.auto()
-    FUNCTION = enum.auto()
-    CLASS = enum.auto()
-    EXCEPTION = enum.auto()
-    COLLECTION = enum.auto()
-    MAPPING = enum.auto()
-    ITERATOR = enum.auto()
-    OTHER = enum.auto()
-    NUMBER = INT | FLOAT | COMPLEX
-    PRIMITIVE = NONE | BOOL | NUMBER | STRING
-    DEFINITION = FUNCTION | CLASS
-    ITERABLE = STRING | COLLECTION | MAPPING | ITERATOR
-    OBJECTS = STRING | DEFINITION | EXCEPTION | ITERABLE | OTHER
-    ANY = PRIMITIVE | DEFINITION | OBJECTS
-
-    @classmethod
-    def from_value(cls, value: Any) -> 'TypeMask':
-        if value is None:
-            return cls.NONE
-        if isinstance(value, bool):
-            return cls.BOOL
-        if isinstance(value, int):
-            return cls.INT
-        if isinstance(value, float):
-            return cls.FLOAT
-        if isinstance(value, complex):
-            return cls.COMPLEX
-        if isinstance(value, str):
-            return cls.STRING
-        if isinstance(value, BaseException):
-            return cls.EXCEPTION
-        if isinstance(value, type):
-            return cls.CLASS
-        if isinstance(value, (tuple, list, set)):
-            return cls.COLLECTION
-        if isinstance(value, dict):
-            return cls.MAPPING
-        if callable(value):
-            return cls.FUNCTION
-        d = {}
-        g = (type(d.items()), type(d.keys()), type(d.values()))
-        if isinstance(value, g):
-            return cls.ITERATOR
-        return cls.OTHER
-
-    @property
-    def can_be_none(self) -> bool:
-        return bool(self & TypeMask.NONE)
-
-    @property
-    def can_be_bool(self) -> bool:
-        return bool(self & TypeMask.BOOL)
-
-    @property
-    def can_be_int(self) -> bool:
-        return bool(self & TypeMask.INT)
-
-    @property
-    def can_be_float(self) -> bool:
-        return bool(self & TypeMask.FLOAT)
-
-    @property
-    def can_be_complex(self) -> bool:
-        return bool(self & TypeMask.COMPLEX)
-
-    @property
-    def can_be_number(self) -> bool:
-        return bool(self & TypeMask.NUMBER)
-
-    @property
-    def can_be_string(self) -> bool:
-        return bool(self & TypeMask.STRING)
-
-    @property
-    def can_be_primitive(self) -> bool:
-        return bool(self & TypeMask.PRIMITIVE)
-
-    @property
-    def can_be_function(self) -> bool:
-        return bool(self & TypeMask.FUNCTION)
-
-    @property
-    def can_be_class(self) -> bool:
-        return bool(self & TypeMask.CLASS)
-
-    @property
-    def can_be_definition(self) -> bool:
-        return bool(self & TypeMask.DEFINITION)
-
-    @property
-    def can_be_exception(self) -> bool:
-        return bool(self & TypeMask.EXCEPTION)
-
-    @property
-    def can_be_collection(self) -> bool:
-        return bool(self & TypeMask.COLLECTION)
-
-    @property
-    def can_be_mapping(self) -> bool:
-        return bool(self & TypeMask.MAPPING)
-
-    @property
-    def can_be_iterator(self) -> bool:
-        return bool(self & TypeMask.ITERATOR)
-
-    @property
-    def can_be_iterable(self) -> bool:
-        return bool(self & TypeMask.ITERABLE)
-
-    @property
-    def can_be_other_object(self) -> bool:
-        return bool(self & TypeMask.OTHER)
-
-    @property
-    def can_be_any_object(self) -> bool:
-        return bool(self & TypeMask.OBJECTS)
-
-    @property
-    def can_be_anything(self) -> bool:
-        return bool(self & TypeMask.ANY)
-
-    @property
-    def can_have_attributes(self) -> bool:
-        return bool(self & ~TypeMask.PRIMITIVE)
-
-    @property
-    def can_have_items(self) -> bool:
-        mask = TypeMask.STRING | TypeMask.COLLECTION | TypeMask.MAPPING | TypeMask.OTHER
-        return bool(self & mask)
-
-
 ###############################################################################
 # Unknown Values
 ###############################################################################
 
 
 @frozen
-class BlackHole:
+class UnknownValue:
+    def __str__(self) -> str:
+        return '?'
+
+
+UNKNOWN_VALUE: Final[UnknownValue] = UnknownValue()
+
+
+@frozen
+class BlackHole(UnknownValue):
     def __getattr__(self, _name: str) -> 'BlackHole':
         # could be __getattribute__ instead, if needed
         return self
@@ -378,12 +223,6 @@ class BlackHole:
     def __call__(self, *args: Any, **kwds: Any) -> 'BlackHole':
         return self
 
-    def __str__(self) -> str:
-        return '?'
-
-
-UNKNOWN_VALUE: Final[BlackHole] = BlackHole()
-
 
 ###############################################################################
 # Results
@@ -392,253 +231,310 @@ UNKNOWN_VALUE: Final[BlackHole] = BlackHole()
 
 @frozen
 class Result(Generic[V]):
-    value: Union[V, TypeMask]
+    _value: Union[V, UnknownValue]
+    type: TypeToken[V]
     source: Optional[TrackedCode]
 
     @property
     def is_resolved(self) -> bool:
-        return not isinstance(self.value, TypeMask)
+        return not isinstance(self._value, UnknownValue)
 
     @property
     def is_traceable(self) -> bool:
         return self.source is not None
 
-    @classmethod
-    def unknown_value(cls, source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(TypeMask.ANY, source)
+    @property
+    def value(self) -> V:
+        if self.is_resolved:
+            return self._value
+        raise ValueError('unresolved value')
 
     @classmethod
-    def unknown_int(cls, source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(TypeMask.INT, source)
+    def unknown_value(
+        cls,
+        of_type: TypeToken[V] = TYPE_TOKEN_ANYTHING,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[V]':
+        assert isinstance(of_type, TypeToken)
+        return cls(UNKNOWN_VALUE, of_type, source)
 
     @classmethod
-    def unknown_float(cls, source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(TypeMask.FLOAT, source)
-
-    @classmethod
-    def from_complex(cls, value: complex, source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(value, source)
-
-    @classmethod
-    def from_string(cls, value: str, source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(TYPE_TOKEN_STRING, source, value)
-
-    @classmethod
-    def from_bool(cls, value: bool, source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(TYPE_TOKEN_BOOL, source, value)
-
-    @classmethod
-    def from_tuple(cls, value: Tuple[V], source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(TYPE_TOKEN_TUPLE, source, value)
-
-    @classmethod
-    def from_list(cls, value: List[V], source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(TYPE_TOKEN_LIST, source, value)
-
-    @classmethod
-    def from_set(cls, value: Set[V], source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(TYPE_TOKEN_SET, source, value)
-
-    @classmethod
-    def from_dict(cls, value: Dict[K, V], source: Optional[TrackedCode] = None) -> 'Result':
-        return cls(TYPE_TOKEN_DICT, source, value)
-
-    @classmethod
-    def from_value(cls, value: V, source: Optional[TrackedCode] = None) -> 'Result':
+    def of(cls, value: V, source: Optional[TrackedCode] = None) -> 'Result[V]':
+        assert not isinstance(value, Result), 'doubly wrapped Result'
         if value is None:
-            return cls.from_none(source=source)
-        # if isinstance(value, bool):
-        #     return cls.from_bool(value, source=source)
-        # if isinstance(value, int):
-        #     return cls.from_int(value, source=source)
-        # if isinstance(value, float):
-        #     return cls.from_float(value, source=source)
-        # if isinstance(value, complex):
-        #     return cls.from_complex(value, source=source)
-        # if isinstance(value, str):
-        #     return cls.from_string(value, source=source)
-        if isinstance(value, Result):
-            raise ValueError('doubly wrapped Result')
+            return cls.of_none(source=source)
+        if isinstance(value, bool):
+            return cls.of_bool(value=value, source=source)
+        if isinstance(value, int):
+            return cls.of_int(value=value, source=source)
+        if isinstance(value, float):
+            return cls.of_float(value=value, source=source)
+        if isinstance(value, complex):
+            return cls.of_complex(value=value, source=source)
+        if isinstance(value, str):
+            return cls.of_string(value=value, source=source)
+        if isinstance(value, tuple):
+            return cls.of_tuple(value=value, source=source)
+        if isinstance(value, list):
+            return cls.of_list(value=value, source=source)
+        if isinstance(value, set):
+            return cls.of_set(value=value, source=source)
+        if isinstance(value, dict):
+            return cls.of_dict(value=value, source=source)
         if isinstance(value, BaseException):
-            return cls(TYPE_TOKEN_EXCEPTION, source, value)
+            return cls.of_exception(value=value, source=source)
         if isinstance(value, CLASS_TYPE):
-            return cls(TypeToken.of(value), source, value)
+            return cls.of_class(value=value, source=source)
         if isinstance(value, BUILTIN_FUNCTION_TYPE):
-            return cls(TYPE_TOKEN_FUNCTION, source, value)
+            return cls.of_builtin_function(value=value, source=source)
         if isinstance(value, DEF_FUNCTION_TYPE):
-            return cls(TYPE_TOKEN_FUNCTION, source, value)
-        if callable(value):
-            return cls(TYPE_TOKEN_FUNCTION, source, value)
-        # if isinstance(value, tuple):
-        #     return cls.from_tuple(value, source=source)
-        # if isinstance(value, list):
-        #     return cls.from_list(value, source=source)
-        # if isinstance(value, set):
-        #     return cls.from_set(value, source=source)
-        # if isinstance(value, dict):
-        #     return cls.from_dict(value, source=source)
-        # d = {}
-        # g = (type(d.items()), type(d.keys()), type(d.values()))
-        # if isinstance(value, g):
-        #     return cls(TYPE_TOKEN_ITERABLE, source, value)
-        return cls(TypeToken.of(value), source, value)
+            return cls.of_def_function(value=value, source=source)
+        d = {}
+        g = (type(d.items()), type(d.keys()), type(d.values()))
+        if isinstance(value, g):
+            return cls.of_iterable(value=value, source=source)
+        return cls(value, TypeToken.of(value), source)
 
-    def trace_to(self, source: Optional[TrackedCode]) -> 'Result':
+    @classmethod
+    def of_none(cls, source: Optional[TrackedCode] = None) -> 'Result[None]':
+        return cls(None, TYPE_TOKEN_NONE, source)
+
+    @classmethod
+    def of_bool(
+        cls,
+        value: Union[bool, UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[bool]':
+        assert isinstance(value, (bool, UnknownValue))
+        return cls(value, TYPE_TOKEN_BOOL, source)
+
+    @classmethod
+    def of_int(
+        cls,
+        value: Union[int, UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[int]':
+        assert isinstance(value, (int, UnknownValue))
+        return cls(value, TYPE_TOKEN_INT, source)
+
+    @classmethod
+    def of_float(
+        cls,
+        value: Union[float, UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[float]':
+        assert isinstance(value, (float, UnknownValue))
+        return cls(value, TYPE_TOKEN_FLOAT, source)
+
+    @classmethod
+    def of_complex(
+        cls,
+        value: Union[complex, UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[complex]':
+        assert isinstance(value, (complex, UnknownValue))
+        return cls(value, TYPE_TOKEN_COMPLEX, source)
+
+    @classmethod
+    def of_number(
+        cls,
+        value: Union[int, float, complex, UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[Union[int, float, complex]]':
+        if isinstance(value, int):
+            return cls.of_int(value=value, source=source)
+        if isinstance(value, float):
+            return cls.of_float(value=value, source=source)
+        if isinstance(value, complex):
+            return cls.of_complex(value=value, source=source)
+        assert isinstance(value, UnknownValue)
+        return cls.of_float(value=value, source=source)
+
+    @classmethod
+    def of_string(
+        cls,
+        value: Union[str, UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[str]':
+        assert isinstance(value, (str, UnknownValue))
+        return cls(value, TYPE_TOKEN_STRING, source)
+
+    @classmethod
+    def of_tuple(
+        cls,
+        value: Union[Tuple[T], UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[Tuple[T]]':
+        assert isinstance(value, (tuple, UnknownValue))
+        return cls(value, TYPE_TOKEN_TUPLE, source)
+
+    @classmethod
+    def of_list(
+        cls,
+        value: Union[List[T], UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[List[T]]':
+        assert isinstance(value, (list, UnknownValue))
+        return cls(value, TYPE_TOKEN_LIST, source)
+
+    @classmethod
+    def of_set(
+        cls,
+        value: Union[Set[T], UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[Set[T]]':
+        assert isinstance(value, (set, UnknownValue))
+        return cls(value, TYPE_TOKEN_SET, source)
+
+    @classmethod
+    def of_dict(
+        cls,
+        value: Union[Dict[K, T], UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[Dict[K, T]]':
+        assert isinstance(value, (dict, UnknownValue))
+        return cls(value, TYPE_TOKEN_DICT, source)
+
+    @classmethod
+    def of_iterable(
+        cls,
+        value: Union[IterableType[T], UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[IterableType[T]]':
+        assert isinstance(value, (IterableType, UnknownValue))
+        return cls(value, TYPE_TOKEN_ITERABLE, source)
+
+    @classmethod
+    def of_mapping(
+        cls,
+        value: Union[MappingType[K, T], UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[MappingType[K, T]]':
+        assert isinstance(value, (MappingType, UnknownValue))
+        return cls(value, TYPE_TOKEN_MAPPING, source)
+
+    @classmethod
+    def of_builtin_function(
+        cls,
+        value: Union[Type[min], UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[Type[min]]':
+        assert callable(value) or isinstance(value, UnknownValue), repr(value)
+        return cls(value, TYPE_TOKEN_BUILTIN, source)
+
+    @classmethod
+    def of_def_function(
+        cls,
+        value: Union[Type[noop], UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[Type[noop]]':
+        assert callable(value) or isinstance(value, UnknownValue)
+        return cls(value, TYPE_TOKEN_FUNCTION, source)
+
+    @classmethod
+    def of_class(
+        cls,
+        value: Union[Type[T], UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[Type[T]]':
+        assert callable(value) or isinstance(value, UnknownValue), repr(value)
+        return cls(value, TYPE_TOKEN_CLASS, source)
+
+    @classmethod
+    def of_instance(
+        cls,
+        constructor: Type[T],
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[T]':
+        assert isinstance(constructor, CLASS_TYPE)
+        return cls(UNKNOWN_VALUE, TypeToken(constructor), source)
+
+    @classmethod
+    def of_exception(
+        cls,
+        value: Union[BaseException, UnknownValue] = UNKNOWN_VALUE,
+        source: Optional[TrackedCode] = None,
+    ) -> 'Result[BaseException]':
+        assert isinstance(value, (BaseException, UnknownValue))
+        return cls(value, TYPE_TOKEN_EXCEPTION, source)
+
+    def cast_to(self, new_type: TypeToken[T]) -> 'Result[T]':
+        return evolve(self, type=new_type)
+
+    def trace_to(self, source: Optional[TrackedCode]) -> 'Result[V]':
         return evolve(self, source=source)
 
-    def get_attr(self, name: str) -> 'Result':
+    def get_attr(self, name: str, source: Optional[TrackedCode] = None) -> 'Result[Any]':
+        if not self.is_resolved:
+            return Result.unknown_value(source=source)
         try:
-            return Result.from_value(getattr(self.value, name))
+            return Result(getattr(self._value, name), source)
         except AttributeError:
-            return Result.unknown_value()
+            return Result.unknown_value(source=source)
 
-    def get_item(self, key: Any) -> 'Result':
+    def get_item(self, key: Any, source: Optional[TrackedCode] = None) -> 'Result[Any]':
+        if not self.is_resolved:
+            return Result.unknown_value(source=source)
         try:
-            return Result.from_value(self.value[key])
+            return Result(self._value[key], source)
         except KeyError:
-            return Result.unknown_value()
+            return Result.unknown_value(source=source)
 
-    def call(self, *args: Any, **kwds: Any) -> 'Result':
+    def call(self, *args: Any, **kwds: Any) -> 'Result[Any]':
+        if not self.is_resolved:
+            return Result.unknown_value()
         try:
-            return Result.from_value(self.value(*args, **kwds))
+            return Result(self._value(*args, **kwds))
         except:
             return Result.unknown_value()
 
     def __str__(self) -> str:
-        return f'$({self.value})'
+        return f'$({self._value})'
 
 
-
-
-
-
-TupleResult: Final[Type[Result]] = Result[Tuple[Result[V]]]
-ListResult: Final[Type[Result]] = Result[List[Result[V]]]
+###############################################################################
+# Value Wrappers
+###############################################################################
 
 
 @frozen
-class UnresolvedInt(Result[int]):
-    min_value: Optional[int] = None
-    max_value: Optional[int] = None
+class IterableWrapper(Generic[V]):
+    value: IterableType[V]
 
-    @classmethod
-    def unknown_value(
-        cls,
-        min_value: Optional[int] = None,
-        max_value: Optional[int] = None,
-        source: Optional[TrackedCode] = None,
-    ) -> 'UnresolvedInt':
-        return cls(TYPE_TOKEN_INT, source, min_value=min_value, max_value=max_value)
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.value, name)
+
+    def __getitem__(self, key: Any) -> Result[V]:
+        return Result(self.value[key], None)
 
     def __str__(self) -> str:
-        return '$(? int)'
+        return str(self.value)
 
 
 @frozen
-class UnresolvedFloat(Result[float]):
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
+class MappingWrapper(Generic[K, V]):
+    value: MappingType[K, V]
 
-    @classmethod
-    def unknown_value(
-        cls,
-        min_value: Optional[float] = None,
-        max_value: Optional[float] = None,
-        source: Optional[TrackedCode] = None,
-    ) -> 'UnresolvedFloat':
-        return cls(TYPE_TOKEN_FLOAT, source, min_value=min_value, max_value=max_value)
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.value, name)
+
+    def __getitem__(self, key: K) -> Result[V]:
+        return Result(self.value[key], None)
 
     def __str__(self) -> str:
-        return '$(? float)'
+        return str(self.value)
+
+
+###############################################################################
+# Partial Results
+###############################################################################
 
 
 @frozen
-class UnresolvedString(Result[str]):
-    parts: List[Optional[str]] = field(factory=list)
-
-    @classmethod
-    def unknown_value(
-        cls,
-        parts: Optional[List[Optional[str]]] = None,
-        source: Optional[TrackedCode] = None,
-    ) -> 'UnresolvedString':
-        parts = list(parts) if parts is not None else []
-        return cls(TYPE_TOKEN_STRING, source, parts=parts)
-
-    def __str__(self) -> str:
-        if not self.parts or (len(self.parts) == 1 and self.parts[0] is None):
-            return '$(? str)'
-        f = lambda s: '$(?)' if s is None else s
-        return ''.join(map(f, self.parts))
-
-
-@frozen
-class UnresolvedIterable(Result[Iterable[V]]):
-    parts: List[Result[V]] = field(factory=list)
-
-    @classmethod
-    def unknown_value(
-        cls,
-        parts: Optional[Iterable[Result[V]]] = None,
-        source: Optional[TrackedCode] = None,
-    ) -> 'UnresolvedIterable':
-        parts = list(parts) if parts is not None else []
-        return cls(TYPE_TOKEN_ITERABLE, source, parts=parts)
-
-    @classmethod
-    def unknown_list(
-        cls,
-        parts: Optional[Iterable[Result[V]]] = None,
-        source: Optional[TrackedCode] = None,
-    ) -> 'UnresolvedIterable':
-        parts = list(parts) if parts is not None else []
-        return cls(TYPE_TOKEN_LIST, source, parts=parts)
-
-    @classmethod
-    def unknown_tuple(
-        cls,
-        parts: Optional[Iterable[Result[V]]] = None,
-        source: Optional[TrackedCode] = None,
-    ) -> 'UnresolvedIterable':
-        parts = list(parts) if parts is not None else []
-        return cls(TYPE_TOKEN_TUPLE, source, parts=parts)
-
-    @classmethod
-    def unknown_set(
-        cls,
-        parts: Optional[Iterable[Result[V]]] = None,
-        source: Optional[TrackedCode] = None,
-    ) -> 'UnresolvedIterable':
-        parts = list(parts) if parts is not None else []
-        return cls(TYPE_TOKEN_SET, source, parts=parts)
+class UnresolvedString(UnknownValue):
+    parts: Iterable[Result[str]]
 
     def __str__(self) -> str:
         if not self.parts:
-            return '$(? list)'
-        return str(list(map(str, self.parts)))
-
-
-@frozen
-class UnresolvedMapping(Result[Mapping[K, V]]):
-    known: Dict[K, Result[V]] = field(factory=dict)
-
-    @classmethod
-    def unknown_value(
-        cls,
-        known: Optional[Mapping[K, Result[V]]] = None,
-        source: Optional[TrackedCode] = None,
-    ) -> 'UnresolvedMapping':
-        known = dict(known) if known is not None else {}
-        return cls(TYPE_TOKEN_MAPPING, source, known=known)
-
-    @classmethod
-    def unknown_dict(
-        cls,
-        known: Optional[Mapping[K, Result[V]]] = None,
-        source: Optional[TrackedCode] = None,
-    ) -> 'UnresolvedMapping':
-        known = dict(known) if known is not None else {}
-        return cls(TYPE_TOKEN_DICT, source, known=known)
-
-    def __str__(self) -> str:
-        return f'$(? map {self.known})'
+            return '(? str)'
+        return ''.join(map(str, self.parts))

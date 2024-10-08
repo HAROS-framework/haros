@@ -13,20 +13,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from attrs import define, frozen
-from haros.analysis.python.dataflow import (
-    TYPE_TOKEN_OBJECT,
-    TYPE_TOKEN_STRING,
-    MockObject,
-    const_list,
-    const_none,
-    library_function_wrapper,
-    solved,
-    solved_from,
-    unknown_tuple,
-    unknown_value,
-)
+from haros.analysis.python.dataflow import MockObject, library_function_wrapper
 from haros.internal.interface import AnalysisSystemInterface, PathType
-from haros.metamodel.common import T, Resolved, Result, UnresolvedString, VariantData
+from haros.metamodel.common import T, VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
     EqualsSubstitution,
@@ -53,6 +42,7 @@ from haros.metamodel.launch import (
     unknown_remap_list,
     unknown_substitution,
 )
+from haros.metamodel.result import Result, TypeToken
 
 ###############################################################################
 # Constants
@@ -63,6 +53,8 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 LAUNCH_ENTRY_POINT: Final[str] = 'generate_launch_description'
 
 UNKNOWN_TOKEN: Final[str] = '{?}'
+
+TYPE_LAUNCH_SUBSTITUTION: Final[TypeToken[LaunchSubstitution]] = TypeToken.of(LaunchSubstitution())
 
 ###############################################################################
 # Mocks
@@ -84,12 +76,12 @@ class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
     def add_action(self, action: Result[LaunchEntity]) -> Result[None]:
         if self.entities.is_resolved:
             self.entities.value.append(action)
-        return solved_from(None)
+        return Result.of_none(None)
 
     def _haros_freeze(self) -> LaunchDescription:
         if self.entities.is_resolved:
-            return LaunchDescription(solved_from(tuple(self.entities.value)))
-        return LaunchDescription(unknown_tuple())
+            return LaunchDescription(Result.of_tuple(tuple(self.entities.value)))
+        return LaunchDescription(Result.of_tuple())
 
 
 ###############################################################################
@@ -136,7 +128,7 @@ def launch_description_function(
     arg_list: Optional[Result[List[Result[LaunchEntity]]]] = None,
 ) -> LaunchDescriptionMock:
     if not arg_list:
-        return LaunchDescriptionMock(Resolved.from_list([]))
+        return LaunchDescriptionMock(Result.of_list([]))
     return LaunchDescriptionMock(arg_list)
 
 
@@ -182,12 +174,12 @@ def include_launch_description_function(
         for item in launch_arguments.value:
             # handle non-deeply transformed values from dataflow
             if isinstance(item, tuple):
-                item = Resolved.from_tuple(item)
+                item = Result.of_tuple(item)
             assert item.type.is_iterable, repr(item)
             if item.is_resolved:
                 key = _dataflow_to_launch_substitution(item.value[0])
                 value = _dataflow_to_launch_substitution(item.value[1])
-                _arguments.append(Resolved.from_tuple((key, value), source=item.source))
+                _arguments.append(Result.of_tuple((key, value), source=item.source))
     return LaunchInclusion(file=_source, arguments=_arguments, condition=condition)
 
 
@@ -216,9 +208,9 @@ def node_function(
     #   arguments: Optional[Iterable[SomeSubstitutionsType]]
     #   **kwargs
     if parameters is None:
-        params = Resolved.from_list([])
+        params = Result.of_list([])
     elif parameters.is_resolved:
-        params = Resolved.from_list([], source=parameters.source)
+        params = Result.of_list([], source=parameters.source)
         for item in parameters.value:
             if item.is_resolved:
                 if item.type.mask.can_be_mapping:
@@ -229,25 +221,25 @@ def node_function(
                     #   of Substitutions that will be expanded to a string.
                     # Additionally, values in the dictionary can be lists of the
                     #   aforementioned types, or another dictionary with the same properties.
-                    params.value.append(Resolved.from_dict(item.value, source=item.source))  # FIXME
+                    params.value.append(Result.of_dict(item.value, source=item.source))  # FIXME
                 else:
                     # yaml file that contains parameter rules
                     # (string or pathlib.Path to the full path of the file)
                     if item.type.mask.can_be_string:
-                        params.value.append(Resolved.from_string(item.value, source=item.source))
+                        params.value.append(Result.of_string(item.value, source=item.source))
                     elif isinstance(item.value, Path):
-                        params.value.append(Resolved.from_value(item.value, source=item.source))
+                        params.value.append(Result.of(item.value, source=item.source))
                     else:
-                        params.value.append(Resolved.from_value(item.value, source=item.source))
+                        params.value.append(Result.of(item.value, source=item.source))
             else:
                 params = unknown_parameter_list(source=parameters.source)
                 break
     else:
         params = unknown_parameter_list(source=parameters.source)
     if remappings is None:
-        remaps = Resolved.from_list([])
+        remaps = Result.of_list([])
     elif remappings.is_resolved:
-        remaps: LaunchNodeRemapList = Resolved.from_list([])
+        remaps: LaunchNodeRemapList = Result.of_list([])
         for item in remappings.value:
             if item.is_resolved:
                 remaps.value.append(item)
@@ -274,12 +266,13 @@ def group_action_function(
     actions: Optional[Result[Iterable[Result[LaunchEntity]]]] = None,
     condition: Optional[LaunchCondition] = None,
 ) -> LaunchGroupAction:
-    return LaunchGroupAction(actions or const_list([]), condition=condition)
+    return LaunchGroupAction(actions or Result.of_list([]), condition=condition)
 
 
+# FIXME return type
 def get_package_share_directory_function(package: Result) -> Result[LaunchSubstitution]:
     if not package.is_resolved:
-        return UnresolvedString()
+        return Result.unknown_value(of_type=TYPE_LAUNCH_SUBSTITUTION)
         # return unknown_substitution(source=package.source)
     path = str(package.value).replace('\\', '/')
     return f'/usr/share/ros/{path}'
@@ -339,12 +332,12 @@ class LazyFileHandle(MockObject):
     def read(self, encoding: Optional[Result[str]] = None) -> Result[str]:
         try:
             if self.path.is_resolved:
-                encoding = encoding or const_none()
+                encoding = encoding or Result.of_none()
                 text = self.system.read_text_file(self.path.value, encoding=encoding.value)
-                return solved_from(text)
+                return Result.of_string(text)
         except ValueError:
             pass
-        return unknown_value(type=TYPE_TOKEN_STRING)
+        return Result.of_string()
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(path={self.path})'
@@ -355,12 +348,12 @@ def builtin_open(
 ) -> Callable[[Result[str], Optional[Result[str]]], Result[LazyFileHandle]]:
     def wrapper(path: Result[str], mode: Optional[Result[str]] = None) -> Result[LazyFileHandle]:
         if not path.is_resolved:
-            return unknown_value()
+            return Result.unknown_value()
         if mode is None:
-            mode = solved_from('r')
+            mode = Result.of_string('r')
         if not mode.is_resolved or mode.value != 'r':
-            return unknown_value()
-        return solved(TYPE_TOKEN_OBJECT, LazyFileHandle(path, system))
+            return Result.unknown_value()
+        return Result.of(LazyFileHandle(path, system))
     return wrapper
 
 

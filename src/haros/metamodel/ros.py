@@ -14,17 +14,11 @@ from attrs.validators import matches_re
 
 from haros.metamodel.common import (
     DevelopmentMetadata,
-    K,
-    Resolved,
-    Result,
     SourceCodeDependencies,
     SourceCodeMetadata,
     TrackedCode,
-    UnresolvedIterable,
-    UnresolvedMapping,
-    V,
-    UnresolvedString,
 )
+from haros.metamodel.result import Result
 
 ###############################################################################
 # Constants
@@ -337,29 +331,23 @@ class NodeModel(RosFileSystemEntity):
 ###############################################################################
 
 
-def unknown_value(
-    type: TypeMask = TypeMask.STRING,
-    source: Optional[TrackedCode] = None,
-) -> Result:
-    return Result(source, type)
-
 def const_string(value: str, source: Optional[TrackedCode] = None) -> Result[str]:
     # TODO validate values
-    return Resolved(source, TypeMask.STRING, value)
+    return Result.of_string(value=value, source=source)
 
 def const_list(
-    value: str,
+    value: Iterable[Result],
     source: Optional[TrackedCode] = None,
 ) -> Result[Iterable[Result]]:
     # TODO validate values
-    return Resolved(source, TypeMask.LIST, value)
+    return Result.of_iterable(value=value, source=source)
 
 def const_mapping(
-    value: str,
+    value: Mapping[str, Result],
     source: Optional[TrackedCode] = None,
 ) -> Result[Mapping[str, Result]]:
     # TODO validate values
-    return Resolved(source, TypeMask.MAPPING, value)
+    return Result.of_mapping(value=value, source=source)
 
 
 ###############################################################################
@@ -372,19 +360,18 @@ class RosNodeModel(RosRuntimeEntity):
     rosname: Result[RosName]
     package: Result[str]
     executable: Result[str]
-    arguments: Result[List[str]] = field(factory=UnresolvedIterable.unknown_list)
-    parameters: Result = field(factory=UnresolvedMapping.unknown_dict)
-    remappings: Result = field(factory=UnresolvedMapping.unknown_dict)
-    output: Result[str] = Resolved.from_string('log')
+    arguments: Result[List[str]] = field(factory=Result.of_list)
+    parameters: Result = field(factory=Result.of_dict)
+    remappings: Result = field(factory=Result.of_dict)
+    output: Result[str] = Result.of_string('log')
 
     @property
     def node(self) -> Result[str]:
-        pkg = None if not self.package.is_resolved else self.package.value
-        exe = None if not self.executable.is_resolved else self.executable.value
-        if pkg is None or exe is None:
-            src = self.package.source if pkg is None else self.executable.source
-            return UnresolvedString.unknown_value(parts=[pkg, exe], source=src)
-        return Resolved.from_string(f'{pkg}/{exe}', source=self.package.source)
+        if not self.package.is_resolved:
+            return self.package
+        if not self.executable.is_resolved:
+            return self.executable
+        return Result.of_string(f'{self.package}/{self.executable}', source=self.package.source)
 
 
 @frozen

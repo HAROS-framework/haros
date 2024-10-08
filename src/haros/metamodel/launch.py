@@ -15,18 +15,13 @@ from types import ModuleType
 from attrs import field, frozen
 from enum import Enum, unique
 
-from haros.metamodel.common import (
-    TYPE_TOKEN_ANYTHING,
-    TYPE_TOKEN_LIST,
-    TYPE_TOKEN_STRING,
-    IterableType,
-    Resolved,
-    Result,
-    TrackedCode,
-    UnresolvedIterable,
-    UnresolvedString,
-)
+from haros.metamodel.common import TrackedCode
 from haros.metamodel.logic import TRUE, LogicValue
+from haros.metamodel.result import (
+    IterableType,
+    Result,
+    UnresolvedString
+)
 from haros.metamodel.ros import RosName, RosNodeModel
 
 ###############################################################################
@@ -58,7 +53,7 @@ class LaunchScopeContext:
         return self.set(name, Result.unknown_value(source=source))
 
     def set_text(self, name: str, text: str, source: Optional[TrackedCode] = None):
-        return self.set(name, Resolved.from_string(text, source=source))
+        return self.set(name, Result.of_string(text, source=source))
 
     def compute_anon_name(self, name: str) -> str:
         # as seen in the official distribution
@@ -163,14 +158,14 @@ class LaunchSubstitution:
 
 
 def unknown_substitution(source: Optional[TrackedCode] = None) -> Result[LaunchSubstitution]:
-    return Result(LaunchSubstitution, source)
+    return Result.of_instance(LaunchSubstitution, source=source)
 
 
 def const_substitution(
     sub: LaunchSubstitution,
     source: Optional[TrackedCode] = None,
 ) -> Result[LaunchSubstitution]:
-    return Resolved(type(sub), source, sub)
+    return Result.of(sub, source=source)
 
 
 def substitute(
@@ -179,10 +174,10 @@ def substitute(
     source: Optional[TrackedCode] = None,
 ) -> Result[str]:
     if substitution is None:
-        return Result.unknown_value(type=TYPE_TOKEN_STRING, source=source)
+        return Result.of_string(source=source)
     if substitution.is_resolved:
         return substitution.value.resolve(context, source=(source or substitution.source))
-    return substitution.cast_to(TYPE_TOKEN_STRING)
+    return Result.of_string(source=substitution.source)
 
 
 def substitute_optional(
@@ -194,36 +189,36 @@ def substitute_optional(
         return None
     if substitution.is_resolved:
         return substitution.value.resolve(context, source=(source or substitution.source))
-    return substitution.cast_to(TYPE_TOKEN_STRING)
+    return Result.of_string(source=substitution.source)
 
 
 def _to_sub(arg: Result[Union[None, str, LaunchSubstitution]]) -> Result[LaunchSubstitution]:
     if not arg.is_resolved:
-        return arg.cast_to(TYPE_TOKEN_ANYTHING)
+        return Result.unknown_value(source=arg.source)
     if arg.value is None:
-        return Resolved.from_value(TextSubstitution(''))
+        return Result.of(TextSubstitution(''))
     if isinstance(arg.value, LaunchSubstitution):
         return arg
     if isinstance(arg.value, str):
-        return Resolved.from_value(TextSubstitution(arg.value), source=arg.source)
-    return Result.unknown_value(type=TYPE_TOKEN_ANYTHING, source=arg.source)
+        return Result.of(TextSubstitution(arg.value), source=arg.source)
+    return Result.unknown_value(source=arg.source)
 
 
 def _to_sub_list(
     arg: Result[Union[None, str, LaunchSubstitution, Iterable[Result[Union[None, str, LaunchSubstitution]]]]],
 ) -> Result[Iterable[Result[LaunchSubstitution]]]:
     if not arg.is_resolved:
-        return arg.cast_to(TYPE_TOKEN_LIST)
+        return Result.of_list(source=arg.source)
     if arg.value is None:
-        return Resolved.from_value(TextSubstitution(''))
+        return Result.of(TextSubstitution(''))
     if isinstance(arg.value, str):
-        arg = Resolved.from_value(TextSubstitution(arg.value), source=arg.source)
+        arg = Result.of(TextSubstitution(arg.value), source=arg.source)
     if isinstance(arg.value, IterableType):
         values = [_to_sub(item) for item in arg.value]
-        return Resolved.from_list(values, source=arg.source)
+        return Result.of_list(values, source=arg.source)
     if isinstance(arg.value, LaunchSubstitution):
-        return Resolved.from_list([arg], source=arg.source)
-    return Result.unknown_value(type=TYPE_TOKEN_LIST, source=arg.source)
+        return Result.of_list([arg], source=arg.source)
+    return Result.of_list(source=arg.source)
 
 
 @frozen
@@ -239,7 +234,7 @@ class TextSubstitution(LaunchSubstitution):
         _ctx: LaunchScopeContext,
         source: Optional[TrackedCode] = None,
     ) -> Result[str]:
-        return Resolved.from_string(self.value, source=source)
+        return Result.of_string(self.value, source=source)
 
     def __str__(self) -> str:
         return self.value
@@ -320,8 +315,8 @@ class LaunchArgumentSubstitution(LaunchSubstitution):
 
 
 def _default_python_modules() -> Result[Iterable[Result[LaunchSubstitution]]]:
-    math = Resolved.from_value(TextSubstitution('math'))
-    return Resolved.from_tuple((math,))
+    math = Result.of(TextSubstitution('math'))
+    return Result.of_tuple((math,))
 
 
 @frozen
@@ -351,18 +346,16 @@ class PythonExpressionSubstitution(LaunchSubstitution):
         source: Optional[TrackedCode] = None,
     ) -> Result[str]:
         if not self.expression.is_resolved or not self.modules.is_resolved:
-            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=source)
+            return Result.of_string(source=source)
         known_parts: List[str] = []
-        all_parts: List[Optional[str]] = []
+        all_parts: List[Result[str]] = []
         for part in self.expression.value:
             value = substitute(part, ctx, source=source)
+            all_parts.append(value)
             if value.is_resolved:
                 known_parts.append(value.value)
-                all_parts.append(value.value)
-            else:
-                all_parts.append(None)
         if len(known_parts) != len(all_parts):
-            return UnresolvedString.unknown_value(parts=all_parts, source=self.expression.source)
+            return Result.of_string(UnresolvedString(all_parts), source=self.expression.source)
         expression = ''.join(known_parts)
         # FIXME avoid eval if possible
         expression_locals: Dict[str, Any] = {}
@@ -377,10 +370,10 @@ class PythonExpressionSubstitution(LaunchSubstitution):
                 expression_locals.update(vars(module))
         try:
             end_result = str(eval(expression, {}, expression_locals))
-            return Resolved.from_string(end_result, source=source)
+            return Result.of_string(end_result, source=source)
         except:
             pass
-        return Result.unknown_value(type=TYPE_TOKEN_STRING, source=source)
+        return Result.of_string(source=source)
 
     def __str__(self) -> str:
         return f'$(python {self.expression})'
@@ -521,7 +514,7 @@ class AnonymousNameSubstitution(LaunchSubstitution):
         value = substitute(self.name, ctx, source=source)
         if value.is_resolved:
             name = ctx.compute_anon_name(value.value)
-            value = Resolved.from_string(name, source=source)
+            value = Result.of_string(name, source=source)
         return value
 
     def __str__(self) -> str:
@@ -541,7 +534,7 @@ class ThisLaunchFileSubstitution(LaunchSubstitution):
         ctx: LaunchScopeContext,
         source: Optional[TrackedCode] = None,
     ) -> Result[str]:
-        return Resolved.from_string(ctx.get_this_launch_file(), source=source)
+        return Result.of_string(ctx.get_this_launch_file(), source=source)
 
     def __str__(self) -> str:
         return '$(this-launch-file)'
@@ -563,7 +556,7 @@ class ThisDirectorySubstitution(LaunchSubstitution):
         ctx: LaunchScopeContext,
         source: Optional[TrackedCode] = None,
     ) -> Result[str]:
-        return Resolved.from_string(ctx.get_this_launch_file_dir(), source=source)
+        return Result.of_string(ctx.get_this_launch_file_dir(), source=source)
 
     def __str__(self) -> str:
         return '$(this-launch-file-dir)'
@@ -583,17 +576,15 @@ class ConcatenationSubstitution(LaunchSubstitution):
         source: Optional[TrackedCode] = None,
     ) -> Result[str]:
         known_parts: List[str] = []
-        all_parts: List[Optional[str]] = []
+        all_parts: List[Result[str]] = []
         for part in self.parts:
             value = substitute(part, ctx, source=source)
+            all_parts.append(value)
             if value.is_resolved:
                 known_parts.append(value.value)
-                all_parts.append(value.value)
-            else:
-                all_parts.append(None)
         if len(known_parts) != len(all_parts):
-            return UnresolvedString.unknown_value(all_parts, source=source)
-        return Resolved.from_string(''.join(known_parts), source=source)
+            return Result.of_string(value=UnresolvedString(all_parts), source=source)
+        return Result.of_string(value=''.join(known_parts), source=source)
 
     def __str__(self) -> str:
         return ''.join(map(str, self.parts))
@@ -614,18 +605,17 @@ class PathJoinSubstitution(LaunchSubstitution):
     ) -> Result[str]:
         path = Path()
         is_unknown: bool = False
-        all_parts: List[Optional[str]] = []
+        all_parts: List[Result[str]] = []
         for part in self.parts:
             value = substitute(part, ctx, source=source)
+            all_parts.append(value)
             if value.is_resolved:
                 path = path / str(value)
-                all_parts.append(value.value)
             else:
                 is_unknown = True
-                all_parts.append(None)
         if is_unknown:
-            return UnresolvedString.unknown_value(parts=all_parts, source=source)
-        return Resolved.from_string(path.as_posix(), source=source)
+            return Result.of_string(value=UnresolvedString(all_parts), source=source)
+        return Result.of_string(value=path.as_posix(), source=source)
 
     def __str__(self) -> str:
         return f'$(join {" ".join(map(str, self.parts))})'
@@ -657,12 +647,12 @@ class EqualsSubstitution(LaunchSubstitution):
         a = substitute(self.argument1, ctx, source=source)
         b = substitute(self.argument2, ctx, source=source)
         if not a.is_resolved:
-            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=a.source)
+            return Result.of_string(source=a.source)
         if not b.is_resolved:
-            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=b.source)
+            return Result.of_string(source=b.source)
         if a.value == b.value:  # FIXME
-            return Resolved.from_string('true', source=source)
-        return Resolved.from_string('false', source=source)
+            return Result.of_string('true', source=source)
+        return Result.of_string('false', source=source)
 
     def __str__(self) -> str:
         return f'$(eq {self.argument1} {self.argument2})'
@@ -694,12 +684,12 @@ class NotEqualsSubstitution(LaunchSubstitution):
         a = substitute(self.argument1, ctx, source=source)
         b = substitute(self.argument2, ctx, source=source)
         if not a.is_resolved:
-            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=a.source)
+            return Result.of_string(source=a.source)
         if not b.is_resolved:
-            return Result.unknown_value(type=TYPE_TOKEN_STRING, source=b.source)
+            return Result.of_string(source=b.source)
         if a.value != b.value:  # FIXME
-            return Resolved.from_string('true', source=source)
-        return Resolved.from_string('false', source=source)
+            return Result.of_string('true', source=source)
+        return Result.of_string('false', source=source)
 
     def __str__(self) -> str:
         return f'$(neq {self.argument1} {self.argument2})'
@@ -812,11 +802,11 @@ LaunchNodeParameterList = Result[List[LaunchNodeParameterItem]]
 
 
 def unknown_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
-    return UnresolvedIterable.unknown_list(source=source)
+    return Result.of_list(source=source)
 
 
 def empty_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
-    return Resolved.from_list([], source=source)
+    return Result.of_list([], source=source)
 
 
 LaunchNodeRemapName = Result[Union[str, LaunchSubstitution]]
@@ -825,11 +815,11 @@ LaunchNodeRemapList = Result[List[LaunchNodeRemapItem]]
 
 
 def unknown_remap_list(source: Optional[TrackedCode] = None) -> LaunchNodeRemapList:
-    return UnresolvedIterable.unknown_list(source=source)
+    return Result.of_list(source=source)
 
 
 def empty_remap_list(source: Optional[TrackedCode] = None) -> LaunchNodeRemapList:
-    return Resolved.from_list([], source=source)
+    return Result.of_list([], source=source)
 
 
 @frozen

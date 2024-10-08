@@ -373,3 +373,125 @@ class UnresolvedMapping(Result[Mapping[K, V]]):
     def __str__(self) -> str:
         return f'$(? map {self.known})'
 
+
+
+
+class TypeMask(enum.Flag):
+    NONE = enum.auto()
+    BOOL = enum.auto()
+    INT = enum.auto()
+    FLOAT = enum.auto()
+    COMPLEX = enum.auto()
+    STRING = enum.auto()
+    FUNCTION = enum.auto()
+    CLASS = enum.auto()
+    EXCEPTION = enum.auto()
+    ITERABLE = enum.auto()
+    MAPPING = enum.auto()
+    OBJECT = enum.auto()
+    NUMBER = INT | FLOAT | COMPLEX
+    PRIMITIVE = NONE | BOOL | NUMBER | STRING
+    DEFINITIONS = FUNCTION | CLASS | EXCEPTION
+    OBJECTS = STRING | ITERABLE | MAPPING | OBJECT
+    ANY = PRIMITIVE | DEFINITIONS | OBJECT
+
+    @classmethod
+    def from_value(cls, value: Any) -> 'TypeMask':
+        if value is None:
+            return cls.NONE
+        if isinstance(value, bool):
+            return cls.BOOL
+        if isinstance(value, int):
+            return cls.INT
+        if isinstance(value, float):
+            return cls.FLOAT
+        if isinstance(value, complex):
+            return cls.COMPLEX
+        if isinstance(value, str):
+            return cls.STRING
+        if isinstance(value, BaseException):
+            return cls.EXCEPTION
+        if isinstance(value, type):
+            return cls.CLASS
+        if isinstance(value, FunctionWrapper) or callable(value):
+            return cls.FUNCTION
+        if isinstance(value, (tuple, list, set)):
+            return cls.ITERABLE
+        if isinstance(value, dict):
+            return cls.MAPPING
+        d = {}
+        g = (type(d.items()), type(d.keys()), type(d.values()))
+        if isinstance(value, g):
+            return cls.ITERABLE
+        return cls.OBJECT
+
+    @property
+    def can_be_bool(self) -> bool:
+        return bool(self & TypeMask.BOOL)
+
+    @property
+    def can_be_int(self) -> bool:
+        return bool(self & TypeMask.INT)
+
+    @property
+    def can_be_float(self) -> bool:
+        return bool(self & TypeMask.FLOAT)
+
+    @property
+    def can_be_complex(self) -> bool:
+        return bool(self & TypeMask.COMPLEX)
+
+    @property
+    def can_be_number(self) -> bool:
+        return bool(self & TypeMask.NUMBER)
+
+    @property
+    def can_be_string(self) -> bool:
+        return bool(self & TypeMask.STRING)
+
+    @property
+    def can_be_primitive(self) -> bool:
+        return bool(self & TypeMask.PRIMITIVE)
+
+    @property
+    def can_be_function(self) -> bool:
+        return bool(self & TypeMask.FUNCTION)
+
+    @property
+    def can_be_class(self) -> bool:
+        return bool(self & TypeMask.CLASS)
+
+    @property
+    def can_be_exception(self) -> bool:
+        return bool(self & TypeMask.EXCEPTION)
+
+    @property
+    def can_be_definitions(self) -> bool:
+        return bool(self & TypeMask.DEFINITIONS)
+
+    @property
+    def can_be_iterable(self) -> bool:
+        return bool(self & TypeMask.ITERABLE)
+
+    @property
+    def can_be_mapping(self) -> bool:
+        return bool(self & TypeMask.MAPPING)
+
+    @property
+    def can_be_object(self) -> bool:
+        return bool(self & TypeMask.OBJECT)
+
+    @property
+    def can_be_any_object(self) -> bool:
+        return bool(self & TypeMask.OBJECTS)
+
+    @property
+    def can_have_attributes(self) -> bool:
+        return bool(self & ~TypeMask.PRIMITIVE)
+
+    @property
+    def can_have_items(self) -> bool:
+        mask = TypeMask.STRING | TypeMask.ITERABLE | TypeMask.MAPPING | TypeMask.OBJECT
+        return bool(self & mask)
+
+

@@ -17,12 +17,12 @@ from haros.analysis.python.dataflow import (
     BUILTINS_MODULE,
     DataScope,
     FunctionWrapper,
-    PythonTypeToken,
 )
 from haros.analysis.python.logic import to_condition
 from haros.errors import AnalysisError
-from haros.metamodel.common import Result, VariantData
+from haros.metamodel.common import VariantData
 from haros.metamodel.logic import TRUE, LogicValue
+from haros.metamodel.result import Result, TypeToken
 from haros.parsing.python.ast import (
     PythonAst,
     PythonBinaryOperator,
@@ -80,7 +80,7 @@ class ProgramNode:
 @frozen
 class AnalysisExpression:
     value: Any
-    type: PythonTypeToken
+    type: TypeToken
 
     @property
     def is_unknown(self) -> bool:

@@ -16,11 +16,12 @@ from haros.analysis.launch.python.mocks import (
     builtin_open,
     prepare_builtin_symbols,
 )
-from haros.analysis.python.dataflow import BUILTINS_MODULE, unknown_tuple
+from haros.analysis.python.dataflow import BUILTINS_MODULE
 from haros.analysis.python.graph import ProgramGraphBuilder, from_ast
 from haros.errors import WrongFileTypeError
 from haros.internal.interface import AnalysisSystemInterface
 from haros.metamodel.launch import LaunchDescription
+from haros.metamodel.result import Result
 from haros.parsing.python import parse
 
 ###############################################################################
@@ -78,4 +79,4 @@ def launch_description_from_program_graph(graph: ProgramGraphBuilder) -> LaunchD
             continue  # FIXME
         return launch_description._haros_freeze()
     logger.error('unable to return a complete LaunchDescription')
-    return LaunchDescription(unknown_tuple())  # FIXME
+    return LaunchDescription(Result.of_tuple())  # FIXME

@@ -20,8 +20,8 @@ from haros.analysis.python.dataflow import BUILTINS_MODULE
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.settings import Settings
 from haros.metamodel.builder.launch import model_from_description
-from haros.metamodel.common import Result
 from haros.metamodel.launch import LaunchFileFeature, NodeFeature
+from haros.metamodel.result import Result
 from haros.metamodel.ros import FileModel, NodeModel, PackageModel, ProjectModel
 
 from haros.analysis.python.graph import ProgramGraphBuilder

@@ -12,10 +12,8 @@ from pathlib import Path
 
 from attrs import define, evolve, field, frozen
 
-from haros.analysis.python.dataflow import unknown_bool, unknown_value
 from haros.errors import AnalysisError, ParseError
 from haros.internal.interface import AnalysisSystemInterface
-from haros.metamodel.common import TYPE_TOKEN_STRING, Resolved, Result, UnresolvedMapping
 from haros.metamodel.launch import (
     ArgumentFeature,
     FeatureId,
@@ -39,6 +37,7 @@ from haros.metamodel.launch import (
     substitute_optional,
 )
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
+from haros.metamodel.result import Result
 from haros.metamodel.ros import RosNodeModel
 
 ###############################################################################
@@ -63,7 +62,7 @@ class ArgumentFeatureBuilder:
     id: FeatureId
     name: str
     # value of this argument - given via command line or computed from default
-    value: Result[str] = field(factory=Result.unknown_value)
+    value: Result[str] = field(factory=Result.of_string)
     # default value, defined on declaration
     default_value: Optional[Result[str]] = None
     description: Optional[Result[str]] = None
@@ -134,7 +133,7 @@ class LaunchScope(LaunchScopeContext):
 
     def resolve_condition(self, condition: Optional[Result[LaunchCondition]]) -> Result[bool]:
         if condition is None:
-            return Resolved.from_bool(True)
+            return Result.of_bool(True)
         if condition.is_resolved:
             if condition.value.is_if_condition:
                 assert isinstance(condition.value, IfCondition), repr(condition.value)
@@ -142,22 +141,22 @@ class LaunchScope(LaunchScopeContext):
                 if result.is_resolved:
                     value = result.value.lower()
                     if value in TRUE_VALUES:
-                        return Resolved.from_bool(True, source=condition.source)
+                        return Result.of_bool(True, source=condition.source)
                     if value in FALSE_VALUES:
-                        return Resolved.from_bool(False, source=condition.source)
+                        return Result.of_bool(False, source=condition.source)
             elif condition.value.is_unless_condition:
                 assert isinstance(condition.value, UnlessCondition), repr(condition.value)
                 result = substitute(condition.value.expression, self, source=condition.source)
                 if result.is_resolved:
                     value = result.value.lower()
                     if value in TRUE_VALUES:
-                        return Resolved.from_bool(False, source=condition.source)
+                        return Result.of_bool(False, source=condition.source)
                     if value in FALSE_VALUES:
-                        return Resolved.from_bool(True, source=condition.source)
+                        return Result.of_bool(True, source=condition.source)
             # TODO LaunchConfigurationEquals
             # TODO LaunchConfigurationNotEquals
             # FIXME https://github.com/ros2/launch/blob/rolling/launch/launch/conditions/launch_configuration_equals.py
-        return unknown_bool(source=condition.source)
+        return Result.of_bool(source=condition.source)
 
     def duplicate(self, join_condition: LogicValue = TRUE) -> 'LaunchScope':
         # LaunchArgument is defined globally
@@ -185,7 +184,7 @@ class LaunchScope(LaunchScopeContext):
 
 
 def _empty_args() -> Result[Mapping[str, Result[str]]]:
-    return Resolved.from_dict({})
+    return Result.of_dict({})
 
 
 @define
@@ -205,7 +204,7 @@ class LaunchFeatureModelBuilder:
         args: Optional[Result[Mapping[str, Result[str]]]] = None,
         condition: LogicValue = TRUE,
     ) -> 'LaunchFeatureModelBuilder':
-        passed_args = args if args is not None else Resolved.from_dict({})
+        passed_args = args if args is not None else Result.of_dict({})
         scopes = [LaunchScope(file_path, condition=condition)]
         return cls(str(file_path), system=system, scope_stack=scopes, passed_args=passed_args)
 
@@ -250,10 +249,10 @@ class LaunchFeatureModelBuilder:
         )
         if self.passed_args.is_resolved:
             # discard default_value=None
-            default_value = default_value or Resolved.from_string('')
+            default_value = default_value or Result.of_string('')
             value = self.passed_args.value.get(name, default_value)
         else:
-            value = Result.unknown_value(type=TYPE_TOKEN_STRING, source=self.passed_args.source)
+            value = Result.of_string(source=self.passed_args.source)
         feature.set(value)
         self.root.args[name] = feature
         # FIXME raise error if argument name already exists?
@@ -275,7 +274,7 @@ class LaunchFeatureModelBuilder:
         self.included_files.add(uid)
         self.scope_stack.append(self.scope.duplicate(join_condition=phi))
         if include.namespace is None:
-            namespace: Result[str] = Resolved.from_string('/')
+            namespace: Result[str] = Result.of_string('/')
         else:
             namespace: Result[str] = substitute(include.namespace, self.scope)
         try:
@@ -301,15 +300,15 @@ class LaunchFeatureModelBuilder:
         for passed_arg in include.arguments:
             if not passed_arg.is_resolved:
                 # reset everything we know
-                return UnresolvedMapping.unknown_dict(source=passed_arg.source)
+                return Result.of_dict(source=passed_arg.source)
             # the tuple itself is resolved
             key = substitute(passed_arg.value[0], self.scope)
             if not key.is_resolved:
                 # reset everything we know
-                return UnresolvedMapping.unknown_dict(source=key.source)
+                return Result.of_dict(source=key.source)
             value = substitute(passed_arg.value[1], self.scope)
             arguments[key.value] = value
-        return Resolved.from_dict(arguments)
+        return Result.of_dict(arguments)
 
     def launch_node(self, node: LaunchNode):
         logger.debug(f'launch_node({node!r})')
@@ -320,7 +319,7 @@ class LaunchFeatureModelBuilder:
         # namespace: Optional[LaunchSubstitution]
         # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
         output: Result = substitute(node.output, self.scope)
-        args: Result = Resolved.from_list([
+        args: Result = Result.of_list([
             substitute(arg, self.scope) for arg in node.arguments
         ])
         params: Result = self.parameters_from_list(node.parameters, node=name)
@@ -330,12 +329,12 @@ class LaunchFeatureModelBuilder:
             if fsnode is None:
                 logger.warning(f'unable to find node: {package}/{executable}')
             # TODO add ROS client library calls
-        rosname = Resolved.from_string(name)  # TODO source if node.name is not None
+        rosname = Result.of_string(name)  # TODO source if node.name is not None
         rosnode = RosNodeModel(
             rosname,
             package,
             executable,
-            # Resolved.from_string(node_id),
+            # Result.of_string(node_id),
             arguments=args,
             parameters=params,
             remappings=remaps,
@@ -350,9 +349,9 @@ class LaunchFeatureModelBuilder:
 
     def parameters_from_list(self, parameters: LaunchNodeParameterList, node: Optional[str] = None) -> Result:
         if not parameters.is_resolved:
-            return UnresolvedMapping.unknown_dict(source=parameters.source)
-        result: Result = Resolved.from_dict({})
-        param_dict: Dict[str, Result] = result.value
+            return Result.of_dict(source=parameters.source)
+        result: Result = Result.of_dict({})
+        param_dict: Dict[str, Result] = result.value  # FIXME key is probably Result[str]
         for item in parameters.value:
             assert isinstance(item, Result), f'unexpected launch node parameter: {item!r}'
             try:
@@ -378,21 +377,21 @@ class LaunchFeatureModelBuilder:
                     return self._parameters_from_yaml(path.value, node=node)
                 else:
                     logger.warning('unable to resolve parameter file path')
-                    return UnresolvedMapping.unknown_dict(source=path.source)
+                    return Result.of_dict(source=path.source)
             elif item.type.is_mapping:
                 result = {}
                 param_dict: Dict[Result[Any], Result[Any]] = item.value
                 for key, sub in param_dict.items():
                     if key.is_resolved and isinstance(key.value, str):
-                        name: Result = Resolved.from_string(key.value, source=key.source)
+                        name: Result[str] = Result.of_string(key.value, source=key.source)
                     else:
-                        name: Result = substitute(key, self.scope)
+                        name: Result[str] = substitute(key, self.scope)
                     if not name.is_resolved:
                         # break the whole dict analysis
                         logger.warning('unable to resolve parameter name')
-                        return UnresolvedMapping.unknown_dict(source=key.source)
+                        return Result.of_dict(source=key.source)
                     if not sub.is_resolved:
-                        result[name.value] = unknown_value()
+                        result[name.value] = Result.unknown_value()
                     elif isinstance(sub.value, LaunchSubstitution):
                         result[name.value] = substitute(sub, self.scope)
                     elif sub.type.is_string:
@@ -401,24 +400,24 @@ class LaunchFeatureModelBuilder:
                         result[name.value] = sub
                     else:
                         # TODO how to handle nested dicts and non-string values?
-                        result[name.value] = Resolved.from_string(str(sub.value), source=sub.source)
-                return Resolved.from_dict(result, source=item.source)
+                        result[name.value] = Result.of_string(str(sub.value), source=sub.source)
+                return Result.of_dict(result, source=item.source)
             else:
                 raise TypeError(f'unexpected parameter: {item!r}')
         else:
             logger.warning('unable to resolve parameter list item')
-            return UnresolvedMapping.unknown_dict(source=item.source)
+            return Result.of_dict(source=item.source)
 
     def _parameters_from_yaml(self, path: str, node: Optional[str] = None) -> Result:
         try:
             data = self.system.read_yaml_file(path)
         except OSError as e:
             logger.warning(f'unable to load parameter file: {e}')
-            return UnresolvedMapping.unknown_dict(source=path.source)
+            return Result.of_dict(source=path.source)
         except ValueError:
             logger.warning(f'parameter file located in unsafe path: {path}')
-            return UnresolvedMapping.unknown_dict(source=path.source)
-        # return Resolved.from_dict({'TODO': Resolved.from_string(str(path))})
+            return Result.of_dict(source=path.source)
+        # return Result.of_dict({'TODO': Result.of_string(str(path))})
         params = data
         if node:
             params = {}
@@ -444,12 +443,12 @@ class LaunchFeatureModelBuilder:
             current = data.get('/**', {})  # FIXME there might be other patterns
             if current:
                 params.update(current.get('ros__parameters', {}))
-        params = {key: Resolved.from_value(value) for key, value in params.items()}
-        return Resolved.from_dict(params)
+        params = {key: Result.of(value) for key, value in params.items()}
+        return Result.of_dict(value=params)
 
     def remappings_from_list(self, remaps: LaunchNodeRemapList) -> Result[Dict[str, Result[str]]]:
         if not remaps.is_resolved:
-            return UnresolvedMapping.unknown_dict(source=remaps.source)
+            return Result.of_dict(source=remaps.source)
         has_unknown: bool = False
         remap_dict: Dict[str, Result[str]] = {}
         for rule in remaps.value:
@@ -477,8 +476,8 @@ class LaunchFeatureModelBuilder:
             else:
                 has_unknown = True
         if has_unknown:
-            return UnresolvedMapping.unknown_dict(known=remap_dict, source=remaps.source)
-        return Resolved.from_dict(remap_dict, source=remaps.source)
+            return Result.of_dict(known=remap_dict, source=remaps.source)
+        return Result.of_dict(value=remap_dict, source=remaps.source)
 
     def _get_node_name(
         self,
@@ -511,10 +510,10 @@ def model_from_description(
     if cmd_args is not None:
         for key, value in cmd_args.items():
             if value is None:
-                args[key] = Result.unknown_value(type=TYPE_TOKEN_STRING)
+                args[key] = Result.of_string()
             else:
-                args[key] = Resolved.from_string(value)
-    return _model_from_description(path, description, system, args=Resolved.from_dict(args))
+                args[key] = Result.of_string(value)
+    return _model_from_description(path, description, system, args=Result.of_dict(args))
 
 
 def _model_from_description(
