@@ -76,7 +76,6 @@ class ProgramNode:
     outgoing: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
 
-
 @frozen
 class AnalysisExpression:
     value: Any
@@ -145,8 +144,6 @@ def make_expression_node(expr: PythonExpression, data: DataScope) -> ExpressionN
     return ExpressionNode(uid, expr, variants)
 
 
-
-
 def program_to_nodes(module):
     statements = {}
     expressions = {}
@@ -171,11 +168,6 @@ def statement_to_node(statement: PythonStatement, uid: ProgramNodeId) -> Program
     )
 
 
-
-
-
-
-
 @frozen
 class ProgramGraph:
     name: str
@@ -193,7 +185,6 @@ class ProgramGraph:
         return self.nodes[self.root_id]
 
 
-
 ###############################################################################
 # Graph Builder
 ###############################################################################
@@ -201,8 +192,8 @@ class ProgramGraph:
 
 @define
 class ProgramGraphBuilder:
-    #graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
-    #current_id: ControlNodeId = ROOT_ID
+    # graph: ControlFlowGraph = field(factory=ControlFlowGraph.singleton)
+    # current_id: ControlNodeId = ROOT_ID
     name: str = '__main__'
     cfg: BasicControlFlowGraphBuilder = field(factory=BasicControlFlowGraphBuilder.from_scratch)
     data: DataScope = field(factory=DataScope.with_builtins)
@@ -417,9 +408,9 @@ class ProgramGraphBuilder:
         self.data.pop_condition()
 
     def _build_except_clause(self, clause: PythonExceptClause):  # FIXME
-        #node = self._new_node(this_node.condition)
-        #self.current_id = node.id
-        #for statement in clause.body:
+        # node = self._new_node(this_node.condition)
+        # self.current_id = node.id
+        # for statement in clause.body:
         #    self.add_statement(statement)
         pass
 
@@ -451,6 +442,7 @@ class ProgramGraphBuilder:
         # returns a wrapper that, given the proper arguments, interprets the function
         # retains the current data scope (where the def appears) to act as globals
         global_vars = self.data
+
         # FIXME what to do if `len(function.decorators) > 0`?
         def cb(*args, **kwargs) -> VariantData[Result[Any]]:
             # args and kwargs should be Result
@@ -496,6 +488,7 @@ class ProgramGraphBuilder:
             # builder.clean_up()
             # builder.build()
             return builder.data.return_values
+
         return FunctionWrapper(function.name, '__main__', cb)
 
 
@@ -538,7 +531,7 @@ def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = Non
     for statement in module.statements:
         builder.add_statement(statement)
     builder.clean_up()
-    #return builder.build()
+    # return builder.build()
     return builder
 
 
@@ -641,7 +634,6 @@ def compare_qualified_names(full_name: str, import_base: str, local_name: str) -
     return full_name == name
 
 
-
 ###############################################################################
 # Duplicate Code
 ###############################################################################
@@ -655,7 +647,9 @@ def compare_qualified_names(full_name: str, import_base: str, local_name: str) -
 # to an UnknownValue whose origin is the given module (e.g. 'pkg.module').
 
 
-def find_qualified_function_call(graph: ControlFlowGraph, full_name: str) -> List[PythonFunctionCall]:
+def find_qualified_function_call(
+    graph: ControlFlowGraph, full_name: str
+) -> List[PythonFunctionCall]:
     data = DataScope.with_builtins()
     matches = find_function_call_in_graph(graph, full_name, data)
     return list(dict.fromkeys(matches))
