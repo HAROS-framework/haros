@@ -187,7 +187,7 @@ def node_function(
     executable: Result,
     package: Optional[Result] = None,
     name: Optional[Result] = None,
-    parameters: Optional[Result] = None,
+    parameters: Optional[Result[Iterable[Result[Any]]]] = None,
     arguments: Optional[Result] = None,
     output: Optional[Result] = None,
     remappings: Optional[Result[Iterable[Result[Any]]]] = None,
@@ -212,28 +212,27 @@ def node_function(
     elif parameters.is_resolved:
         params = Result.of_list([], source=parameters.source)
         for item in parameters.value:
-            if item.is_resolved:
-                if item.type.mask.can_be_mapping:
-                    # dictionary that specifies parameter rules
-                    # Keys of the dictionary can be strings or an iterable of
-                    #   Substitutions that will be expanded to a string.
-                    # Values in the dictionary can be strings, integers, floats, or tuples
-                    #   of Substitutions that will be expanded to a string.
-                    # Additionally, values in the dictionary can be lists of the
-                    #   aforementioned types, or another dictionary with the same properties.
-                    params.value.append(Result.of_dict(item.value, source=item.source))  # FIXME
-                else:
-                    # yaml file that contains parameter rules
-                    # (string or pathlib.Path to the full path of the file)
-                    if item.type.mask.can_be_string:
-                        params.value.append(Result.of_string(item.value, source=item.source))
-                    elif isinstance(item.value, Path):
-                        params.value.append(Result.of(item.value, source=item.source))
-                    else:
-                        params.value.append(Result.of(item.value, source=item.source))
-            else:
+            if not item.is_resolved:
                 params = unknown_parameter_list(source=parameters.source)
                 break
+            if item.type.is_mapping:
+                # dictionary that specifies parameter rules
+                # Keys of the dictionary can be strings or an iterable of
+                #   Substitutions that will be expanded to a string.
+                # Values in the dictionary can be strings, integers, floats, or tuples
+                #   of Substitutions that will be expanded to a string.
+                # Additionally, values in the dictionary can be lists of the
+                #   aforementioned types, or another dictionary with the same properties.
+                params.value.append(Result.of_dict(item.value, source=item.source))  # FIXME
+            else:
+                # yaml file that contains parameter rules
+                # (string or pathlib.Path to the full path of the file)
+                if item.type.is_string:
+                    params.value.append(Result.of_string(item.value, source=item.source))
+                elif isinstance(item.value, Path):
+                    params.value.append(Result.of(item.value, source=item.source))
+                else:
+                    params.value.append(Result.of(item.value, source=item.source))
     else:
         params = unknown_parameter_list(source=parameters.source)
     if remappings is None:
@@ -309,8 +308,8 @@ def prepare_builtin_symbols() -> Mapping[str, Any]:
         value = getattr(os.path, key)
         if key == 'join':
             value = _os_path_wrapper
-        if callable(value):
-            value = library_function_wrapper(key, 'os.path', value)
+        # if callable(value):
+        #     value = library_function_wrapper(key, 'os.path', value)
         setattr(ns.path, key, value)
     ns.environ = {
         'TURTLEBOT3_MODEL': 'burger',
@@ -344,7 +343,7 @@ class LazyFileHandle(MockObject):
 
 
 def builtin_open(
-    system: AnalysisSystemInterface
+    system: AnalysisSystemInterface,
 ) -> Callable[[Result[str], Optional[Result[str]]], Result[LazyFileHandle]]:
     def wrapper(path: Result[str], mode: Optional[Result[str]] = None) -> Result[LazyFileHandle]:
         if not path.is_resolved:
@@ -354,6 +353,7 @@ def builtin_open(
         if not mode.is_resolved or mode.value != 'r':
             return Result.unknown_value()
         return Result.of(LazyFileHandle(path, system))
+
     return wrapper
 
 
@@ -391,4 +391,3 @@ def _dataflow_to_launch_list(arg_list: Optional[Result]) -> List[Result[LaunchSu
         else:
             values.append(unknown_substitution())  # FIXME
     return values
-

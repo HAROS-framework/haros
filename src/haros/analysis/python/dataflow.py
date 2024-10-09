@@ -196,7 +196,7 @@ class FunctionWrapper:
     module: str
     call: Callable[..., VariantData[Result[Any]]]
 
-    def  __call__(self, *args: Any, **kwds: Any) -> VariantData[Result[Any]]:
+    def __call__(self, *args: Any, **kwds: Any) -> VariantData[Result[Any]]:
         return self.call(*args, **kwds)
 
 
@@ -237,6 +237,7 @@ def wrap_normal_function(function: Callable) -> Callable:
         else:
             value = Result.of(raw_value)
         return VariantData.with_base_value(value)
+
     return wrapper
 
 
@@ -255,6 +256,7 @@ def custom_function_wrapper(name: str, module: str, function: Callable) -> Funct
     def wrapper(*args, **kwargs) -> VariantData[Result]:
         raw_value = function(*args, **kwargs)
         return VariantData.with_base_value(Result.of(raw_value))
+
     return FunctionWrapper(name, module, wrapper)
 
 
@@ -267,6 +269,7 @@ def result_function_wrapper(
     def wrapper(*args, **kwargs) -> VariantData[Result[Any]]:
         result: Result[Any] = function(*args, **kwargs)
         return VariantData.with_base_value(result)
+
     return FunctionWrapper(name, module, wrapper)
 
 
@@ -294,16 +297,16 @@ class Definition(Generic[V]):
 
     @classmethod
     def of_builtin_function(cls, name: str) -> 'Definition[Type[min]]':
-        #value = getattr(__builtins__, name)
+        # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
-        assert callable(raw_value),  f'expected function, got: {raw_value!r}'
+        assert callable(raw_value), f'expected function, got: {raw_value!r}'
         wrapper = builtin_function_wrapper(name, raw_value)
         value = Result.of_builtin_function(value=wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
     def of_builtin_class(cls, name: str) -> 'Definition[Type]':
-        #value = getattr(__builtins__, name)
+        # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
         wrapper = builtin_function_wrapper(name, raw_value)
@@ -312,7 +315,7 @@ class Definition(Generic[V]):
 
     @classmethod
     def of_builtin_exception(cls, name: str) -> 'Definition[Type[BaseException]]':
-        #value = getattr(__builtins__, name)
+        # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
         assert issubclass(raw_value, BaseException), f'expected exception, got: {raw_value!r}'
@@ -326,11 +329,12 @@ class Definition(Generic[V]):
     def cast_to(self, type: TypeToken[T]) -> 'Definition[T]':
         if self.value.type == type:
             return self
-        new_type_mask = self.value.type.mask & type.mask
-        if bool(new_type_mask):
-            new_type = evolve(type, mask=new_type_mask)
-            return evolve(self, value=self.value.cast_to(new_type))
-        raise TypeError(f'unable to cast {self.value.type} to {type}')
+        # new_type_mask = self.value.type.mask & type.mask
+        # if bool(new_type_mask):
+        #     new_type = evolve(type, mask=new_type_mask)
+        #     return evolve(self, value=self.value.cast_to(new_type))
+        # raise TypeError(f'unable to cast {self.value.type} to {type}')
+        return evolve(self, value=self.value.cast_to(type))
 
     def __str__(self) -> str:
         if self.import_base:
@@ -570,9 +574,8 @@ class DataScope:
     def value_from_reference(self, reference: PythonReference) -> Result:
         if reference.object is not None:
             obj: Result = self.value_from_expression(reference.object)
-            if not obj.type.mask.can_have_attributes:
-                return Result.unknown_value(source=obj.source)
-            if not obj.is_resolved:
+            if not obj.type.has_attributes or not obj.is_resolved:
+                logger.warning(f'object without attributes: {obj} # {reference.object}')
                 return Result.unknown_value(source=obj.source)
             value = getattr(obj.value, reference.name)
             if callable(value):
@@ -605,14 +608,14 @@ class DataScope:
         assert operator.is_unary
         value = self.value_from_expression(operator.operand)
         if operator.is_bitwise:
-            if not value.type.mask.can_be_int:
+            if not value.type.is_int:
                 raise DataFlowError.type_check('INT', value.type.name, value)
             if not value.is_resolved:
                 return Result.of_int(source=tracked(operator))
             r = ~value.value
             return Result.of_int(r, source=tracked(operator))
         if operator.is_arithmetic:
-            if not value.type.mask.can_be_number:
+            if not value.type.is_number:
                 raise DataFlowError.type_check('NUMBER', value.type.name, value)
             if not value.is_resolved:
                 return Result.of_number(source=tracked(operator))
@@ -671,10 +674,15 @@ class DataScope:
         if operator.is_arithmetic:
             if o == '+':
                 r = a.value + b.value
+                if isinstance(r, (int, float, complex)):
+                    return Result.of_number(r, source=tracked(operator))
                 if isinstance(r, str):
                     return Result.of_string(r, source=tracked(operator))
-                else:
-                    return Result.of_number(r, source=tracked(operator))
+                if isinstance(r, list):
+                    return Result.of_list(r, source=tracked(operator))
+                if isinstance(r, tuple):
+                    return Result.of_tuple(r, source=tracked(operator))
+                return Result.unknown_value(source=tracked(operator))
             if o == '-':
                 return Result.of_number(a.value - b.value, source=tracked(operator))
             if o == '*':
@@ -684,7 +692,7 @@ class DataScope:
             if o == '//':
                 return Result.of_int(a.value // b.value, source=tracked(operator))
             if o == '**':
-                return Result.of_number(a.value ** b.value, source=tracked(operator))
+                return Result.of_number(a.value**b.value, source=tracked(operator))
             return Result.of_number(source=tracked(operator))
         return Result.unknown_value(source=tracked(operator))
 
@@ -692,7 +700,7 @@ class DataScope:
         # object: PythonExpression
         # key: PythonSubscript
         obj: Result = self.value_from_expression(access.object)
-        if not obj.is_resolved or not obj.type.mask.can_have_items:
+        if not obj.is_resolved or not obj.type.has_items:
             return Result.unknown_value(source=tracked(access))
         if access.key.is_slice:
             return Result.unknown_value(source=tracked(access))
@@ -712,7 +720,8 @@ class DataScope:
         value = self.value_from_expression(call.function)
         if not value.is_resolved:
             return Result.unknown_value(source=tracked(call))
-        if not value.type.mask.can_be_function and not value.type.mask.can_be_class:
+        # if not value.type.is_function and not value.type.is_class:
+        if not value.is_callable:
             return Result.unknown_value(source=tracked(call))
         function = value.value
         assert isinstance(function, FunctionWrapper), f'not function wrapper: {repr(function)}'

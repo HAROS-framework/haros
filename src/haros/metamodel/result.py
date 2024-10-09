@@ -11,6 +11,7 @@ from typing import (
     Final,
     Generic,
     Iterable,
+    Iterator,
     List,
     Mapping,
     Optional,
@@ -171,6 +172,10 @@ class TypeToken(Generic[V]):
         return issubclass(self.token, MappingType)
 
     @property
+    def has_attributes(self) -> bool:
+        return not self.is_bool and not self.is_number
+
+    @property
     def has_items(self) -> bool:
         return self.is_string or self.is_iterable or self.is_mapping
 
@@ -248,6 +253,10 @@ class Result(Generic[V]):
         if self.is_resolved:
             return self._value
         raise ValueError('unresolved value')
+
+    @property
+    def is_callable(self) -> bool:
+        return self.is_resolved and callable(self._value)
 
     @classmethod
     def unknown_value(
@@ -347,7 +356,7 @@ class Result(Generic[V]):
             return cls.of_float(value=value, source=source)
         if isinstance(value, complex):
             return cls.of_complex(value=value, source=source)
-        assert isinstance(value, UnknownValue)
+        assert isinstance(value, UnknownValue), repr(value)
         return cls.of_float(value=value, source=source)
 
     @classmethod
@@ -468,7 +477,7 @@ class Result(Generic[V]):
         if not self.is_resolved:
             return Result.unknown_value(source=source)
         try:
-            return Result(getattr(self._value, name), source)
+            return Result.of(getattr(self._value, name), source=source)
         except AttributeError:
             return Result.unknown_value(source=source)
 
@@ -476,15 +485,21 @@ class Result(Generic[V]):
         if not self.is_resolved:
             return Result.unknown_value(source=source)
         try:
-            return Result(self._value[key], source)
+            return Result.of(self._value[key], source=source)
         except KeyError:
             return Result.unknown_value(source=source)
+
+    def items(self) -> Iterable['Result[Any]']:
+        if not self.is_resolved:
+            raise ValueError('cannot iterate an unresolved result')
+        assert isinstance(self._value, Iterable)
+        return IterableWrapper(self._value)
 
     def call(self, *args: Any, **kwds: Any) -> 'Result[Any]':
         if not self.is_resolved:
             return Result.unknown_value()
         try:
-            return Result(self._value(*args, **kwds))
+            return Result.of(self._value(*args, **kwds))
         except:
             return Result.unknown_value()
 
@@ -499,13 +514,17 @@ class Result(Generic[V]):
 
 @frozen
 class IterableWrapper(Generic[V]):
-    value: IterableType[V]
+    value: Iterable[V]
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self.value, name)
 
     def __getitem__(self, key: Any) -> Result[V]:
-        return Result(self.value[key], None)
+        return Result.of(self.value[key])
+
+    def __iter__(self) -> Iterator[Result[V]]:
+        for item in self.value:
+            yield Result.of(item)
 
     def __str__(self) -> str:
         return str(self.value)
@@ -513,7 +532,7 @@ class IterableWrapper(Generic[V]):
 
 @frozen
 class MappingWrapper(Generic[K, V]):
-    value: MappingType[K, V]
+    value: Mapping[K, V]
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self.value, name)
