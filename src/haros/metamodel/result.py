@@ -210,7 +210,7 @@ TYPE_TOKEN_EXCEPTION: Final[TypeToken[Exception]] = TypeToken(Exception)
 @frozen
 class UnknownValue:
     def __str__(self) -> str:
-        return '?'
+        return '$(?)'
 
 
 UNKNOWN_VALUE: Final[UnknownValue] = UnknownValue()
@@ -504,7 +504,7 @@ class Result(Generic[V]):
             return Result.unknown_value()
 
     def __str__(self) -> str:
-        return f'$({self._value})'
+        return str(self._value)
 
 
 ###############################################################################
@@ -555,5 +555,5 @@ class UnresolvedString(UnknownValue):
 
     def __str__(self) -> str:
         if not self.parts:
-            return '(? str)'
+            return '$(? str)'
         return ''.join(map(str, self.parts))
