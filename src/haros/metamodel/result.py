@@ -24,7 +24,7 @@ from typing import (
 
 from collections.abc import Iterable as IterableType, Mapping as MappingType
 
-from attrs import evolve, frozen
+from attrs import evolve, field, frozen
 
 from haros.metamodel.common import TrackedCode
 
@@ -234,9 +234,15 @@ class BlackHole(UnknownValue):
 ###############################################################################
 
 
+def flatten_result(value: Any) -> Any:
+    while isinstance(value, Result):
+        value = value._value
+    return value
+
+
 @frozen
 class Result(Generic[V]):
-    _value: Union[V, UnknownValue]
+    _value: Union[V, UnknownValue] = field(converter=flatten_result)
     type: TypeToken[V]
     source: Optional[TrackedCode]
 
