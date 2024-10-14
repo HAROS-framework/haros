@@ -148,6 +148,14 @@ class TypeToken(Generic[V]):
         return self.is_bool or self.is_number or self.is_string
 
     @property
+    def is_builtin_function(self) -> bool:
+        return issubclass(self.token, BUILTIN_FUNCTION_TYPE)
+
+    @property
+    def is_def_function(self) -> bool:
+        return issubclass(self.token, DEF_FUNCTION_TYPE)
+
+    @property
     def is_function(self) -> bool:
         return issubclass(self.token, (BUILTIN_FUNCTION_TYPE, DEF_FUNCTION_TYPE))
 
