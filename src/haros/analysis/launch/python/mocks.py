@@ -13,7 +13,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from attrs import define, frozen
-from haros.analysis.python.dataflow import MockObject, library_function_wrapper
+from haros.analysis.python.dataflow import MockObject, StrictFunctionCaller
 from haros.internal.interface import AnalysisSystemInterface, PathType
 from haros.metamodel.common import T, VariantData
 from haros.metamodel.launch import (
@@ -73,10 +73,9 @@ class HarosMockObject(MockObject, Generic[T]):
 class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
     entities: Result[List[Result[LaunchEntity]]]
 
-    def add_action(self, action: Result[LaunchEntity]) -> Result[None]:
+    def add_action(self, action: Result[LaunchEntity]) -> None:
         if self.entities.is_resolved:
             self.entities.value.append(action)
-        return Result.of_none(None)
 
     def _haros_freeze(self) -> LaunchDescription:
         if self.entities.is_resolved:
@@ -109,15 +108,14 @@ def python_launch_description_source_function(arg_list: Result) -> LaunchSubstit
         return TextSubstitution(arg_list.value)
     assert arg_list.type.is_iterable
     parts = []
-    for arg in arg_list.value:
+    for arg in arg_list.items():
         if not arg.is_resolved:
             parts.append(unknown_substitution(source=arg.source))
             continue
         value = arg.value
         assert not isinstance(value, VariantData), repr(value)
-        if isinstance(value, Result):
-            parts.append(value)
-        elif isinstance(value, LaunchSubstitution):
+        assert not isinstance(value, Result), repr(value)
+        if isinstance(value, LaunchSubstitution):
             parts.append(const_substitution(value, source=arg.source))
         else:
             parts.append(const_text(str(value), source=arg.source))  # FIXME
@@ -307,9 +305,7 @@ def prepare_builtin_symbols() -> Mapping[str, Any]:
             continue
         value = getattr(os.path, key)
         if key == 'join':
-            value = _os_path_wrapper
-        # if callable(value):
-        #     value = library_function_wrapper(key, 'os.path', value)
+            value = StrictFunctionCaller('join', 'os.path', _os_path_wrapper)
         setattr(ns.path, key, value)
     ns.environ = {
         'TURTLEBOT3_MODEL': 'burger',

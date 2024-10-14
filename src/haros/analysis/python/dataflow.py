@@ -191,13 +191,31 @@ BUILTIN_EXCEPTIONS: Final[List[str]] = [
 
 
 @frozen
-class FunctionWrapper:
-    function: str
+class StrictFunctionCaller(Callable):
+    name: str
     module: str
-    call: Callable[..., VariantData[Result[Any]]]
+    function: Callable
 
-    def __call__(self, *args: Any, **kwds: Any) -> VariantData[Result[Any]]:
-        return self.call(*args, **kwds)
+    def __call__(self, *args: Result[Any], **kwargs: Result[Any]) -> Result[Any]:
+        for arg in args:
+            if not arg.is_resolved:
+                return Result.unknown_value()
+        for arg in kwargs.values():
+            if not arg.is_resolved:
+                return Result.unknown_value()
+        raw_args = [arg.value for arg in args]
+        raw_kwargs = {key: arg.value for key, arg in kwargs.items()}
+        raw_value = self.function(*raw_args, **raw_kwargs)
+        if isinstance(raw_value, list):
+            value = [Result.of(v) for v in raw_value]
+            return Result.of_list(value)
+        if isinstance(raw_value, tuple):
+            value = tuple(Result.of(v) for v in raw_value)
+            return Result.of_tuple(value)
+        if isinstance(raw_value, dict):
+            value = {Result.of(k): Result.of(v) for k, v in raw_value.items()}
+            return Result.of_dict(value)
+        return Result.of(raw_value)
 
 
 def tracked(ast: PythonAst) -> Optional[TrackedCode]:
@@ -214,63 +232,6 @@ def tracked(ast: PythonAst) -> Optional[TrackedCode]:
 @define
 class MockObject:
     pass
-
-
-def wrap_normal_function(function: Callable) -> Callable:
-    # The purpose of this is just to make return values uniform.
-    def wrapper(*args: Result[Any], **kwargs: Result[Any]) -> VariantData[Result]:
-        for arg in args:
-            if not arg.is_resolved:
-                return VariantData.with_base_value(Result.unknown_value())
-        for arg in kwargs.values():
-            if not arg.is_resolved:
-                return VariantData.with_base_value(Result.unknown_value())
-        raw_args = [arg.value for arg in args]
-        raw_kwargs = {key: arg.value for key, arg in kwargs.items()}
-        raw_value = function(*raw_args, **raw_kwargs)
-        if isinstance(raw_value, list):
-            value = [Result.of(v) for v in raw_value]
-        elif isinstance(raw_value, tuple):
-            value = tuple(Result.of(v) for v in raw_value)
-        elif isinstance(raw_value, dict):
-            value = {Result.of(k): Result.of(v) for k, v in raw_value.items()}
-        else:
-            value = Result.of(raw_value)
-        return VariantData.with_base_value(value)
-
-    return wrapper
-
-
-def builtin_function_wrapper(name: str, function: Callable) -> FunctionWrapper:
-    # if name == 'open':
-    #     return FunctionWrapper(name, BUILTINS_MODULE, _builtin_open)
-    return library_function_wrapper(name, BUILTINS_MODULE, function)
-
-
-def library_function_wrapper(name: str, module: str, function: Callable) -> FunctionWrapper:
-    wrapper = wrap_normal_function(function)
-    return FunctionWrapper(name, module, wrapper)
-
-
-def custom_function_wrapper(name: str, module: str, function: Callable) -> FunctionWrapper:
-    def wrapper(*args, **kwargs) -> VariantData[Result]:
-        raw_value = function(*args, **kwargs)
-        return VariantData.with_base_value(Result.of(raw_value))
-
-    return FunctionWrapper(name, module, wrapper)
-
-
-def result_function_wrapper(
-    name: str,
-    module: str,
-    function: Callable[..., Result[Any]],
-) -> FunctionWrapper:
-    # args and kwargs are Result[Any]
-    def wrapper(*args, **kwargs) -> VariantData[Result[Any]]:
-        result: Result[Any] = function(*args, **kwargs)
-        return VariantData.with_base_value(result)
-
-    return FunctionWrapper(name, module, wrapper)
 
 
 @frozen
@@ -300,7 +261,7 @@ class Definition(Generic[V]):
         # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert callable(raw_value), f'expected function, got: {raw_value!r}'
-        wrapper = builtin_function_wrapper(name, raw_value)
+        wrapper = StrictFunctionCaller(name, BUILTINS_MODULE, raw_value)
         value = Result.of_builtin_function(value=wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
@@ -309,17 +270,8 @@ class Definition(Generic[V]):
         # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
-        wrapper = builtin_function_wrapper(name, raw_value)
+        wrapper = StrictFunctionCaller(name, BUILTINS_MODULE, raw_value)
         value: Result[Type] = Result.of_class(value=wrapper)
-        return cls(value, import_base=BUILTINS_MODULE)
-
-    @classmethod
-    def of_builtin_exception(cls, name: str) -> 'Definition[Type[BaseException]]':
-        # value = getattr(__builtins__, name)
-        raw_value = __builtins__.get(name)
-        assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
-        assert issubclass(raw_value, BaseException), f'expected exception, got: {raw_value!r}'
-        value = Result.of(value=raw_value)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
@@ -372,7 +324,7 @@ class DataScope:
         for name in BUILTIN_CLASSES:
             variables[name] = VariantData.with_base_value(Definition.of_builtin_class(name))
         for name in BUILTIN_EXCEPTIONS:
-            variables[name] = VariantData.with_base_value(Definition.of_builtin_exception(name))
+            variables[name] = VariantData.with_base_value(Definition.of_builtin_class(name))
         return cls(variables=variables)
 
     def duplicate(self) -> 'DataScope':
@@ -392,31 +344,6 @@ class DataScope:
         definition = Definition(value, ast=ast, import_base=import_base)
         self.define(name, definition)
 
-    def set_raw_value(
-        self,
-        name: str,
-        raw_value: Any,
-        ast: Optional[PythonAst] = None,
-        import_base: str = '',
-    ):
-        # TODO TrackedCode from ast
-        source: Optional[TrackedCode] = None
-        value = Result.of(value=raw_value, source=source)
-        return self.set(name, value, ast=ast, import_base=import_base)
-
-    def set_function(
-        self,
-        name: str,
-        function: Callable[..., Result[Any]],
-        ast: Optional[PythonAst] = None,
-        import_base: str = '',
-    ):
-        # TODO TrackedCode from ast
-        source: Optional[TrackedCode] = None
-        wrapper = result_function_wrapper(name, import_base, function)
-        value = Result.of_def_function(value=wrapper, source=source)
-        return self.set(name, value, ast=ast, import_base=import_base)
-
     def define(self, name: str, definition: Definition):
         var = self.variables.get(name)
         if var is None:
@@ -429,11 +356,6 @@ class DataScope:
 
     def pop_condition(self) -> LogicValue:
         self._condition_stack.pop()
-
-    def add_imported_function(self, name: str, module: str, function: Callable):
-        # `function` receives `Result`, returns `Any`
-        wrapper = custom_function_wrapper(name, module, function)
-        self.add_imported_symbol(name, module, wrapper)
 
     def add_imported_symbol(self, name: str, module: str, value: Any):
         full_name = f'{module}.{name}' if module else name
@@ -466,13 +388,13 @@ class DataScope:
     def add_function_def(
         self,
         statement: PythonFunctionDefStatement,
-        fun: Optional[FunctionWrapper] = None,
+        fun: Optional[Callable] = None,
     ):
         assert statement.is_statement and statement.is_function_def
         if fun is None:
-            self.set(statement.name, Result.of_def_function, ast=statement)
+            self.set(statement.name, Result.of_def_function(), ast=statement)
         else:
-            self.set_raw_value(statement.name, fun, ast=statement)
+            self.set(statement.name, Result.of_def_function(fun), ast=statement)
 
     def add_class_def(self, statement: PythonClassDefStatement):
         assert statement.is_statement and statement.is_class_def
@@ -578,13 +500,6 @@ class DataScope:
                 logger.warning(f'object without attributes: {obj} # {reference.object}')
                 return Result.unknown_value(source=obj.source)
             value = getattr(obj.value, reference.name)
-            if callable(value):
-                name: str = reference.name
-                module: str = str(type(obj.value))
-                if isinstance(obj.value, MockObject):
-                    value = result_function_wrapper(name, module, value)
-                else:
-                    value = library_function_wrapper(name, module, value)
             return Result.of(value, source=tracked(reference))
         var = self.get(reference.name)
         if not var.has_values or not var.is_deterministic:
@@ -724,13 +639,12 @@ class DataScope:
         if not value.is_callable:
             return Result.unknown_value(source=tracked(call))
         function = value.value
-        assert isinstance(function, FunctionWrapper), f'not function wrapper: {repr(function)}'
-        assert callable(function.call), f'not callable: {repr(function.call)}'
+        assert callable(function), f'not callable: {repr(function)}'
         if not call.arguments:
-            result: VariantData[Result] = function.call()
-            if result.has_values and result.is_deterministic:
-                return evolve(result.get(), source=tracked(call))
-            return Result.unknown_value(source=tracked(call))
+            result = function()
+            if isinstance(result, Result):
+                return result.trace_to(tracked(call))
+            return Result.of(result, source=tracked(call))
         args: List[Result[Any]] = []
         kwargs: Dict[str, Result[Any]] = {}
         for argument in call.arguments:
@@ -751,10 +665,10 @@ class DataScope:
                     # kwargs.update(arg)
                     return Result.unknown_value(source=tracked(call))  # FIXME
         try:
-            result: VariantData[Result[Any]] = function.call(*args, **kwargs)
+            result = function(*args, **kwargs)
+            if isinstance(result, Result):
+                return result.trace_to(tracked(call))
+            return Result.of(result, source=tracked(call))
         except Exception as e:
             logger.exception(f'exception during function call: {e}')
-            result = VariantData.with_base_value(Result.unknown_value())
-        if result.has_values and result.is_deterministic:
-            return evolve(result.get(), source=tracked(call))
-        return Result.unknown_value(source=tracked(call))
+            return Result.unknown_value(source=tracked(call))

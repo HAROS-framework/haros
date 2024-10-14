@@ -5,7 +5,19 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, NewType, Optional, Tuple
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Final,
+    Iterable,
+    List,
+    Mapping,
+    NewType,
+    Optional,
+    Tuple,
+)
 
 import logging
 from types import SimpleNamespace
@@ -13,11 +25,7 @@ from types import SimpleNamespace
 from attrs import define, field, frozen
 
 from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph, ControlNodeId
-from haros.analysis.python.dataflow import (
-    BUILTINS_MODULE,
-    DataScope,
-    FunctionWrapper,
-)
+from haros.analysis.python.dataflow import BUILTINS_MODULE, DataScope, tracked
 from haros.analysis.python.logic import to_condition
 from haros.errors import AnalysisError
 from haros.metamodel.common import VariantData
@@ -35,6 +43,7 @@ from haros.parsing.python.ast import (
     PythonTupleLiteral,
 )
 from haros.parsing.python.ast.expressions import PythonAssignmentExpression
+from haros.parsing.python.ast.helpers import PythonFunctionParameter
 from haros.parsing.python.ast.statements import PythonExpressionStatement, PythonWithStatement
 
 ###############################################################################
@@ -204,9 +213,6 @@ class ProgramGraphBuilder:
     def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
         cfg = BasicControlFlowGraphBuilder.from_scratch(name=name, asynchronous=asynchronous)
         return cls(name=name, cfg=cfg)
-
-    def add_imported_function(self, name: str, module: str, function: Callable):
-        self.data.add_imported_function(name, module, function)
 
     def add_imported_symbol(self, name: str, module: str, value: Any):
         self.data.add_imported_symbol(name, module, value)
@@ -438,13 +444,13 @@ class ProgramGraphBuilder:
         for statement in body:
             self.add_statement(statement)
 
-    def _function_interpreter(self, function: PythonFunctionDefStatement) -> FunctionWrapper:
+    def _function_interpreter(self, function: PythonFunctionDefStatement) -> Callable:
         # returns a wrapper that, given the proper arguments, interprets the function
         # retains the current data scope (where the def appears) to act as globals
         global_vars = self.data
 
         # FIXME what to do if `len(function.decorators) > 0`?
-        def cb(*args, **kwargs) -> VariantData[Result[Any]]:
+        def cb(*args: Result[Any], **kwargs: Result[Any]) -> Result[Any]:
             # args and kwargs should be Result
             builder = ProgramGraphBuilder.from_scratch(
                 name=function.name,
@@ -473,7 +479,7 @@ class ProgramGraphBuilder:
                                 del mapping[param.name]
                             builder.data.set(param.name, value)
                     elif param.is_variadic_list:
-                        builder.data.set_raw_value(param.name, stack)  # FIXME
+                        builder.data.set(param.name, Result.of_list(stack))  # FIXME
                     elif param.is_keyword:
                         value = mapping.get(param.name)
                         if value is None:
@@ -482,14 +488,19 @@ class ProgramGraphBuilder:
                             del mapping[param.name]
                         builder.data.set(param.name, value)
                     elif param.is_variadic_keywords:
-                        builder.data.set_raw_value(param.name, mapping)  # FIXME
+                        builder.data.set(param.name, Result.of_dict(mapping))  # FIXME
             for statement in function.body:
                 builder.add_statement(statement)
             # builder.clean_up()
             # builder.build()
-            return builder.data.return_values
+            result = builder.data.return_values
+            if result.has_values and result.is_deterministic:
+                return result.get()
+            return Result.unknown_value(source=tracked(function))
 
-        return FunctionWrapper(function.name, '__main__', cb)
+        # cb.name = function.name
+        # cb.module = '__main__'
+        return cb
 
 
 ###############################################################################
@@ -511,23 +522,14 @@ def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = Non
         for key, value in symbols.items():
             name, import_base = _split_names(key)
             assert bool(import_base), f'expected non-empty import base: {key}'
-            if import_base == BUILTINS_MODULE:
-                if callable(value):
-                    builder.data.set_function(name, value)
-                else:
-                    builder.data.set_raw_value(name, value)
-            elif isinstance(value, SimpleNamespace):
+            if isinstance(value, SimpleNamespace):
                 # full module
                 if not name:
                     name = import_base
                     import_base = ''
-                builder.add_imported_symbol(name, import_base, value)
             else:
                 assert bool(name), f'expected non-empty name: {key}'
-                if callable(value):
-                    builder.add_imported_function(name, import_base, value)
-                else:
-                    builder.add_imported_symbol(name, import_base, value)
+            builder.add_imported_symbol(name, import_base, value)
     for statement in module.statements:
         builder.add_statement(statement)
     builder.clean_up()
