@@ -9,7 +9,7 @@ from typing import Optional, Tuple, Union
 
 from attrs import frozen
 
-from haros.parsing.python.ast.common import PythonAst, PythonExpression, PythonHelperNode
+from haros.parsing.python.ast.common import PythonAst, PythonExpression
 from haros.parsing.python.ast.helpers import (
     PythonArgument,
     PythonDictEntry,
@@ -158,7 +158,7 @@ class PythonTupleLiteral(PythonLiteral):
 
     def pretty(self, indent: int = 0, step: int = 2) -> str:
         ws = ' ' * indent
-        values = '\n'.join(v.pretty(indent=(indent+step)) for v in self.values)
+        values = '\n'.join(v.pretty(indent=(indent + step)) for v in self.values)
         return f'{ws}Tuple Literal\n{values}'
 
 
@@ -176,7 +176,7 @@ class PythonListLiteral(PythonLiteral):
 
     def pretty(self, indent: int = 0, step: int = 2) -> str:
         ws = ' ' * indent
-        values = '\n'.join(v.pretty(indent=(indent+step)) for v in self.values)
+        values = '\n'.join(v.pretty(indent=(indent + step)) for v in self.values)
         return f'{ws}List Literal\n{values}'
 
 
@@ -194,7 +194,7 @@ class PythonDictLiteral(PythonLiteral):
 
     def pretty(self, indent: int = 0, step: int = 2) -> str:
         ws = ' ' * indent
-        entries = '\n'.join(e.pretty(indent=(indent+step)) for e in self.entries)
+        entries = '\n'.join(e.pretty(indent=(indent + step)) for e in self.entries)
         return f'{ws}Dict Literal\n{entries}'
 
 
@@ -212,7 +212,7 @@ class PythonSetLiteral(PythonLiteral):
 
     def pretty(self, indent: int = 0, step: int = 2) -> str:
         ws = ' ' * indent
-        values = '\n'.join(v.pretty(indent=(indent+step)) for v in self.values)
+        values = '\n'.join(v.pretty(indent=(indent + step)) for v in self.values)
         return f'{ws}Set Literal\n{values}'
 
 
@@ -295,7 +295,7 @@ class PythonReference(PythonExpression):
         ws2 = ' ' * (indent + step)
         if self.object is None:
             return f'{ws1}Reference\n{ws2}{self.name}'
-        object = self.object.pretty(indent=(indent+step), step=step)
+        object = self.object.pretty(indent=(indent + step), step=step)
         return f'{ws1}Reference\n{ws2}{self.name}\n{object}'
 
 
