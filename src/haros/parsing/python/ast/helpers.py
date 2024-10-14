@@ -117,53 +117,32 @@ class PythonIterator(PythonHelperNode):
 
 @frozen
 class PythonArgument(PythonHelperNode):
+    value: PythonExpression
+    name: str = ''
+
     @property
     def is_argument(self) -> bool:
         return True
 
     @property
     def is_positional(self) -> bool:
-        return False
+        return not self.name
 
     @property
     def is_key_value(self) -> bool:
-        return False
+        return self.name and not self.is_star and not self.is_double_star
 
     @property
     def is_star(self) -> bool:
-        return False
+        return self.name == '*'
+
+    @property
+    def is_double_star(self) -> bool:
+        return self.name == '**'
 
     @property
     def is_keyword(self) -> bool:
-        return False
-
-
-@frozen
-class PythonSimpleArgument(PythonArgument):
-    value: PythonExpression
-    name: Optional[str] = None
-
-    @property
-    def is_positional(self) -> bool:
-        return self.name is None
-
-    @property
-    def is_key_value(self) -> bool:
-        return self.name is not None
-
-
-@frozen
-class PythonSpecialArgument(PythonArgument):
-    value: PythonExpression
-    is_double_star: bool = False
-
-    @property
-    def is_star(self) -> bool:
-        return not self.is_double_star
-
-    @property
-    def is_keyword(self) -> bool:
-        return self.is_double_star
+        return self.name == '**'
 
 
 ###############################################################################

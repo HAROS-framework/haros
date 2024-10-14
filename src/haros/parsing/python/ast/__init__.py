@@ -63,10 +63,8 @@ from haros.parsing.python.ast.helpers import (
     PythonNamedCasePattern,
     PythonOrCasePattern,
     PythonSequenceCasePattern,
-    PythonSimpleArgument,
     PythonSimpleCasePattern,
     PythonSlice,
-    PythonSpecialArgument,
     PythonSubscript,
     PythonWildcardCasePattern,
 )

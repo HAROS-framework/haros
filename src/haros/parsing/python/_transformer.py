@@ -5,11 +5,12 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Iterable, Optional, Tuple, Union
+from typing import Any, Collection, Iterable, List, Optional, Tuple, Union
 
 import re
 
 from attrs import frozen
+from haros.parsing.python.ast.common import PythonHelperNode
 from lark import Token, Transformer, v_args
 
 from haros.parsing.python.ast import (
@@ -72,10 +73,8 @@ from haros.parsing.python.ast import (
     PythonSequenceCasePattern,
     PythonSetComprehension,
     PythonSetLiteral,
-    PythonSimpleArgument,
     PythonSimpleCasePattern,
     PythonSlice,
-    PythonSpecialArgument,
     PythonStarExpression,
     PythonStatement,
     PythonStringLiteral,
@@ -149,7 +148,7 @@ class ToAst(Transformer):
             if isinstance(statement, tuple):
                 statements.extend(statement)
             else:
-                assert isinstance(statement, PythonStatement), f'_flatten_statements: {children}'
+                assert isinstance(statement, PythonStatement), f'_flatten_statements: {items}'
                 statements.append(statement)
         return tuple(statements)
 
@@ -212,7 +211,7 @@ class ToAst(Transformer):
         names = children[0]
         assert isinstance(names, tuple), f'expected dotted name: {children}'
         arguments = () if len(children) < 2 else children[1]
-        assert isinstance(args, tuple), f'expected arg tuple: {children}'
+        assert isinstance(arguments, tuple), f'expected arg tuple: {children}'
         return self._new_node(PythonDecorator, names, arguments)
 
     @v_args(inline=True)
@@ -423,8 +422,8 @@ class ToAst(Transformer):
             # e.g.: from ..
             i += 1
             dots = len(children[0])
-            line=children[0].line
-            column=children[0].column
+            line = children[0].line
+            column = children[0].column
         base = self._new_node(PythonImportBase, (), dots=dots, line=line, column=column)
 
         items = children[i]
@@ -452,8 +451,7 @@ class ToAst(Transformer):
         assert isinstance(items, tuple), f'import_from: {children}'
         assert isinstance(items[0], PythonAliasName), f'import_from: {children}'
         names = tuple(
-            self._new_node(PythonImportedName, base, name.name, alias=name.alias)
-            for name in items
+            self._new_node(PythonImportedName, base, name.name, alias=name.alias) for name in items
         )
         return self._new_node(PythonImportStatement, names, line=line, column=column)
 
@@ -525,7 +523,9 @@ class ToAst(Transformer):
         param: Union[PythonFunctionParameter, Token],
     ) -> PythonFunctionParameter:
         if not isinstance(param, PythonFunctionParameter):
-            param = self._new_node(PythonFunctionParameter, param, line=param.line, column=param.column)
+            param = self._new_node(
+                PythonFunctionParameter, param, line=param.line, column=param.column
+            )
         assert param.default_value is None, f'starparam: {param}'
         object.__setattr__(param, 'modifier', '*')
         return param
@@ -646,9 +646,7 @@ class ToAst(Transformer):
 
     @v_args(inline=True)
     def elif_(
-        self,
-        condition: PythonExpression,
-        body: Tuple[PythonStatement]
+        self, condition: PythonExpression, body: Tuple[PythonStatement]
     ) -> PythonConditionalBlock:
         return self._new_node(PythonConditionalBlock, condition, body)
 
@@ -1109,7 +1107,7 @@ class ToAst(Transformer):
     def not_test(self, operator: Token, operand: PythonExpression) -> PythonUnaryOperator:
         # this rule is inlined if the unary operator is not present
         line = operator.line
-        column= operator.column
+        column = operator.column
         return self._new_node(PythonUnaryOperator, operator, operand, line=line, column=column)
 
     def comparison(self, children: OperatorSequence) -> PythonBinaryOperator:
@@ -1143,7 +1141,7 @@ class ToAst(Transformer):
             operand2 = children[i + 1]
             assert isinstance(operand2, PythonExpression), f'_op_sequence: {children!r}'
             line = operand1.line
-            column= operand1.column
+            column = operand1.column
             operand1 = self._new_node(
                 PythonBinaryOperator,
                 operator,
@@ -1158,7 +1156,7 @@ class ToAst(Transformer):
     def factor(self, operator: Token, operand: PythonExpression) -> PythonUnaryOperator:
         # this rule is inlined if the unary operator is not present
         line = operator.line
-        column= operator.column
+        column = operator.column
         return self._new_node(PythonUnaryOperator, operator, operand, line=line, column=column)
 
     @v_args(inline=True)
@@ -1170,7 +1168,7 @@ class ToAst(Transformer):
         # this rule is inlined if the operator and second operand are not present
         operator = '**'
         line = operand1.line
-        column= operand1.column
+        column = operand1.column
         return self._new_node(
             PythonBinaryOperator,
             operator,
@@ -1305,7 +1303,10 @@ class ToAst(Transformer):
             column=function.column,
         )
 
-    def arguments(self, children: Iterable[PythonAst]) -> Tuple[PythonArgument]:
+    def arguments(
+        self,
+        children: Iterable[Union[None, PythonAst, Tuple[PythonAst]]],
+    ) -> Tuple[PythonArgument]:
         args = []
         for arg in children:
             if arg is None:
@@ -1313,72 +1314,89 @@ class ToAst(Transformer):
             if isinstance(arg, tuple):
                 args.extend(arg)
             elif arg.is_expression:
-                args.append(
-                    self._new_node(PythonSimpleArgument, arg, line=arg.line, column=arg.column)
-                )
-            elif arg.is_helper and arg.is_argument:
-                args.append(arg)
+                args.append(self._new_node(PythonArgument, arg, line=arg.line, column=arg.column))
+            elif arg.is_helper:
+                assert isinstance(arg, PythonHelperNode)
+                if arg.is_argument:
+                    args.append(arg)
+                else:
+                    assert False, f'unexpected argument: {arg}'
             else:
                 assert False, f'unexpected argument: {arg}'
         return tuple(args)
 
-    def starargs(self, children: Iterable[PythonAst]) -> Tuple[PythonArgument]:
+    def starargs(
+        self,
+        children: Iterable[Union[PythonAst, Tuple[PythonAst]]],
+    ) -> Tuple[PythonArgument]:
         args = []
         for arg in children:
             if isinstance(arg, tuple):
                 args.extend(arg)
             elif arg.is_expression:
-                args.append(
-                    self._new_node(PythonSimpleArgument, arg, line=arg.line, column=arg.column)
-                )
-            elif arg.is_helper and arg.is_argument:
-                args.append(arg)
+                args.append(self._new_node(PythonArgument, arg, line=arg.line, column=arg.column))
+            elif arg.is_helper:
+                assert isinstance(arg, PythonHelperNode)
+                if arg.is_argument:
+                    args.append(arg)
+                else:
+                    assert False, f'unexpected argument: {arg}'
             else:
                 assert False, f'unexpected argument: {arg}'
         return tuple(args)
 
     @v_args(inline=True)
-    def stararg(self, argument: PythonExpression) -> PythonSpecialArgument:
+    def stararg(self, argument: PythonExpression) -> PythonArgument:
         return self._new_node(
-            PythonSpecialArgument,
+            PythonArgument,
             argument,
-            is_double_star=False,
+            name='*',
             line=argument.line,
             column=argument.column,
         )
 
-    def kwargs(self, children: Iterable[PythonAst]) -> Tuple[PythonArgument]:
+    def kwargs(
+        self,
+        children: Collection[Union[PythonExpression, PythonArgument]],
+    ) -> Tuple[PythonArgument]:
         assert len(children) >= 1
-        args = [self._new_node(
-            PythonSpecialArgument,
-            children[0],
-            is_double_star=True,
-            line=children[0].line,
-            column=children[0].column,
-        )]
-        for i in range(1, len(children)):
-            arg = children[1]
+        args: List[PythonArgument] = []
+        arg = children[0]
+        if isinstance(children[0], PythonArgument):
+            args.append(children[0])
+        else:
             args.append(
-                self._new_node(PythonSimpleArgument, arg, line=arg.line, column=arg.column)
+                self._new_node(
+                    PythonArgument,
+                    children[0],
+                    name='**',
+                    line=children[0].line,
+                    column=children[0].column,
+                ),
+            )
+        for i in range(1, len(children)):
+            arg = children[i]
+            assert isinstance(arg, PythonExpression)
+            args.append(
+                self._new_node(PythonArgument, arg, line=arg.line, column=arg.column)
                 if arg.is_expression
                 else arg
             )
         return tuple(args)
 
-    def argvalue(self, children: Iterable[PythonExpression]) -> PythonSimpleArgument:
+    def argvalue(self, children: Collection[PythonExpression]) -> PythonArgument:
         assert len(children) >= 1 and len(children) <= 2, f'argvalue: {children}'
-        value = children[-1]
-        name = None
-        if len(children) == 2:
-            assert children[0].is_expression, f'expected reference: {children[0]}'
-            assert children[0].is_reference, f'expected reference: {children[0]}'
+        value: PythonExpression = children[-1]
+        name: str = ''
+        if len(children) > 1:
+            assert isinstance(children[0], PythonReference), f'expected reference: {children[0]}'
             assert children[0].object is None, f'expected name: {children[0]}'
             name = children[0].name
         # else:
         #     print('>> argvalue with len(children) == 1')
-        # return PythonSimpleArgument(value, name=name, line=value.line, column=value.column)
+        # return PythonArgument(value, name=name, line=value.line, column=value.column)
         return self._new_node(
-            PythonSimpleArgument,
+            PythonArgument,
             value,
             name=name,
             line=value.line,
@@ -1419,7 +1437,7 @@ class ToAst(Transformer):
         is_raw = 'r' in prefix
         is_unicode = not 'b' in prefix
         is_format = 'f' in prefix
-        value = s[match.end():-1]
+        value = s[match.end() : -1]
         return self._new_node(
             PythonStringLiteral,
             value,
@@ -1438,7 +1456,7 @@ class ToAst(Transformer):
         is_raw = 'r' in prefix
         is_unicode = not 'b' in prefix
         is_format = 'f' in prefix
-        value = s[match.end()+2:-3]
+        value = s[match.end() + 2 : -3]
         return self._new_node(
             PythonStringLiteral,
             value,
