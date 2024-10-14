@@ -27,8 +27,8 @@ class PythonKeyValuePair(PythonHelperNode):
 
     def pretty(self, indent: int = 0, step: int = 2) -> str:
         ws = ' ' * indent
-        key = self.key.pretty(indent=(indent+step))
-        value = self.value.pretty(indent=(indent+step))
+        key = self.key.pretty(indent=(indent + step))
+        value = self.value.pretty(indent=(indent + step))
         return f'{ws}Key Value\n{key}\n{value}'
 
 
@@ -104,8 +104,8 @@ class PythonIterator(PythonHelperNode):
     def pretty(self, indent: int = 0, step: int = 2) -> str:
         ws1 = ' ' * indent
         ws2 = ' ' * (indent + step)
-        vs = '\n'.join(v.pretty(indent=(indent+step+step)) for v in self.variables)
-        it = self.iterable.pretty(indent=(indent+step))
+        vs = '\n'.join(v.pretty(indent=(indent + step + step)) for v in self.variables)
+        it = self.iterable.pretty(indent=(indent + step))
         asynchronous = f'{ws2}async\n' if self.asynchronous else ''
         return f'{ws1}Iterator\n{asynchronous}{ws2}variables\n{vs}\niterable\n{it}'
 
@@ -259,7 +259,7 @@ class PythonDecorator(PythonHelperNode):
 
     @property
     def dotted_name(self) -> str:
-        return ('.' * self.dots) + '.'.join(self.names)
+        return '.'.join(self.names)
 
 
 @frozen
