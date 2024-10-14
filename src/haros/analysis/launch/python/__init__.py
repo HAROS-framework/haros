@@ -66,7 +66,6 @@ def get_python_launch_description(path: Path, system: AnalysisSystemInterface) -
 def launch_description_from_program_graph(graph: ProgramGraphBuilder) -> LaunchDescription:
     subgraph, data = graph.subgraph_builder(LAUNCH_ENTRY_POINT).build()  # !!
     for variant_value in data.return_values.possible_values():
-        # variant_value: VariantData[Result]
         if not variant_value.condition.is_true:
             logger.error('variant_value is not true')
             continue  # FIXME
