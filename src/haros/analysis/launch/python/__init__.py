@@ -10,14 +10,10 @@ from typing import Final
 import logging
 from pathlib import Path
 
-from haros.analysis.launch.python.mocks import (
-    LAUNCH_SYMBOLS,
-    LaunchDescriptionMock,
-    builtin_open,
-    prepare_builtin_symbols,
-)
+from haros.analysis.launch.python.mocks import LAUNCH_SYMBOLS, LaunchDescriptionMock
 from haros.analysis.python.dataflow import BUILTINS_MODULE
 from haros.analysis.python.graph import ProgramGraphBuilder, from_ast
+from haros.analysis.python.mocks import standard_symbols
 from haros.errors import WrongFileTypeError
 from haros.internal.interface import AnalysisSystemInterface
 from haros.metamodel.launch import LaunchDescription
@@ -46,14 +42,15 @@ def get_python_launch_description(path: Path, system: AnalysisSystemInterface) -
     code = path.read_text(encoding='utf-8')
     ast = parse(code, path=path.as_posix())
 
-    symbols = {
-        f'{BUILTINS_MODULE}.__file__': path.as_posix(),
-        f'{BUILTINS_MODULE}.open': builtin_open(system),
-        # 'mymodule.MY_CONSTANT': 44,
-        # 'mymodule.my_division': lambda a, b: (a.value // b.value) if a.is_resolved and b.is_resolved else None,
+    env = {
+        'TURTLEBOT3_MODEL': 'burger',
+        'LDS_MODEL': 'LDS-01',
     }
-    symbols.update(prepare_builtin_symbols())
+
+    symbols = standard_symbols(system)
     symbols.update(LAUNCH_SYMBOLS)
+    symbols['os'].environ.update(env)
+    symbols[f'{BUILTINS_MODULE}.__file__'] = path.as_posix()
 
     # TODO include launch arguments
     # TODO node parameters

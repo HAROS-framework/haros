@@ -229,11 +229,6 @@ def tracked(ast: PythonAst) -> Optional[TrackedCode]:
     return TrackedCode(ast, location)
 
 
-@define
-class MockObject:
-    pass
-
-
 @frozen
 class Definition(Generic[V]):
     value: Result[V]

@@ -5,17 +5,14 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, Generic, Iterable, List, Optional, Mapping, Tuple, Union
+from typing import Any, Final, Iterable, List, Optional, Tuple, Union
 
 import logging
-import os
 from pathlib import Path
-from types import SimpleNamespace
 
-from attrs import define, frozen
-from haros.analysis.python.dataflow import MockObject, StrictFunctionCaller
-from haros.internal.interface import AnalysisSystemInterface, PathType
-from haros.metamodel.common import T, VariantData
+from attrs import define
+from haros.analysis.python.mocks import HarosMockObject
+from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
     EqualsSubstitution,
@@ -59,14 +56,6 @@ TYPE_LAUNCH_SUBSTITUTION: Final[TypeToken[LaunchSubstitution]] = TypeToken.of(La
 ###############################################################################
 # Mocks
 ###############################################################################
-
-
-@define
-class HarosMockObject(MockObject, Generic[T]):
-    def _haros_freeze(self) -> T:
-        # use a method name with a low probability of name collision
-        # with one of the mocked object's methods or attributes
-        raise NotImplementedError()
 
 
 @define
@@ -294,63 +283,6 @@ LAUNCH_SYMBOLS = {
     'launch.substitutions.NotEqualsSubstitution': NotEqualsSubstitution,
     'launch.substitutions.PythonExpression': PythonExpressionSubstitution,
 }
-
-
-def prepare_builtin_symbols() -> Mapping[str, Any]:
-    symbols = {}
-    ns = SimpleNamespace()
-    ns.path = SimpleNamespace()
-    for key in dir(os.path):
-        if key.startswith('_'):
-            continue
-        value = getattr(os.path, key)
-        if key == 'join':
-            value = StrictFunctionCaller('join', 'os.path', _os_path_wrapper)
-        setattr(ns.path, key, value)
-    ns.environ = {
-        'TURTLEBOT3_MODEL': 'burger',
-        'LDS_MODEL': 'LDS-01',
-    }
-    symbols['os'] = ns
-    return symbols
-
-
-def _os_path_wrapper(*args) -> str:
-    return Path(*args).as_posix()
-
-
-@frozen
-class LazyFileHandle(MockObject):
-    path: Result[PathType]
-    system: AnalysisSystemInterface
-
-    def read(self, encoding: Optional[Result[str]] = None) -> Result[str]:
-        try:
-            if self.path.is_resolved:
-                encoding = encoding or Result.of_none()
-                text = self.system.read_text_file(self.path.value, encoding=encoding.value)
-                return Result.of_string(text)
-        except ValueError:
-            pass
-        return Result.of_string()
-
-    def __str__(self) -> str:
-        return f'{self.__class__.__name__}(path={self.path})'
-
-
-def builtin_open(
-    system: AnalysisSystemInterface,
-) -> Callable[[Result[str], Optional[Result[str]]], Result[LazyFileHandle]]:
-    def wrapper(path: Result[str], mode: Optional[Result[str]] = None) -> Result[LazyFileHandle]:
-        if not path.is_resolved:
-            return Result.unknown_value()
-        if mode is None:
-            mode = Result.of_string('r')
-        if not mode.is_resolved or mode.value != 'r':
-            return Result.unknown_value()
-        return Result.of(LazyFileHandle(path, system))
-
-    return wrapper
 
 
 ###############################################################################
