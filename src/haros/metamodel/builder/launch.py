@@ -30,6 +30,7 @@ from haros.metamodel.launch import (
     LaunchNodeParameterList,
     LaunchNodeRemapList,
     LaunchScopeContext,
+    LaunchSetEnvironment,
     LaunchSubstitution,
     NodeFeature,
     UnlessCondition,
@@ -224,8 +225,8 @@ class LaunchFeatureModelBuilder:
         return LaunchFileFeature(
             uid if uid is not None else FeatureId(f'file:{self.file}'),
             self.file,
-            arguments={ a.id: a.build() for a in self.root.args.values() },
-            nodes={ n.id: n for n in self.nodes },
+            arguments={a.id: a.build() for a in self.root.args.values()},
+            nodes={n.id: n for n in self.nodes},
             inclusions=set(self.included_files),
         )
         # conflicts: Dict[FeatureId, LogicValue] = field(factory=dict)
@@ -237,6 +238,15 @@ class LaunchFeatureModelBuilder:
 
     def exit_group(self):
         self.scope_stack.pop()
+
+    def set_environment_var(self, env: LaunchSetEnvironment):
+        key: Result[str] = substitute(env.key, self.scope)
+        value: Result[str] = substitute(env.value, self.scope)
+        if not key.is_resolved:
+            return logger.warning('set unknown environment variable')
+        if not value.is_resolved:
+            return logger.warning(f'unknown environment variable value for "{key.value}"')
+        self.system.environment[key.value] = value.value
 
     def declare_argument(self, arg: LaunchArgument):
         name: str = arg.name
@@ -319,9 +329,7 @@ class LaunchFeatureModelBuilder:
         # namespace: Optional[LaunchSubstitution]
         # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
         output: Result = substitute(node.output, self.scope)
-        args: Result = Result.of_list([
-            substitute(arg, self.scope) for arg in node.arguments
-        ])
+        args: Result = Result.of_list([substitute(arg, self.scope) for arg in node.arguments])
         params: Result = self.parameters_from_list(node.parameters, node=name)
         remaps: Result = self.remappings_from_list(node.remaps)
         if package.is_resolved and executable.is_resolved:
@@ -347,7 +355,9 @@ class LaunchFeatureModelBuilder:
         feature = NodeFeature(uid, rosnode, condition=condition)
         self.nodes.append(feature)
 
-    def parameters_from_list(self, parameters: LaunchNodeParameterList, node: Optional[str] = None) -> Result:
+    def parameters_from_list(
+        self, parameters: LaunchNodeParameterList, node: Optional[str] = None
+    ) -> Result:
         if not parameters.is_resolved:
             return Result.of_dict(source=parameters.source)
         result: Result = Result.of_dict({})
@@ -556,6 +566,9 @@ def _add_list_of_entities(
             builder.enter_group(entity.condition)
             _add_list_of_entities(builder, entity.entities.value)
             builder.exit_group()
+        elif entity.is_set_environment:
+            assert isinstance(entity, LaunchSetEnvironment)
+            builder.set_environment_var(entity)
 
 
 def _logic_value_from_result(condition: Result[bool]) -> LogicValue:

@@ -17,11 +17,7 @@ from enum import Enum, unique
 
 from haros.metamodel.common import TrackedCode
 from haros.metamodel.logic import TRUE, LogicValue
-from haros.metamodel.result import (
-    IterableType,
-    Result,
-    UnresolvedString
-)
+from haros.metamodel.result import IterableType, Result, UnresolvedString
 from haros.metamodel.ros import RosName, RosNodeModel
 
 ###############################################################################
@@ -61,6 +57,7 @@ class LaunchScopeContext:
         import random
         import socket
         import sys
+
         name = f'{name}_{socket.gethostname()}_{os.getpid()}_{random.randint(0, sys.maxsize)}'
         name = name.replace('.', '_')
         name = name.replace('-', '_')
@@ -205,7 +202,9 @@ def _to_sub(arg: Result[Union[None, str, LaunchSubstitution]]) -> Result[LaunchS
 
 
 def _to_sub_list(
-    arg: Result[Union[None, str, LaunchSubstitution, Iterable[Result[Union[None, str, LaunchSubstitution]]]]],
+    arg: Result[
+        Union[None, str, LaunchSubstitution, Iterable[Result[Union[None, str, LaunchSubstitution]]]]
+    ],
 ) -> Result[Iterable[Result[LaunchSubstitution]]]:
     if not arg.is_resolved:
         return Result.of_list(source=arg.source)
@@ -760,6 +759,10 @@ class LaunchEntity:
     def is_group(self) -> bool:
         return False
 
+    @property
+    def is_set_environment(self) -> bool:
+        return False
+
 
 @frozen
 class LaunchArgument(LaunchEntity):
@@ -887,6 +890,16 @@ class LaunchGroupAction(LaunchEntity):
 
     @property
     def is_group(self) -> bool:
+        return True
+
+
+@frozen
+class LaunchSetEnvironment(LaunchEntity):
+    key: Result[LaunchSubstitution]
+    value: Result[LaunchSubstitution]
+
+    @property
+    def is_set_environment(self) -> bool:
         return True
 
 

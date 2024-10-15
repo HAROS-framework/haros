@@ -80,6 +80,9 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     model = model_from_description(path, launch_description, system)
     print('Launch Model:')
     print_launch_model(model)
+    print('Environment:')
+    for key, value in system.environment.items():
+        print(f'    {key}: {value}')
 
     # code = path.read_text(encoding='utf-8')
     # ast = parse(code, path=path.as_posix())

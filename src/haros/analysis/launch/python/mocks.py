@@ -22,6 +22,7 @@ from haros.metamodel.launch import (
     LaunchEntity,
     LaunchGroupAction,
     LaunchNodeRemapList,
+    LaunchSetEnvironment,
     NotEqualsSubstitution,
     PythonExpressionSubstitution,
     TextSubstitution,
@@ -128,6 +129,13 @@ def declare_launch_argument_function(
         _dataflow_to_string(name),
         default_value=_dataflow_to_launch_substitution(default_value),
         description=_dataflow_to_launch_substitution(description),
+    )
+
+
+def set_environment_variable_function(name: Result, value: Result) -> LaunchSetEnvironment:
+    return LaunchSetEnvironment(
+        _dataflow_to_launch_substitution(name),
+        _dataflow_to_launch_substitution(value),
     )
 
 
@@ -270,6 +278,7 @@ LAUNCH_SYMBOLS = {
     'launch.actions.DeclareLaunchArgument': declare_launch_argument_function,
     'launch.actions.GroupAction': group_action_function,
     'launch.actions.IncludeLaunchDescription': include_launch_description_function,
+    'launch.actions.SetEnvironmentVariable': set_environment_variable_function,
     'launch.conditions.IfCondition': if_condition_function,
     'launch.conditions.if_condition.IfCondition': if_condition_function,
     'launch.conditions.UnlessCondition': unless_condition_function,
