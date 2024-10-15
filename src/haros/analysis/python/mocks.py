@@ -97,7 +97,7 @@ def standard_symbols(system: AnalysisSystemInterface) -> Dict[str, Any]:
         if key == 'join':
             value = StrictFunctionCaller('join', 'os.path', _os_path_wrapper)
         setattr(ns.path, key, value)
-    ns.environ = {}
+    ns.environ = dict(system.environment)
     symbols['os'] = ns
     return symbols
 

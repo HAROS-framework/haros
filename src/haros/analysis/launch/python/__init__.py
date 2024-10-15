@@ -46,10 +46,10 @@ def get_python_launch_description(path: Path, system: AnalysisSystemInterface) -
         'TURTLEBOT3_MODEL': 'burger',
         'LDS_MODEL': 'LDS-01',
     }
+    system.environment.update(env)
 
     symbols = standard_symbols(system)
     symbols.update(LAUNCH_SYMBOLS)
-    symbols['os'].environ.update(env)
     symbols[f'{BUILTINS_MODULE}.__file__'] = path.as_posix()
 
     # TODO include launch arguments
