@@ -13,7 +13,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from attrs import define, frozen
-from haros.analysis.python.dataflow import BUILTINS_MODULE, StrictFunctionCaller
+from haros.analysis.python.dataflow import BUILTINS_MODULE, MockObject, StrictFunctionCaller
 from haros.internal.interface import AnalysisSystemInterface, PathType
 from haros.metamodel.common import T
 from haros.metamodel.result import Result
@@ -27,11 +27,6 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 # Mocks
 ###############################################################################
-
-
-@define
-class MockObject:
-    pass
 
 
 @define
@@ -95,7 +90,7 @@ def standard_symbols(system: AnalysisSystemInterface) -> Dict[str, Any]:
             continue
         value = getattr(os.path, key)
         if key == 'join':
-            value = StrictFunctionCaller('join', 'os.path', _os_path_wrapper)
+            value = StrictFunctionCaller(_os_path_wrapper, name='join', module='os.path')
         setattr(ns.path, key, value)
     ns.environ = dict(system.environment)
     symbols['os'] = ns

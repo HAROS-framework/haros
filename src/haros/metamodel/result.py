@@ -23,11 +23,18 @@ from typing import (
 )
 
 from collections.abc import Iterable as IterableType, Mapping as MappingType
+import logging
 
 from attrs import evolve, field, frozen
 
 from haros.metamodel.common import TrackedCode
 
+
+###############################################################################
+# Constants
+###############################################################################
+
+logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 ###############################################################################
 # Data Analysis
@@ -252,7 +259,7 @@ def flatten_result(value: Any) -> Any:
 class Result(Generic[V]):
     _value: Union[V, UnknownValue] = field(converter=flatten_result)
     type: TypeToken[V]
-    source: Optional[TrackedCode]
+    source: Optional[TrackedCode] = field(default=None, eq=False, repr=False)
 
     @property
     def is_resolved(self) -> bool:
@@ -283,7 +290,8 @@ class Result(Generic[V]):
 
     @classmethod
     def of(cls, value: V, source: Optional[TrackedCode] = None) -> 'Result[V]':
-        assert not isinstance(value, Result), 'doubly wrapped Result'
+        if isinstance(value, Result):
+            return value.trace_to(source)
         if value is None:
             return cls.of_none(source=source)
         if isinstance(value, bool):
@@ -493,6 +501,7 @@ class Result(Generic[V]):
         try:
             return Result.of(getattr(self._value, name), source=source)
         except AttributeError:
+            logger.warning(f'failed get_attr {self}.{name}')
             return Result.unknown_value(source=source)
 
     def get_item(self, key: Any, source: Optional[TrackedCode] = None) -> 'Result[Any]':
@@ -501,6 +510,7 @@ class Result(Generic[V]):
         try:
             return Result.of(self._value[key], source=source)
         except KeyError:
+            logger.warning(f'failed get_item {self}[{key}]')
             return Result.unknown_value(source=source)
 
     def items(self) -> Iterable['Result[Any]']:
@@ -509,12 +519,13 @@ class Result(Generic[V]):
         assert isinstance(self._value, Iterable)
         return IterableWrapper(self._value)
 
-    def call(self, *args: Any, **kwds: Any) -> 'Result[Any]':
+    def call(self, *args: Any, **kwargs: Any) -> 'Result[Any]':
         if not self.is_resolved:
             return Result.unknown_value()
         try:
-            return Result.of(self._value(*args, **kwds))
-        except:
+            return Result.of(self._value(*args, **kwargs))
+        except Exception as e:
+            logger.warning(f'failed call {self}(*{args}, **{kwargs}): {e}')
             return Result.unknown_value()
 
     def __str__(self) -> str:
@@ -527,7 +538,7 @@ class Result(Generic[V]):
 
 
 @frozen
-class IterableWrapper(Generic[V]):
+class IterableWrapper(Iterable[Result[V]]):
     value: Iterable[V]
 
     def __getattr__(self, name: str) -> Any:
@@ -545,7 +556,7 @@ class IterableWrapper(Generic[V]):
 
 
 @frozen
-class MappingWrapper(Generic[K, V]):
+class MappingWrapper(Mapping[K, V]):
     value: Mapping[K, V]
 
     def __getattr__(self, name: str) -> Any:

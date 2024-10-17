@@ -24,7 +24,10 @@ from haros.metamodel.launch import (
     LaunchNodeRemapList,
     LaunchSetEnvironment,
     NotEqualsSubstitution,
+    ParameterFileDescription,
     PythonExpressionSubstitution,
+    ReplaceStringSubstitution,
+    RewrittenYamlSubstitution,
     TextSubstitution,
     UnlessCondition,
     const_substitution,
@@ -274,6 +277,7 @@ def get_package_share_directory_function(package: Result) -> Result[LaunchSubsti
 
 
 LAUNCH_SYMBOLS = {
+    'ament_index_python.packages.get_package_share_directory': get_package_share_directory_function,
     'launch.LaunchDescription': launch_description_function,
     'launch.actions.DeclareLaunchArgument': declare_launch_argument_function,
     'launch.actions.GroupAction': group_action_function,
@@ -283,14 +287,16 @@ LAUNCH_SYMBOLS = {
     'launch.conditions.if_condition.IfCondition': if_condition_function,
     'launch.conditions.UnlessCondition': unless_condition_function,
     'launch.conditions.unless_condition.UnlessCondition': unless_condition_function,
-    'launch.substitutions.LaunchConfiguration': launch_configuration_function,
-    'launch_ros.actions.Node': node_function,
-    'ament_index_python.packages.get_package_share_directory': get_package_share_directory_function,
     'launch.launch_description_sources.PythonLaunchDescriptionSource': python_launch_description_source_function,
-    'launch.substitutions.ThisLaunchFileDir': ThisDirectorySubstitution,
     'launch.substitutions.EqualsSubstitution': EqualsSubstitution,
+    'launch.substitutions.LaunchConfiguration': launch_configuration_function,
     'launch.substitutions.NotEqualsSubstitution': NotEqualsSubstitution,
     'launch.substitutions.PythonExpression': PythonExpressionSubstitution,
+    'launch.substitutions.ThisLaunchFileDir': ThisDirectorySubstitution,
+    'launch_ros.actions.Node': node_function,
+    'launch_ros.descriptions.ParameterFile': ParameterFileDescription.factory,
+    'nav2_common.launch.ReplaceString': ReplaceStringSubstitution,
+    'nav2_common.launch.RewrittenYaml': RewrittenYamlSubstitution,
 }
 
 

@@ -190,11 +190,16 @@ BUILTIN_EXCEPTIONS: Final[List[str]] = [
 ###############################################################################
 
 
+@define
+class MockObject:
+    pass  # marker interface
+
+
 @frozen
 class StrictFunctionCaller(Callable):
-    name: str
-    module: str
     function: Callable
+    name: str = ''
+    module: str = ''
 
     def __call__(self, *args: Result[Any], **kwargs: Result[Any]) -> Result[Any]:
         for arg in args:
@@ -256,7 +261,7 @@ class Definition(Generic[V]):
         # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert callable(raw_value), f'expected function, got: {raw_value!r}'
-        wrapper = StrictFunctionCaller(name, BUILTINS_MODULE, raw_value)
+        wrapper = StrictFunctionCaller(raw_value, name=name, module=BUILTINS_MODULE)
         value = Result.of_builtin_function(value=wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
@@ -265,7 +270,7 @@ class Definition(Generic[V]):
         # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
-        wrapper = StrictFunctionCaller(name, BUILTINS_MODULE, raw_value)
+        wrapper = StrictFunctionCaller(raw_value, name=name, module=BUILTINS_MODULE)
         value: Result[Type] = Result.of_class(value=wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
@@ -495,6 +500,11 @@ class DataScope:
                 logger.warning(f'object without attributes: {obj} # {reference.object}')
                 return Result.unknown_value(source=obj.source)
             value = getattr(obj.value, reference.name)
+            if callable(value):
+                if not isinstance(value, StrictFunctionCaller):
+                    if not isinstance(obj.value, MockObject):
+                        module = type(obj.value).__name__
+                        value = StrictFunctionCaller(value, name=reference.name, module=module)
             return Result.of(value, source=tracked(reference))
         var = self.get(reference.name)
         if not var.has_values or not var.is_deterministic:
@@ -607,8 +617,6 @@ class DataScope:
         return Result.unknown_value(source=tracked(operator))
 
     def value_from_item_access(self, access: PythonItemAccess) -> Result:
-        # object: PythonExpression
-        # key: PythonSubscript
         obj: Result = self.value_from_expression(access.object)
         if not obj.is_resolved or not obj.type.has_items:
             return Result.unknown_value(source=tracked(access))
@@ -627,19 +635,17 @@ class DataScope:
         return Result.of(value, source=tracked(access))
 
     def value_from_function_call(self, call: PythonFunctionCall) -> Result:
-        value = self.value_from_expression(call.function)
-        if not value.is_resolved:
+        function = self.value_from_expression(call.function)
+        if not function.is_resolved:
+            logger.debug(f'function is not resolved ({function.type}): {call.function}')
             return Result.unknown_value(source=tracked(call))
-        # if not value.type.is_function and not value.type.is_class:
-        if not value.is_callable:
+        # if not function.type.is_function and not function.type.is_class:
+        if not function.is_callable:
+            logger.warning(f'function is not callable: {function} ({function.type})')
             return Result.unknown_value(source=tracked(call))
-        function = value.value
-        assert callable(function), f'not callable: {repr(function)}'
+        assert callable(function.value), f'not callable: {repr(function.value)}'
         if not call.arguments:
-            result = function()
-            if isinstance(result, Result):
-                return result.trace_to(tracked(call))
-            return Result.of(result, source=tracked(call))
+            return function.call().trace_to(tracked(call))
         args: List[Result[Any]] = []
         kwargs: Dict[str, Result[Any]] = {}
         for argument in call.arguments:
@@ -658,12 +664,6 @@ class DataScope:
                     args.append(arg)
                 elif argument.is_double_star:
                     # kwargs.update(arg)
+                    logger.warning(f'use of double star arguments for {function}')
                     return Result.unknown_value(source=tracked(call))  # FIXME
-        try:
-            result = function(*args, **kwargs)
-            if isinstance(result, Result):
-                return result.trace_to(tracked(call))
-            return Result.of(result, source=tracked(call))
-        except Exception as e:
-            logger.exception(f'exception during function call: {e}')
-            return Result.unknown_value(source=tracked(call))
+        return function.call(*args, **kwargs).trace_to(tracked(call))

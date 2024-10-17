@@ -33,6 +33,7 @@ from haros.metamodel.launch import (
     LaunchSetEnvironment,
     LaunchSubstitution,
     NodeFeature,
+    ParameterFileDescription,
     UnlessCondition,
     substitute,
     substitute_optional,
@@ -112,6 +113,7 @@ class ArgumentFeatureBuilder:
 @frozen
 class LaunchScope(LaunchScopeContext):
     file_path: Path
+    system: AnalysisSystemInterface
     condition: LogicValue = field(default=TRUE)
     args: Dict[str, ArgumentFeatureBuilder] = field(factory=dict)
     configs: Dict[str, Result] = field(factory=dict)
@@ -165,6 +167,7 @@ class LaunchScope(LaunchScopeContext):
         join_condition = self.condition.join(join_condition)
         return LaunchScope(
             self.file_path,
+            self.system,
             condition=join_condition,
             args=self.args,
             configs=dict(self.configs),
@@ -182,6 +185,12 @@ class LaunchScope(LaunchScopeContext):
 
     def get_this_launch_file_dir(self) -> str:
         return self.file_path.parent.as_posix()
+
+    def read_text_file(self, path: str) -> str:
+        return self.system.read_text_file(path)
+
+    def read_yaml_file(self, path: str) -> Dict[Any, Any]:
+        return self.system.read_yaml_file(path)
 
 
 def _empty_args() -> Result[Mapping[str, Result[str]]]:
@@ -206,7 +215,7 @@ class LaunchFeatureModelBuilder:
         condition: LogicValue = TRUE,
     ) -> 'LaunchFeatureModelBuilder':
         passed_args = args if args is not None else Result.of_dict({})
-        scopes = [LaunchScope(file_path, condition=condition)]
+        scopes = [LaunchScope(file_path, system, condition=condition)]
         return cls(str(file_path), system=system, scope_stack=scopes, passed_args=passed_args)
 
     @property
@@ -273,7 +282,7 @@ class LaunchFeatureModelBuilder:
     def include_launch(self, include: LaunchInclusion):
         file: Result[str] = substitute(include.file, self.scope)
         if not file.is_resolved:
-            logger.warning(f'unknown launch file inclusion')
+            logger.warning(f'unknown launch file inclusion: {include}')
             return  # FIXME
         uid = FeatureId(f'file:{file.value}')
         boolean: Result[bool] = self.scope.resolve_condition(include.condition)
@@ -367,7 +376,7 @@ class LaunchFeatureModelBuilder:
             try:
                 new_params = self.process_parameter_item(item, node=node)
             except TypeError as e:
-                logger.error(str(e))
+                logger.exception(str(e))
                 new_params = Result.unknown_value(source=item.source)
             if new_params.is_resolved:
                 param_dict.update(new_params.value)
@@ -379,6 +388,8 @@ class LaunchFeatureModelBuilder:
 
     def process_parameter_item(self, item: Result, node: Optional[str] = None) -> Result:
         if item.is_resolved:
+            if isinstance(item.value, ParameterFileDescription):
+                item = item.value.evaluate(self.scope, source=item.source)
             if item.type.is_string or issubclass(item.type.token, Path):
                 return self._parameters_from_yaml(item.value, node=node)
             elif issubclass(item.type.token, LaunchSubstitution):

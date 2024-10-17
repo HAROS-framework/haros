@@ -5,15 +5,30 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    Collection,
+    Dict,
+    Final,
+    Iterable,
+    Iterator,
+    List,
+    NewType,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
+from enum import Enum, unique
 import importlib
 import logging
 from pathlib import Path
+import tempfile
 from types import ModuleType
 
-from attrs import field, frozen
-from enum import Enum, unique
+from attrs import define, field, frozen
+import yaml
 
 from haros.metamodel.common import TrackedCode
 from haros.metamodel.logic import TRUE, LogicValue
@@ -51,6 +66,10 @@ class LaunchScopeContext:
     def set_text(self, name: str, text: str, source: Optional[TrackedCode] = None):
         return self.set(name, Result.of_string(text, source=source))
 
+    def resolve_condition(self, condition: Optional[Result['LaunchCondition']]) -> Result[bool]:
+        logger.debug(f'{self.__class__.__name__}.resolve_condition({condition!r})')
+        raise NotImplementedError()
+
     def compute_anon_name(self, name: str) -> str:
         # as seen in the official distribution
         import os
@@ -71,6 +90,14 @@ class LaunchScopeContext:
         logger.debug(f'{self.__class__.__name__}.get_this_launch_file_dir()')
         raise NotImplementedError()
 
+    def read_text_file(self, path: str) -> str:
+        logger.debug(f'{self.__class__.__name__}.read_text_file({path!r})')
+        raise NotImplementedError()
+
+    def read_yaml_file(self, path: str) -> Dict[Any, Any]:
+        logger.debug(f'{self.__class__.__name__}.read_yaml_file({path!r})')
+        raise NotImplementedError()
+
 
 # For a full list of substitutions see
 # https://github.com/ros2/launch/tree/galactic/launch/launch/substitutions
@@ -78,77 +105,13 @@ class LaunchScopeContext:
 
 @frozen
 class LaunchSubstitution:
-    @property
-    def is_text(self) -> bool:
-        return False
-
-    @property
-    def is_python_expression(self) -> bool:
-        return False
-
-    @property
-    def is_configuration(self) -> bool:
-        return False
-
-    @property
-    def is_package_share(self) -> bool:
-        return False
-
-    @property
-    def is_argument(self) -> bool:
-        return False
-
-    @property
-    def is_environment(self) -> bool:
-        return False
-
-    @property
-    def is_find_executable(self) -> bool:
-        return False
-
-    @property
-    def is_local(self) -> bool:
-        return False
-
-    @property
-    def is_command(self) -> bool:
-        return False
-
-    @property
-    def is_anon_name(self) -> bool:
-        return False
-
-    @property
-    def is_this_file(self) -> bool:
-        return False
-
-    @property
-    def is_this_dir(self) -> bool:
-        return False
-
-    @property
-    def is_concatenation(self) -> bool:
-        return False
-
-    @property
-    def is_path_join(self) -> bool:
-        return False
-
-    @property
-    def is_equals(self) -> bool:
-        return False
-
-    @property
-    def is_not_equals(self) -> bool:
-        return False
-
     def resolve(
         self,
         ctx: LaunchScopeContext,
         source: Optional[TrackedCode] = None,
     ) -> Result[str]:
         logger.debug(f'{self.__class__.__name__}.resolve({ctx!r}, {source!r})')
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __str__(self) -> str:
         return '$(?)'
@@ -166,15 +129,27 @@ def const_substitution(
 
 
 def substitute(
-    substitution: Optional[Result[LaunchSubstitution]],
+    substitution: Optional[
+        Result[Union[LaunchSubstitution, Collection[Result[LaunchSubstitution]]]]
+    ],
     context: LaunchScopeContext,
     source: Optional[TrackedCode] = None,
 ) -> Result[str]:
     if substitution is None:
         return Result.of_string(source=source)
+    source = source or substitution.source
     if substitution.is_resolved:
-        return substitution.value.resolve(context, source=(source or substitution.source))
-    return Result.of_string(source=substitution.source)
+        if isinstance(substitution.value, LaunchSubstitution):
+            return substitution.value.resolve(context, source=source)
+        if substitution.type.is_iterable:
+            parts: List[str] = []
+            for sub in substitution.value:
+                part = sub.value.resolve(context, source=source)
+                if not part.is_resolved:
+                    return Result.of_string(source=source)
+                parts.append(part.value)
+            return Result.of_string(''.join(parts))
+    return Result.of_string(source=source)
 
 
 def substitute_optional(
@@ -205,14 +180,14 @@ def _to_sub_list(
     arg: Result[
         Union[None, str, LaunchSubstitution, Iterable[Result[Union[None, str, LaunchSubstitution]]]]
     ],
-) -> Result[Iterable[Result[LaunchSubstitution]]]:
+) -> Result[List[Result[LaunchSubstitution]]]:
     if not arg.is_resolved:
         return Result.of_list(source=arg.source)
     if arg.value is None:
-        return Result.of(TextSubstitution(''))
-    if isinstance(arg.value, str):
+        arg = Result.of(TextSubstitution(''), source=arg.source)
+    elif isinstance(arg.value, str):
         arg = Result.of(TextSubstitution(arg.value), source=arg.source)
-    if isinstance(arg.value, IterableType):
+    elif isinstance(arg.value, IterableType):
         values = [_to_sub(item) for item in arg.value]
         return Result.of_list(values, source=arg.source)
     if isinstance(arg.value, LaunchSubstitution):
@@ -220,13 +195,26 @@ def _to_sub_list(
     return Result.of_list(source=arg.source)
 
 
+def _to_sub_list_or_none(
+    arg: Optional[
+        Result[
+            Union[
+                None,
+                str,
+                LaunchSubstitution,
+                Iterable[Result[Union[None, str, LaunchSubstitution]]],
+            ]
+        ]
+    ],
+) -> Optional[Result[List[Result[LaunchSubstitution]]]]:
+    if arg is None:
+        return None
+    return _to_sub_list(arg)
+
+
 @frozen
 class TextSubstitution(LaunchSubstitution):
     value: str
-
-    @property
-    def is_text(self) -> bool:
-        return True
 
     def resolve(
         self,
@@ -247,10 +235,6 @@ def const_text(text: str, source: Optional[TrackedCode] = None) -> Result[Launch
 class LaunchConfiguration(LaunchSubstitution):
     name: str
     default_value: Optional[Result[LaunchSubstitution]] = None
-
-    @property
-    def is_configuration(self) -> bool:
-        return True
 
     def resolve(
         self,
@@ -274,10 +258,6 @@ class PackageShareDirectorySubstitution(LaunchSubstitution):
 
     package: Result[LaunchSubstitution]
 
-    @property
-    def is_package_share(self) -> bool:
-        return True
-
     def resolve(
         self,
         ctx: LaunchScopeContext,
@@ -297,10 +277,6 @@ class LaunchArgumentSubstitution(LaunchSubstitution):
     """
 
     name: str
-
-    @property
-    def is_argument(self) -> bool:
-        return True
 
     def resolve(
         self,
@@ -329,15 +305,11 @@ class PythonExpressionSubstitution(LaunchSubstitution):
     """
 
     # https://github.com/ros2/launch/blob/rolling/launch/launch/substitutions/python_expression.py
-    expression: Result[Iterable[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
-    modules: Result[Iterable[Result[LaunchSubstitution]]] = field(
+    expression: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
+    modules: Result[Collection[Result[LaunchSubstitution]]] = field(
         converter=_to_sub_list,
         factory=_default_python_modules,
     )
-
-    @property
-    def is_python_expression(self) -> bool:
-        return True
 
     def resolve(
         self,
@@ -387,10 +359,6 @@ class EnvironmentSubstitution(LaunchSubstitution):
 
     name: str
 
-    @property
-    def is_environment(self) -> bool:
-        return True
-
     def resolve(
         self,
         ctx: LaunchScopeContext,
@@ -410,10 +378,6 @@ class FindExecutableSubstitution(LaunchSubstitution):
     """
 
     name: str
-
-    @property
-    def is_find_executable(self) -> bool:
-        return True
 
     def resolve(
         self,
@@ -435,10 +399,6 @@ class LocalSubstitution(LaunchSubstitution):
     """
 
     expression: str
-
-    @property
-    def is_local(self) -> bool:
-        return True
 
     def resolve(
         self,
@@ -476,10 +436,6 @@ class CommandSubstitution(LaunchSubstitution):
     """
     # on_stderr: LaunchSubstitution  # TODO
 
-    @property
-    def is_command(self) -> bool:
-        return True
-
     def resolve(
         self,
         ctx: LaunchScopeContext,
@@ -501,10 +457,6 @@ class AnonymousNameSubstitution(LaunchSubstitution):
 
     name: Result[LaunchSubstitution]
 
-    @property
-    def is_anon_name(self) -> bool:
-        return True
-
     def resolve(
         self,
         ctx: LaunchScopeContext,
@@ -524,10 +476,6 @@ class AnonymousNameSubstitution(LaunchSubstitution):
 class ThisLaunchFileSubstitution(LaunchSubstitution):
     """Substitution that returns the absolute path to the current launch file."""
 
-    @property
-    def is_this_file(self) -> bool:
-        return True
-
     def resolve(
         self,
         ctx: LaunchScopeContext,
@@ -546,10 +494,6 @@ class ThisDirectorySubstitution(LaunchSubstitution):
     containing directory.
     """
 
-    @property
-    def is_this_dir(self) -> bool:
-        return True
-
     def resolve(
         self,
         ctx: LaunchScopeContext,
@@ -564,10 +508,6 @@ class ThisDirectorySubstitution(LaunchSubstitution):
 @frozen
 class ConcatenationSubstitution(LaunchSubstitution):
     parts: Iterable[Result[LaunchSubstitution]]
-
-    @property
-    def is_concatenation(self) -> bool:
-        return True
 
     def resolve(
         self,
@@ -592,10 +532,6 @@ class ConcatenationSubstitution(LaunchSubstitution):
 @frozen
 class PathJoinSubstitution(LaunchSubstitution):
     parts: Iterable[Result[LaunchSubstitution]]
-
-    @property
-    def is_path_join(self) -> bool:
-        return True
 
     def resolve(
         self,
@@ -625,10 +561,6 @@ class EqualsSubstitution(LaunchSubstitution):
     # https://github.com/ros2/launch/blob/rolling/launch/launch/substitutions/equals_substitution.py
     argument1: Result[LaunchSubstitution] = field(converter=_to_sub)
     argument2: Result[LaunchSubstitution] = field(converter=_to_sub)
-
-    @property
-    def is_equals(self) -> bool:
-        return True
 
     @property
     def a(self) -> Result[LaunchSubstitution]:
@@ -664,10 +596,6 @@ class NotEqualsSubstitution(LaunchSubstitution):
     argument2: Result[LaunchSubstitution] = field(converter=_to_sub)
 
     @property
-    def is_not_equals(self) -> bool:
-        return True
-
-    @property
     def a(self) -> Result[LaunchSubstitution]:
         return self.argument1
 
@@ -701,8 +629,6 @@ class NotEqualsSubstitution(LaunchSubstitution):
 
 @frozen
 class LaunchCondition:
-    pass
-
     @property
     def is_if_condition(self) -> bool:
         return False
@@ -734,6 +660,376 @@ class UnlessCondition(LaunchCondition):
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}({self.expression})'
+
+
+###############################################################################
+# Third-Party ROS Launch Substitutions
+###############################################################################
+
+
+def _values_to_sub_list(
+    d: Result[Dict[Result[str], Result[Union[None, str, LaunchSubstitution]]]]
+) -> Result[Dict[str, Result[Collection[Result[LaunchSubstitution]]]]]:
+    if not d.is_resolved:
+        return Result.of_dict(source=d.source)
+    o: Dict[str, Result[Collection[Result[LaunchSubstitution]]]] = {}
+    for key, value in d.value.items():
+        if not key.is_resolved:
+            return Result.of_dict(source=d.source)
+        o[key.value] = _to_sub_list(value)
+    return Result.of_dict(o)
+
+
+@frozen
+class ReplaceStringSubstitution(LaunchSubstitution):
+    # nav2_common/launch/replace_string.py
+    source_file: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
+    replacements: Result[Dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+        converter=_values_to_sub_list
+    )
+    condition: Optional[Result[LaunchCondition]] = None
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        if not self.replacements.is_resolved:
+            return Result.of_string(source=source)
+        yaml_filename: Result[str] = substitute(self.source_file, ctx, source=source)
+        if not yaml_filename.is_resolved:
+            return yaml_filename
+
+        phi: Result[bool] = Result.of_bool(source=source)
+        if self.condition is None:
+            phi = Result.of_bool(True, source=source)
+        elif self.condition.is_resolved:
+            phi = ctx.resolve_condition(self.condition)
+        if not phi.is_resolved:
+            return Result.of_string(source=source)
+
+        if phi.value:
+            replacements = self._resolve_replacements(ctx, source)
+            if not replacements.is_resolved:
+                return Result.of_string(source=source)
+            output_file = tempfile.NamedTemporaryFile(mode='w', delete=False)
+            try:
+                input_file = open(yaml_filename, 'r')
+                self._replace(input_file, output_file, replacements)
+            finally:
+                input_file.close()
+                output_file.close()
+            return Result.of_string(output_file.name, source=source)
+        else:
+            return yaml_filename
+
+    def _resolve_replacements(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode],
+    ) -> Result[Dict[str, str]]:
+        assert self.replacements.is_resolved
+        resolved_replacements: Dict[str, Result[str]] = {}
+        for key, replacement in self.replacements.value.items():
+            value = substitute(replacement, ctx, source=source)
+            if not value.is_resolved:
+                return Result.of_dict(source=source)
+            resolved_replacements[key] = value
+        return Result.of_dict(resolved_replacements)
+
+    def _replace(self, input_file, output_file, replacements: Dict[str, str]):
+        for line in input_file:
+            for key, value in replacements.items():
+                if isinstance(key, str) and isinstance(value, str):
+                    if key in line:
+                        line = line.replace(key, value)
+                else:
+                    raise TypeError(
+                        'A provided replacement pair is not a string. '
+                        'Both key and value should be strings.'
+                    )
+            output_file.write(line)
+
+    def __str__(self) -> str:
+        return (
+            '$(nav2_common/replace-string '
+            f'{self.source_file} {self.replacements} {self.condition})'
+        )
+
+
+@frozen
+class RewrittenYamlSubstitution(LaunchSubstitution):
+    # nav2_common/launch/rewritten_yaml.py
+    source_file: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
+    param_rewrites: Result[Dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+        converter=_values_to_sub_list,
+    )
+    root_key: Optional[Result[List[Result[LaunchSubstitution]]]] = field(
+        default=None,
+        converter=_to_sub_list_or_none,
+    )
+    key_rewrites: Result[Dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+        default=None,
+        converter=lambda d: Result.of_dict({}) if d is None else _values_to_sub_list(d),
+    )
+    convert_types: Result[bool] = field(factory=lambda: Result.of_bool(False))
+
+    def resolve(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[str]:
+        if not self.param_rewrites.is_resolved:
+            return Result.of_string(source=source)
+        if not self.key_rewrites.is_resolved:
+            return Result.of_string(source=source)
+
+        yaml_filename: Result[str] = substitute(self.source_file, ctx, source=source)
+        if not yaml_filename.is_resolved:
+            return yaml_filename
+
+        param_rewrites, keys_rewrites = self._resolve_rewrites(ctx)
+        yaml_data = ctx.read_yaml_file(yaml_filename.value)
+        data: Result[Dict[Any, Any]] = self._substitute_params(yaml_data, param_rewrites)
+        if not data.is_resolved:
+            return yaml_filename
+
+        data = self._add_params(data.value, param_rewrites)
+        if not data.is_resolved:
+            return yaml_filename
+
+        data = self._substitute_keys(data.value, keys_rewrites)
+        if not data.is_resolved:
+            return yaml_filename
+
+        if self.root_key is not None:
+            root_key = substitute(self.root_key, ctx)
+            if not root_key.is_resolved:
+                return yaml_filename
+            if root_key.value:
+                data = Result.of_dict({root_key.value: data.value})
+
+        assert data.is_resolved
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as rewritten_yaml:
+            yaml.dump(data.value, rewritten_yaml)
+        return Result.of_string(rewritten_yaml.name)
+
+    def _resolve_rewrites(
+        self, context: LaunchScopeContext
+    ) -> Tuple[Dict[str, Result[str]], Dict[str, Result[str]]]:
+        resolved_params: Dict[str, Result[str]] = {}
+        for key, value in self.param_rewrites.value.items():
+            resolved_params[key] = substitute(value, context)
+        resolved_keys: Dict[str, Result[str]] = {}
+        for key, value in self.key_rewrites.value.items():
+            resolved_keys[key] = substitute(value, context)
+        return resolved_params, resolved_keys
+
+    def _substitute_params(
+        self, data: Dict[Any, Any], param_rewrites: Dict[str, Result[str]]
+    ) -> Result[Dict[Any, Any]]:
+        # substitute leaf-only parameters
+        for key in self._get_leaf_keys(data):
+            raw_value = param_rewrites.get(key)
+            if raw_value is not None:
+                if not raw_value.is_resolved:
+                    return Result.of_dict(source=raw_value.source)
+                if not self.convert_types.is_resolved:
+                    return Result.of_dict(source=self.convert_types.source)
+                data[key] = self._convert(raw_value.value)
+        # substitute total path parameters
+        yaml_paths = self._pathify(Result.of_dict(data), '', {})
+        for path in yaml_paths:
+            if path in param_rewrites:
+                # this is an absolute path (ex. 'key.keyA.keyB.val')
+                value = param_rewrites[path]
+                if not value.is_resolved:
+                    return Result.of_dict(source=value.source)
+                rewrite_val = self._convert(value.value)
+                yaml_keys = path.split('.')
+                data = self._update_yaml_path_vals(data, yaml_keys, rewrite_val)
+        return Result.of_dict(data)
+
+    def _get_leaf_keys(self, data: Dict[Any, Any]) -> Iterator[str]:
+        for key, value in data.items():
+            if isinstance(value, dict):
+                yield from self._get_leaf_keys(value)
+            yield key
+
+    def _convert(self, text_value: str) -> Union[bool, int, float, str]:
+        if self.convert_types.value:
+            # try converting to int or float
+            try:
+                if '.' in text_value:
+                    return float(text_value)
+                return int(text_value)
+            except ValueError:
+                pass
+        # try converting to bool
+        if text_value.lower() == 'true':
+            return True
+        if text_value.lower() == 'false':
+            return False
+        # nothing else worked so fall through and return text
+        return text_value
+
+    def _pathify(self, data: Any, p: str, paths: Dict[str, Any], joinchar='.') -> Dict[str, Any]:
+        pn = p if not p else p + joinchar
+        if isinstance(data, dict):
+            for k, v in data.items():
+                self._pathify(v, f'{pn}{k}', paths, joinchar=joinchar)
+        elif isinstance(data, list):
+            for i, e in enumerate(data):
+                self._pathify(e, f'{pn}{i}', paths, joinchar=joinchar)
+        else:
+            paths[p] = data
+        return paths
+
+    def _update_yaml_path_vals(
+        self,
+        data: Dict[Any, Any],
+        yaml_key_list: List[str],
+        rewrite_val: Union[bool, int, float, str],
+    ) -> Dict[Any, Any]:
+        for key in yaml_key_list:
+            if key == yaml_key_list[-1]:
+                data[key] = rewrite_val
+                break
+            key = yaml_key_list.pop(0)
+            if isinstance(data, list):
+                data[int(key)] = self._update_yaml_path_vals(
+                    data[int(key)], yaml_key_list, rewrite_val
+                )
+            else:
+                data[key] = self._update_yaml_path_vals(
+                    data.get(key, {}), yaml_key_list, rewrite_val
+                )
+        return data
+
+    def _add_params(
+        self, data: Dict[Any, Any], param_rewrites: Dict[str, Result[str]]
+    ) -> Result[Dict[Any, Any]]:
+        # add new total path parameters
+        yaml_paths: Dict[str, Any] = self._pathify(data, '', {})
+        for path in param_rewrites:
+            if path not in yaml_paths:
+                value = param_rewrites[path]
+                if not value.is_resolved:
+                    return Result.of_dict(source=value.source)
+                new_val = self._convert(value.value)
+                yaml_keys = path.split('.')
+                if 'ros__parameters' in yaml_keys:
+                    data = self._update_yaml_path_vals(data, yaml_keys, new_val)
+        return Result.of_dict(data)
+
+    def _substitute_keys(
+        self, data: Dict[Any, Any], key_rewrites: Dict[str, Result[str]]
+    ) -> Result[Dict[Any, Any]]:
+        if len(key_rewrites) != 0:
+            for key, val in list(data.items()):
+                final_key = key
+                if key in key_rewrites:
+                    new_key = key_rewrites[key]
+                    if not new_key.is_resolved:
+                        return Result.of_dict(source=new_key.source)
+                    data[new_key.value] = val
+                    del data[key]
+                    final_key = new_key.value
+                if isinstance(val, dict):
+                    new_val = self._substitute_keys(val, key_rewrites)
+                    if not new_val.is_resolved:
+                        return Result.of_dict(source=new_val.source)
+                    data[final_key] = new_val.value
+        return Result.of_dict(data)
+
+    def __str__(self) -> str:
+        return (
+            '$(nav2_common/rewritten-yaml '
+            f'{self.source_file} {self.param_rewrites} {self.key_rewrites} '
+            f'{self.root_key} {self.convert_types})'
+        )
+
+
+###############################################################################
+# ROS Launch Description Entities
+###############################################################################
+
+
+@define
+class ParameterFileDescription:
+    filepath: Result[LaunchSubstitution]
+    allow_subs: Result[Union[bool, LaunchSubstitution]]
+    __cached_result: Optional[Result[Dict[Result[str], Result[Any]]]] = None
+
+    @classmethod
+    def factory(
+        cls,
+        filepath: Result[Union[str, LaunchSubstitution]],
+        allow_substs: Optional[Result[Union[bool, LaunchSubstitution]]] = None,
+    ) -> 'ParameterFileDescription':
+        if filepath.is_resolved:
+            if not isinstance(filepath.value, LaunchSubstitution):
+                filepath = Result.of(TextSubstitution(filepath.value), source=filepath.source)
+        if allow_substs is None:
+            allow_substs = Result.of_bool(False)
+        return cls(filepath, allow_substs)
+
+    def evaluate(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[Dict[Result[str], Result[Any]]]:
+        if self.__cached_result is None:
+            self.__cached_result = self._evaluate(ctx, source=source)
+        return self.__cached_result
+
+    def _evaluate(
+        self,
+        ctx: LaunchScopeContext,
+        source: Optional[TrackedCode] = None,
+    ) -> Result[Dict[Result[str], Result[Any]]]:
+        if not self.filepath.is_resolved:
+            return Result.of_dict(source=source)
+        if not self.allow_subs.is_resolved:
+            return Result.of_dict(source=source)
+        filepath = substitute(self.filepath, ctx, source=source)
+        if not filepath.is_resolved:
+            return Result.of_dict(source=source)
+        if self.allow_subs.type.is_bool:
+            allow_subs: Result[bool] = self.allow_subs
+        else:
+            r = substitute(self.allow_subs, ctx, source=source)
+            if not r.is_resolved:
+                return Result.of_dict(source=source)
+            if r.value.lower() == 'true':
+                allow_subs = Result.of_bool(True, source=self.allow_subs.source)
+            elif r.value.lower == 'false':
+                allow_subs = Result.of_bool(False, source=self.allow_subs.source)
+            else:
+                allow_subs = Result.of_bool(source=self.allow_subs.source)
+        if not allow_subs.is_resolved:
+            return Result.of_dict(source=source)
+
+        if allow_subs.value:  # FIXME
+            # try:
+            #     text = ctx.read_text_file(filepath.value)
+            # except (FileNotFoundError, IOError):
+            #     return Result.of_dict(source=source)
+            # https://github.com/ros2/launch_ros/blob/rolling/launch_ros/launch_ros/parameter_descriptions.py
+            logger.debug(f'parse and apply substitutions on {filepath.value}')
+
+        try:
+            raw_data = ctx.read_yaml_file(filepath.value)
+        except (FileNotFoundError, IOError):
+            return Result.of_dict(source=source)
+
+        data: Dict[Result[str], Result[Any]] = {}
+        for key, value in raw_data.items():
+            data[Result.of_string(key)] = Result.of(value)
+        return Result.of_dict(value=data, source=source)
+
+    def __str__(self) -> str:
+        return f'$(parameter-file {self.filepath} {self.allow_subs})'
 
 
 ###############################################################################
