@@ -387,47 +387,62 @@ class LaunchFeatureModelBuilder:
         return result
 
     def process_parameter_item(self, item: Result, node: Optional[str] = None) -> Result:
-        if item.is_resolved:
-            if isinstance(item.value, ParameterFileDescription):
-                item = item.value.evaluate(self.scope, source=item.source)
-            if item.type.is_string or issubclass(item.type.token, Path):
-                return self._parameters_from_yaml(item.value, node=node)
-            elif issubclass(item.type.token, LaunchSubstitution):
-                path: Result = substitute(item, self.scope)
-                if path.is_resolved:
-                    return self._parameters_from_yaml(path.value, node=node)
-                else:
-                    logger.warning('unable to resolve parameter file path')
-                    return Result.of_dict(source=path.source)
-            elif item.type.is_mapping:
-                result = {}
-                param_dict: Dict[Result[Any], Result[Any]] = item.value
-                for key, sub in param_dict.items():
-                    if key.is_resolved and isinstance(key.value, str):
-                        name: Result[str] = Result.of_string(key.value, source=key.source)
-                    else:
-                        name: Result[str] = substitute(key, self.scope)
-                    if not name.is_resolved:
-                        # break the whole dict analysis
-                        logger.warning('unable to resolve parameter name')
-                        return Result.of_dict(source=key.source)
-                    if not sub.is_resolved:
-                        result[name.value] = Result.unknown_value()
-                    elif isinstance(sub.value, LaunchSubstitution):
-                        result[name.value] = substitute(sub, self.scope)
-                    elif sub.type.is_string:
-                        result[name.value] = sub
-                    elif sub.type.is_iterable:
-                        result[name.value] = sub
-                    else:
-                        # TODO how to handle nested dicts and non-string values?
-                        result[name.value] = Result.of_string(str(sub.value), source=sub.source)
-                return Result.of_dict(result, source=item.source)
-            else:
-                raise TypeError(f'unexpected parameter: {item!r}')
-        else:
+        if not item.is_resolved:
             logger.warning('unable to resolve parameter list item')
             return Result.of_dict(source=item.source)
+
+        if isinstance(item.value, ParameterFileDescription):
+            mapping = item.value.evaluate(self.scope, source=item.source)
+            if not mapping.is_resolved:
+                logger.warning('unable to resolve parameter list item')
+                return Result.of_dict(source=mapping.source)
+            # FIXME loss of unresolved information
+            data: Dict[str, Any] = {
+                key.value: val.value
+                for key, val in mapping.value.items()
+                if key.is_resolved and val.is_resolved
+            }
+            return self._parameters_from_dict(data, node=node)
+
+        if item.type.is_string or issubclass(item.type.token, Path):
+            return self._parameters_from_yaml(item.value, node=node)
+
+        if issubclass(item.type.token, LaunchSubstitution):
+            path: Result = substitute(item, self.scope)
+            if path.is_resolved:
+                return self._parameters_from_yaml(path.value, node=node)
+            else:
+                logger.warning('unable to resolve parameter file path')
+                return Result.of_dict(source=path.source)
+
+        if item.type.is_mapping:
+            result: Dict[str, Any] = {}
+            param_dict: Dict[Result[Any], Result[Any]] = item.value
+            for key, sub in param_dict.items():
+                if key.is_resolved and isinstance(key.value, str):
+                    name: Result[str] = Result.of_string(key.value, source=key.source)
+                else:
+                    name: Result[str] = substitute(key, self.scope)
+                if not name.is_resolved:
+                    # break the whole dict analysis
+                    logger.warning('unable to resolve parameter name')
+                    return Result.of_dict(source=key.source)
+                if not sub.is_resolved:
+                    result[name.value] = Result.unknown_value()
+                elif isinstance(sub.value, LaunchSubstitution):
+                    result[name.value] = substitute(sub, self.scope)
+                elif sub.type.is_string:
+                    result[name.value] = sub
+                elif sub.type.is_iterable:
+                    result[name.value] = sub
+                elif sub.type.is_mapping:
+                    # nested dicts
+                    result[name.value] = sub
+                else:
+                    result[name.value] = Result.of_string(str(sub.value), source=sub.source)
+            return Result.of_dict(result, source=item.source)
+
+        raise TypeError(f'unexpected parameter: {item!r}')
 
     def _parameters_from_yaml(self, path: str, node: Optional[str] = None) -> Result:
         try:
@@ -439,7 +454,10 @@ class LaunchFeatureModelBuilder:
             logger.warning(f'parameter file located in unsafe path: {path}')
             return Result.of_dict(source=path.source)
         # return Result.of_dict({'TODO': Result.of_string(str(path))})
-        params = data
+        return self._parameters_from_dict(data, node=node)
+
+    def _parameters_from_dict(self, data: Dict[str, Any], node: Optional[str] = None) -> Result:
+        params: Dict[str, Result[Any]] = data
         if node:
             params = {}
             parts = node.split('/')
@@ -447,7 +465,7 @@ class LaunchFeatureModelBuilder:
             current = data
             while parts:
                 name = parts.pop()
-                current = current.get(name, current.get(f'/{name}', {}))
+                current: Dict[str, Any] = current.get(name, current.get(f'/{name}', {}))
                 if current:
                     params.update(current.get('ros__parameters', {}))
             current = data.get(node, {})
