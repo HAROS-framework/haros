@@ -13,10 +13,12 @@ from typing import Any, Dict, Final, Iterable, List, Mapping
 
 import argparse
 import logging
+import json
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_description
 from haros.analysis.python.dataflow import BUILTINS_MODULE
+from haros.export.json import export_launch_description
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.settings import Settings
 from haros.metamodel.builder.launch import model_from_description
@@ -78,6 +80,10 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 
     launch_description = system.get_launch_description(path)
     model = model_from_description(path, launch_description, system)
+
+    data = export_launch_description(launch_description)
+    print(json.dumps(data, indent=2))
+
     print('Launch Model:')
     print_launch_model(model)
     print('Environment:')

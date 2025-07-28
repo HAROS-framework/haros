@@ -16,6 +16,7 @@ from haros.metamodel.common import (
 )
 from haros.metamodel.launch import (
     ArgumentFeature,
+    LaunchDescription,
     LaunchFileFeature,
     LaunchModel,
     NodeFeature,
@@ -88,19 +89,25 @@ def export_file(model: FileModel) -> Dict[str, Any]:
 ###############################################################################
 
 
+def export_launch_description(launch: LaunchDescription) -> Dict[str, Any]:
+    return serialize(launch)
+
+
+###############################################################################
+# ROS Launch Interface
+###############################################################################
+
+
 def export_launch_model(model: LaunchModel) -> Dict[str, Any]:
-    return {
-        'name': model.name,
-        'files': list(map(launch_feature, model.files))
-    }
+    return {'name': model.name, 'files': list(map(launch_feature, model.files))}
 
 
 def launch_feature(model: LaunchFileFeature) -> Dict[str, Any]:
     return {
         'id': model.id,
         'file': model.file,
-        'arguments': { k: launch_argument_feature(v) for k, v in model.arguments.items() },
-        'nodes': { k: launch_node_feature(v) for k, v in model.nodes.items() },
+        'arguments': {k: launch_argument_feature(v) for k, v in model.arguments.items()},
+        'nodes': {k: launch_node_feature(v) for k, v in model.nodes.items()},
         'inclusions': list(model.inclusions),
         'conflicts': serialize(model.conflicts),
     }
@@ -160,15 +167,12 @@ def serialize(value: Any) -> Any:
     if isinstance(value, IterableType):
         return list(map(serialize, value))
     if hasattr(value, 'serialize'):
-        return value.serialize()
+        return serialize(value.serialize())
     return str(value)
 
 
 def _result(result: Result[Any]) -> Dict[str, Any]:
-    data = {
-        'type': str(result.type),
-        'source': _tracked_code(result.source)
-    }
+    data = {'type': str(result.type), 'source': _tracked_code(result.source)}
     if result.is_resolved:
         data['value'] = serialize(result.value)
     return data

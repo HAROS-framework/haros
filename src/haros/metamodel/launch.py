@@ -27,7 +27,7 @@ from pathlib import Path
 import tempfile
 from types import ModuleType
 
-from attrs import define, field, frozen
+from attrs import asdict, define, field, frozen
 import yaml
 
 from haros.metamodel.common import TrackedCode
@@ -668,7 +668,7 @@ class UnlessCondition(LaunchCondition):
 
 
 def _values_to_sub_list(
-    d: Result[Dict[Result[str], Result[Union[None, str, LaunchSubstitution]]]]
+    d: Result[Dict[Result[str], Result[Union[None, str, LaunchSubstitution]]]],
 ) -> Result[Dict[str, Result[Collection[Result[LaunchSubstitution]]]]]:
     if not d.is_resolved:
         return Result.of_dict(source=d.source)
@@ -1202,6 +1202,9 @@ class LaunchSetEnvironment(LaunchEntity):
 @frozen
 class LaunchDescription:
     entities: Result[Tuple[Result[LaunchEntity]]]
+
+    def serialize(self) -> Dict[str, Any]:
+        return asdict(self)
 
 
 ###############################################################################
