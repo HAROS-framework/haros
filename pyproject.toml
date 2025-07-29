@@ -35,7 +35,7 @@ warn_unused_ignores = true
 [tool.black]
 line-length = 100
 skip-string-normalization = true
-target-version = ["py38"]
+target-version = ["py312"]
 exclude = '\.eggs|\.git|\.mypy_cache|\.tox|_build|buck-out|build|dist|\.env|\.venv|env|venv'
 
 [tool.isort]
