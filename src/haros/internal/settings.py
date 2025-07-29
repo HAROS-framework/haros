@@ -8,6 +8,7 @@
 from typing import Any, Dict, Final
 
 from pathlib import Path
+
 try:
     from yaml import CDumper as Dumper
 except ImportError:
@@ -43,7 +44,7 @@ def _default_logging_handlers() -> Dict[str, Any]:
             'stream': 'ext://sys.stdout',
         },
         'logfile': {
-            'class' : 'logging.handlers.RotatingFileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'level': 'DEBUG',
             'formatter': 'logfileFormat',
             'filename': 'haros.log',
@@ -54,14 +55,11 @@ def _default_logging_handlers() -> Dict[str, Any]:
 
 
 def _default_logging_root() -> Dict[str, Any]:
-    return {
-        'level': 'DEBUG',
-        'handlers': ['console', 'logfile']
-    }
+    return {'level': 'DEBUG', 'handlers': ['console', 'logfile']}
 
 
 # follows Python's Dictionary configuration schema
-# https://docs.python.org/3.8/library/logging.config.html#dictionary-schema-details
+# https://docs.python.org/3.12/library/logging.config.html#dictionary-schema-details
 DEFAULT_SETTINGS_LOGGING: Final[Dict[str, Any]] = {
     'version': 1,
     'formatters': _default_logging_formatters(),
@@ -89,7 +87,7 @@ DEFAULT_SETTINGS_PLUGINS: Final[Dict[str, Any]] = {
 
 
 def _default_parsing_cpp() -> Dict[str, Any]:
-    return { 'parser': 'clang' }
+    return {'parser': 'clang'}
 
 
 DEFAULT_SETTINGS_PARSING: Final[Dict[str, Any]] = {
@@ -103,14 +101,19 @@ DEFAULT_SETTINGS: Final[Dict[str, Any]] = {
     'parsing': DEFAULT_SETTINGS_PARSING,
 }
 
-YAML_DEFAULT_SETTINGS: Final[str] = r"""%YAML 1.1
+YAML_DEFAULT_SETTINGS: Final[str] = (
+    r"""%YAML 1.1
 ---
 {}
-""".format(dump(DEFAULT_SETTINGS, Dumper=Dumper))
+""".format(
+        dump(DEFAULT_SETTINGS, Dumper=Dumper)
+    )
+)
 
 ###############################################################################
 # Data Types
 ###############################################################################
+
 
 @define
 class EnvironmentSettings:
@@ -124,7 +127,7 @@ class EnvironmentSettings:
 @define
 class LoggingSettings:
     # follows Python's Dictionary configuration schema
-    # https://docs.python.org/3.8/library/logging.config.html#dictionary-schema-details
+    # https://docs.python.org/3.12/library/logging.config.html#dictionary-schema-details
     version: int = DEFAULT_SETTINGS_LOGGING['version']
     formatters: Dict[str, Any] = field(factory=_default_logging_formatters)
     handlers: Dict[str, Any] = field(factory=_default_logging_handlers)
