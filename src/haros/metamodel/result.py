@@ -9,7 +9,6 @@ from typing import (
     Any,
     Dict,
     Final,
-    Generic,
     Iterable,
     Iterator,
     List,
@@ -55,7 +54,7 @@ CLASS_TYPE = type
 
 
 @frozen
-class TypeToken(Generic[V]):
+class TypeToken[V]:
     token: Type[V]
 
     @classmethod
@@ -256,7 +255,7 @@ def flatten_result(value: Any) -> Any:
 
 
 @frozen
-class Result(Generic[V]):
+class Result[V]:
     _value: Union[V, UnknownValue] = field(converter=flatten_result)
     type: TypeToken[V]
     source: Optional[TrackedCode] = field(default=None, eq=False, repr=False)

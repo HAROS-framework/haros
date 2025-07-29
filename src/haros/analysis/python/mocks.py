@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Generic, Optional
+from typing import Any, Callable, Dict, Final, Optional
 
 import logging
 import os
@@ -30,7 +30,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 @define
-class HarosMockObject(MockObject, Generic[T]):
+class HarosMockObject[T](MockObject):
     def _haros_freeze(self) -> T:
         # use a method name with a low probability of name collision
         # with one of the mocked object's methods or attributes

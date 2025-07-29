@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Generic, Iterable, Optional, Set, TypeVar
+from typing import Any, Callable, Iterable, Optional, Set, TypeVar
 
 from attrs import define
 
@@ -30,7 +30,7 @@ T = TypeVar('T')
 
 
 @define
-class Query(Generic[T]):
+class Query[T]:
     matches: Set[T]
 
     @classmethod

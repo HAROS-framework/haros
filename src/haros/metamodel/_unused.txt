@@ -1,7 +1,7 @@
 
 
 @frozen
-class DynamicResult(Generic[V]):
+class DynamicResult[V]:
     __type: TypeToken[V]
     __value: V
     __source: Optional[TrackedCode]
@@ -42,7 +42,7 @@ class DynamicResult(Generic[V]):
 
 
 @frozen
-class DynamicResult2(Generic[V]):
+class DynamicResult2[V]:
     type: TypeToken[V]
     value: V
     source: Optional[TrackedCode]
@@ -94,7 +94,7 @@ class DynamicResult2(Generic[V]):
 
 
 @frozen
-class Result(Generic[V]):
+class Result[V]:
     type: TypeToken[V]
     source: Optional[TrackedCode]
 

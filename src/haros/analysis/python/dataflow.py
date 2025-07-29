@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Generic, List, Optional, Type
+from typing import Any, Callable, Dict, Final, List, Optional, Type
 
 import logging
 
@@ -235,7 +235,7 @@ def tracked(ast: PythonAst) -> Optional[TrackedCode]:
 
 
 @frozen
-class Definition(Generic[V]):
+class Definition[V]:
     value: Result[V]
     ast: Optional[PythonAst] = None
     import_base: str = ''

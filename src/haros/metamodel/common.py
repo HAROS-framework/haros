@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Generic, List, Mapping, Optional, Set, TypeVar
+from typing import Any, Dict, List, Mapping, Optional, Set, TypeVar
 
 from collections import defaultdict
 
@@ -95,7 +95,7 @@ T = TypeVar('T')
 
 
 @frozen
-class VariantValue(Generic[T]):
+class VariantValue[T]:
     value: T
     condition: LogicValue
 
@@ -104,7 +104,7 @@ class VariantValue(Generic[T]):
 
 
 @define
-class VariantData(Generic[T]):
+class VariantData[T]:
     _base_value: Optional[T] = None
     _variants: List[VariantValue[T]] = field(factory=list)
 
@@ -150,7 +150,7 @@ class VariantData(Generic[T]):
     def serialize(self) -> Mapping[str, Any]:
         return {
             'base': self._base_value,
-            'variants': [[v.value, v.condition.serialize()] for v in self._variants]
+            'variants': [[v.value, v.condition.serialize()] for v in self._variants],
         }
 
     @classmethod
