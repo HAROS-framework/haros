@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, List, Tuple
+from typing import Any, Callable, Final, Tuple
 
 from importlib import metadata
 import importlib.util
@@ -65,7 +65,7 @@ class HarosPluginInterface:
 
 @frozen(slots=False)
 class PluginManager:
-    plugins: List[HarosPluginInterface] = field(factory=list)
+    plugins: list[HarosPluginInterface] = field(factory=list)
     # plugin name -> error
     # this serves to disable a plugin after it crashes
     errors: dict[str, Exception] = field(factory=dict)
@@ -106,7 +106,7 @@ def load(haroshome: Path, settings: dict[str, dict[str, Any]]) -> PluginManager:
 ###############################################################################
 
 
-def _load_from_entrypoints(settings: dict[str, dict[str, Any]]) -> List[HarosPluginInterface]:
+def _load_from_entrypoints(settings: dict[str, dict[str, Any]]) -> list[HarosPluginInterface]:
     logger.info(f'plugins: searching {ENTRY_POINT}')
     plugins = []
     try:
@@ -134,7 +134,7 @@ def _load_from_entrypoints(settings: dict[str, dict[str, Any]]) -> List[HarosPlu
 def _load_from_haroshome(
     haroshome: Path,
     settings: dict[str, dict[str, Any]],
-) -> List[HarosPluginInterface]:
+) -> list[HarosPluginInterface]:
     try:
         directory = (haroshome / 'plugins').resolve(strict=True)
     except FileNotFoundError:

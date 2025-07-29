@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from attrs import field, frozen
 
@@ -196,7 +196,7 @@ class PythonFunctionDefStatement(PythonStatement):
     def has_variadic_keywords(self) -> bool:
         return any(p.is_variadic_keywords for p in self.parameters)
 
-    def substatements(self) -> List[PythonStatement]:
+    def substatements(self) -> list[PythonStatement]:
         return list(self.body)
 
 
@@ -219,7 +219,7 @@ class PythonClassDefStatement(PythonStatement):
     def is_decorated(self) -> bool:
         return len(self.decorators) > 0
 
-    def substatements(self) -> List[PythonStatement]:
+    def substatements(self) -> list[PythonStatement]:
         return list(self.body)
 
 
@@ -258,7 +258,7 @@ class PythonIfStatement(PythonStatement):
     def has_else_branch(self) -> bool:
         return len(self.else_branch) > 0
 
-    def substatements(self) -> List[PythonStatement]:
+    def substatements(self) -> list[PythonStatement]:
         statements = list(self.then_branch.body)
         for branch in self.elif_branches:
             statements.extend(branch.body)
@@ -295,7 +295,7 @@ class PythonWhileStatement(PythonStatement):
     def has_else_branch(self) -> bool:
         return len(self.else_branch) > 0
 
-    def substatements(self) -> List[PythonStatement]:
+    def substatements(self) -> list[PythonStatement]:
         statements = list(self.loop.body)
         statements.extend(self.else_branch)
         return statements
@@ -335,7 +335,7 @@ class PythonForStatement(PythonStatement):
     def has_else_branch(self) -> bool:
         return len(self.else_branch) > 0
 
-    def substatements(self) -> List[PythonStatement]:
+    def substatements(self) -> list[PythonStatement]:
         statements = list(self.body)
         statements.extend(self.else_branch)
         return statements
@@ -368,7 +368,7 @@ class PythonTryStatement(PythonStatement):
     def has_finally_block(self) -> bool:
         return len(self.finally_block) > 0
 
-    def substatements(self) -> List[PythonStatement]:
+    def substatements(self) -> list[PythonStatement]:
         statements = list(self.body)
         for clause in self.except_clauses:
             statements.extend(clause.body)
@@ -387,7 +387,7 @@ class PythonWithStatement(PythonStatement):
     def is_with(self) -> bool:
         return True
 
-    def substatements(self) -> List[PythonStatement]:
+    def substatements(self) -> list[PythonStatement]:
         return list(self.body)
 
 
@@ -400,7 +400,7 @@ class PythonMatchStatement(PythonStatement):
     def is_match(self) -> bool:
         return True
 
-    def substatements(self) -> List[PythonStatement]:
+    def substatements(self) -> list[PythonStatement]:
         statements = []
         for case_stmt in self.cases:
             statements.extend(case_stmt.body)

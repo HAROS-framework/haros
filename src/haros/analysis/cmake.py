@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, List
+from typing import Any, Final, Iterable
 
 import logging
 from pathlib import Path
@@ -30,8 +30,8 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 class CMakeTarget:
     name: str
     is_executable: bool = True
-    sources: List[str] = field(factory=list)
-    dependencies: List[str] = field(factory=list)
+    sources: list[str] = field(factory=list)
+    dependencies: list[str] = field(factory=list)
 
     @property
     def is_library(self) -> bool:
@@ -47,11 +47,11 @@ class CMakeContext:
     cache: dict[str, str] = field(factory=dict)
     targets: dict[str, CMakeTarget] = field(factory=dict)
 
-    def process_arguments(self, arguments: List[CMakeArgument]) -> List[str]:
+    def process_arguments(self, arguments: list[CMakeArgument]) -> list[str]:
         if not arguments:
             return []
         # first pass: variable substitution
-        args: List[str] = self.interpret_all(arg.value for arg in arguments)
+        args: list[str] = self.interpret_all(arg.value for arg in arguments)
         # second pass: join text and break it down again in separate arguments
         text: str = ' '.join(args)
         arguments = self.parser.parse_arguments(text)
@@ -81,7 +81,7 @@ class CMakeContext:
         # must take nested variables into account
         return self.interpret(''.join(parts))
 
-    def interpret_all(self, values: Iterable[str]) -> List[str]:
+    def interpret_all(self, values: Iterable[str]) -> list[str]:
         return [self.interpret(v) for v in values]
 
     _RE_ENV_VAR = re.compile(r'ENV{(.+)}')
@@ -230,7 +230,7 @@ class CMakeContext:
 ###############################################################################
 
 
-def get_targets_from_cmake(path: Path) -> List[CMakeTarget]:
+def get_targets_from_cmake(path: Path) -> list[CMakeTarget]:
     logger.debug(f'get_targets_from_cmake("{path}")')
     parser = cmake_parser()
     text = path.read_text()

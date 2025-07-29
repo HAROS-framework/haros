@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final, List, Tuple
+from typing import Final, Tuple
 
 from pathlib import Path
 import re
@@ -60,10 +60,10 @@ class CMakeArgument:
 @frozen
 class CMakeCommand:
     name: str
-    arguments: List[CMakeArgument]
+    arguments: list[CMakeArgument]
     line: int = 1
     column: int = 1
-    comments: List[CMakeComment] = field(factory=list)
+    comments: list[CMakeComment] = field(factory=list)
 
     def pretty(self, indent: int = 0) -> str:
         ws = _INDENT_SPACE * indent
@@ -83,8 +83,8 @@ class CMakeCommand:
 
 @frozen
 class CMakeFile:
-    commands: List[CMakeCommand] = field(factory=list)
-    comments: List[CMakeComment] = field(factory=list)
+    commands: list[CMakeCommand] = field(factory=list)
+    comments: list[CMakeComment] = field(factory=list)
 
     def pretty(self) -> str:
         parts = ['file:']
@@ -124,7 +124,7 @@ class _ToAst(Transformer):
             comments=comments,
         )
 
-    def arguments(self, children) -> Tuple[List[CMakeArgument], List[CMakeComment]]:
+    def arguments(self, children) -> Tuple[list[CMakeArgument], list[CMakeComment]]:
         arguments = [c for c in children if isinstance(c, CMakeArgument)]
         comments = [c for c in children if isinstance(c, CMakeComment)]
         return arguments, comments
@@ -191,7 +191,7 @@ class _CMakeParser:
         tree = self._parser.parse(text)
         return self._transformer.transform(tree)
 
-    def parse_arguments(self, text: str) -> List[CMakeArgument]:
+    def parse_arguments(self, text: str) -> list[CMakeArgument]:
         tree = self._arg_parser.parse(text)
         arguments, comments = self._transformer.transform(tree)
         return arguments

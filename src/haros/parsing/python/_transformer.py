@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Collection, Iterable, List, Optional, Tuple, Union
+from typing import Any, Collection, Iterable, Optional, Tuple, Union
 
 import re
 
@@ -1360,7 +1360,7 @@ class ToAst(Transformer):
         children: Collection[Union[PythonExpression, PythonArgument]],
     ) -> Tuple[PythonArgument]:
         assert len(children) >= 1
-        args: List[PythonArgument] = []
+        args: list[PythonArgument] = []
         arg = children[0]
         if isinstance(children[0], PythonArgument):
             args.append(children[0])

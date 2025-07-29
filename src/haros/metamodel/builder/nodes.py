@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final, List
+from typing import Final
 
 import logging
 from pathlib import Path
@@ -24,7 +24,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def build_from_cmake(package: str, root: Path) -> List[NodeModel]:
+def build_from_cmake(package: str, root: Path) -> list[NodeModel]:
     logger.info(f'build_from_cmake("{package}", "{root}")')
     nodes = []
     path = root / 'CMakeLists.txt'

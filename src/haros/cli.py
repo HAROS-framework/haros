@@ -18,7 +18,7 @@ Some of the structure of this file came from this StackExchange question:
 # Imports
 ###############################################################################
 
-from typing import Any, Final, List, Optional
+from typing import Any, Final, Optional
 
 import argparse
 import logging
@@ -43,7 +43,7 @@ from haros.internal.settings import (
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     args = parse_arguments(argv)
     cmd = args['cmd']
 
@@ -107,7 +107,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: Optional[List[str]]) -> dict[str, Any]:
+def parse_arguments(argv: Optional[list[str]]) -> dict[str, Any]:
     msg = 'The High-Assurance ROS Framework.'
     parser = argparse.ArgumentParser(description=msg)
 

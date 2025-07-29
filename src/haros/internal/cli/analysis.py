@@ -7,7 +7,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, List
+from typing import Any, Final
 
 import argparse
 import json
@@ -40,7 +40,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def subprogram(argv: List[str], settings: Settings) -> int:
+def subprogram(argv: list[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -101,7 +101,7 @@ def run(args: dict[str, Any], settings: Settings) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: List[str]) -> dict[str, Any]:
+def parse_arguments(argv: list[str]) -> dict[str, Any]:
     msg = 'Run analyses over ROS workspaces and packages'
     parser = argparse.ArgumentParser(prog='haros analysis', description=msg)
 
@@ -136,7 +136,7 @@ def parse_arguments(argv: List[str]) -> dict[str, Any]:
 ###############################################################################
 
 
-def process_paths(paths: List[Path]) -> StorageManager:
+def process_paths(paths: list[Path]) -> StorageManager:
     storage = StorageManager()
     adhoc = []
     for path in paths:

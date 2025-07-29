@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final, List, NewType, Union
+from typing import Final, NewType, Union
 
 from attrs import define, field, frozen
 
@@ -45,7 +45,7 @@ class ControlJump:
 @frozen
 class ControlNode:
     id: ControlNodeId
-    body: List[PythonStatement] = field(factory=list, eq=False, hash=False)
+    body: list[PythonStatement] = field(factory=list, eq=False, hash=False)
     condition: LogicValue = field(default=TRUE, eq=False, hash=False)
     incoming: dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
     outgoing: dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
@@ -155,7 +155,7 @@ class LoopingContext:
 @define
 class BranchingContext:
     guard_node: ControlNode
-    branch_leaves: List[ControlNode] = field(init=False, factory=list)
+    branch_leaves: list[ControlNode] = field(init=False, factory=list)
     condition: LogicValue = field(init=False, default=FALSE)
     previous: LogicValue = field(init=False, default=TRUE)
     terminal_branch: bool = False

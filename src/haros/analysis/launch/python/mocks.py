@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, List, Optional, Tuple, Union
+from typing import Any, Final, Iterable, Optional, Tuple, Union
 
 import logging
 from pathlib import Path
@@ -65,7 +65,7 @@ TYPE_LAUNCH_SUBSTITUTION: Final[TypeToken[LaunchSubstitution]] = TypeToken.of(La
 
 @define
 class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
-    entities: Result[List[Result[LaunchEntity]]]
+    entities: Result[list[Result[LaunchEntity]]]
 
     def add_action(self, action: Result[LaunchEntity]) -> None:
         if self.entities.is_resolved:
@@ -117,7 +117,7 @@ def python_launch_description_source_function(arg_list: Result) -> LaunchSubstit
 
 
 def launch_description_function(
-    arg_list: Optional[Result[List[Result[LaunchEntity]]]] = None,
+    arg_list: Optional[Result[list[Result[LaunchEntity]]]] = None,
 ) -> LaunchDescriptionMock:
     if not arg_list:
         return LaunchDescriptionMock(Result.of_list([]))
@@ -167,7 +167,7 @@ def include_launch_description_function(
     if source.is_resolved:
         if isinstance(source.value, LaunchSubstitution):
             _source = const_substitution(source.value, source=source.source)
-    _arguments: List[LaunchArgumentKeyValuePair] = []
+    _arguments: list[LaunchArgumentKeyValuePair] = []
     if launch_arguments is not None and launch_arguments.is_resolved:
         assert launch_arguments.type.is_iterable, repr(launch_arguments)
         for item in launch_arguments.value:
@@ -326,7 +326,7 @@ def _dataflow_to_launch_substitution(
     return unknown_substitution(source=result.source)
 
 
-def _dataflow_to_launch_list(arg_list: Optional[Result]) -> List[Result[LaunchSubstitution]]:
+def _dataflow_to_launch_list(arg_list: Optional[Result]) -> list[Result[LaunchSubstitution]]:
     values = []
     if arg_list is not None:
         if arg_list.is_resolved:

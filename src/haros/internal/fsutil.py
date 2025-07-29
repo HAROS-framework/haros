@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, List, Union
+from typing import Any, Final, Union
 
 import logging
 import os
@@ -139,7 +139,7 @@ def crawl_workspace(ws: Path, *, relative: bool = False) -> dict[str, Path]:
     return packages
 
 
-def crawl_package(pkg: Path) -> List[Path]:
+def crawl_package(pkg: Path) -> list[Path]:
     """Return a list of file paths found within the given package."""
     if is_ignored_dir(pkg):
         return []
@@ -167,7 +167,7 @@ def crawl_package(pkg: Path) -> List[Path]:
 
 @frozen
 class StorageManager:
-    workspaces: List[Path] = field(factory=list)
+    workspaces: list[Path] = field(factory=list)
     packages: dict[str, Path] = field(factory=dict)
 
     def crawl(self):
@@ -204,7 +204,7 @@ def _get_installed_package_path(name: str) -> Path:
     return prefix / 'share' / name
 
 
-def _get_ament_search_paths() -> List[Path]:
+def _get_ament_search_paths() -> list[Path]:
     ament_prefix_path = os.environ.get(AMENT_PREFIX_PATH_ENV_VAR)
     if not ament_prefix_path:
         # raise EnvironmentError(AMENT_PREFIX_PATH_ENV_VAR)
