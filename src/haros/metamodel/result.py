@@ -28,7 +28,6 @@ from attrs import evolve, field, frozen
 
 from haros.metamodel.common import TrackedCode
 
-
 ###############################################################################
 # Constants
 ###############################################################################

@@ -13,9 +13,9 @@ try:
     from yaml import CDumper as Dumper
 except ImportError:
     from yaml import Dumper
-from yaml import dump, safe_load
 
 from attrs import asdict, define, field
+from yaml import dump, safe_load
 
 ###############################################################################
 # Constants

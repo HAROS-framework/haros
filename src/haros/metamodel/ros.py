@@ -7,7 +7,7 @@
 
 from typing import Any, Dict, Final, Iterable, List, Mapping, Optional
 
-from enum import auto, Enum, Flag, unique
+from enum import Enum, Flag, auto, unique
 
 from attrs import asdict, field, frozen
 from attrs.validators import matches_re
@@ -335,12 +335,14 @@ def const_string(value: str, source: Optional[TrackedCode] = None) -> Result[str
     # TODO validate values
     return Result.of_string(value=value, source=source)
 
+
 def const_list(
     value: Iterable[Result],
     source: Optional[TrackedCode] = None,
 ) -> Result[Iterable[Result]]:
     # TODO validate values
     return Result.of_iterable(value=value, source=source)
+
 
 def const_mapping(
     value: Mapping[str, Result],
@@ -429,6 +431,7 @@ class ProjectModel:
 
 def uid_file(package: str, relative_path: str) -> str:
     return f'{package}/{relative_path}'
+
 
 def uid_node(package: str, executable: str) -> str:
     return f'{package}/{executable}'

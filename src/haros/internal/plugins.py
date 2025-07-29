@@ -91,6 +91,7 @@ class PluginManager:
                         plugin.teardown()
                     except Exception:
                         pass
+
         return hook
 
 

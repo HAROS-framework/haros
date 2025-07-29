@@ -135,10 +135,10 @@ class AnalysisSystemInterface:
     def _redirect_to_local_packages(self, path: PathType) -> str:
         path = uniform_path_string(path)
         if path.startswith(PACKAGE_SHARE_DIR):
-            relative = path[len(PACKAGE_SHARE_DIR):]
+            relative = path[len(PACKAGE_SHARE_DIR) :]
             parts = relative.split('/', maxsplit=1)
             package = parts[0]
-            suffix = relative[len(package):]
+            suffix = relative[len(package) :]
             new_path = self.packages.get(package, f'{PACKAGE_SHARE_DIR}{package}')
             if new_path is not None:
                 return f'{new_path}{suffix}'

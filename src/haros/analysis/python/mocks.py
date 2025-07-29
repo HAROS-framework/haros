@@ -5,14 +5,15 @@
 # Imports
 ###############################################################################
 
+from types import SimpleNamespace
 from typing import Any, Callable, Dict, Final, Optional
 
 import logging
 import os
 from pathlib import Path
-from types import SimpleNamespace
 
 from attrs import define, frozen
+
 from haros.analysis.python.dataflow import BUILTINS_MODULE, MockObject, StrictFunctionCaller
 from haros.internal.interface import AnalysisSystemInterface, PathType
 from haros.metamodel.common import T

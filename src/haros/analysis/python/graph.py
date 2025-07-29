@@ -5,6 +5,7 @@
 # Imports
 ###############################################################################
 
+from types import SimpleNamespace
 from typing import (
     Any,
     Callable,
@@ -20,7 +21,6 @@ from typing import (
 )
 
 import logging
-from types import SimpleNamespace
 
 from attrs import define, field, frozen
 

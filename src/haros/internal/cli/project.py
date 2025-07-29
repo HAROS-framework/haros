@@ -111,17 +111,14 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
 def _parser_new(subparsers):
     parser = subparsers.add_parser('new')
 
-    parser.add_argument(
-        'name',
-        help='name of the new project'
-    )
+    parser.add_argument('name', help='name of the new project')
 
     parser.add_argument(
         'path',
         nargs='?',
         default=DEFAULT_PATH,
         type=Path,
-        help=f'path of the generated file [{DEFAULT_PATH}]'
+        help=f'path of the generated file [{DEFAULT_PATH}]',
     )
 
 
@@ -134,5 +131,5 @@ def _parser_build(subparsers):
         nargs='?',
         default=DEFAULT_PATH,
         type=Path,
-        help=f'path to the project file [{DEFAULT_PATH}]'
+        help=f'path to the project file [{DEFAULT_PATH}]',
     )

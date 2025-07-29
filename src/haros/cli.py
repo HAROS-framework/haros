@@ -30,9 +30,9 @@ from haros import __version__ as current_version
 from haros.internal import home
 from haros.internal.cli import analysis, debug, init, project
 from haros.internal.settings import (
+    Settings,
     defaults as default_settings,
     load as load_settings,
-    Settings,
 )
 
 ###############################################################################
@@ -115,7 +115,7 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
         '--version',
         action='version',
         version=f'{current_version}',
-        help='Prints the program version.'
+        help='Prints the program version.',
     )
 
     parser.add_argument(
@@ -147,6 +147,7 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
 ###############################################################################
 # Logging Configuration
 ###############################################################################
+
 
 def _setup_logging(homepath: Path, settings: Settings) -> None:
     config = settings.logging.asdict()

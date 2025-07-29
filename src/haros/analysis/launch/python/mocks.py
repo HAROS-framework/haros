@@ -11,34 +11,35 @@ import logging
 from pathlib import Path
 
 from attrs import define
+
 from haros.analysis.python.mocks import HarosMockObject
 from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
     EqualsSubstitution,
     IfCondition,
+    LaunchArgument,
     LaunchArgumentKeyValuePair,
     LaunchCondition,
+    LaunchConfiguration,
+    LaunchDescription,
     LaunchEntity,
     LaunchGroupAction,
+    LaunchInclusion,
+    LaunchNode,
     LaunchNodeRemapList,
     LaunchSetEnvironment,
+    LaunchSubstitution,
     NotEqualsSubstitution,
     ParameterFileDescription,
     PythonExpressionSubstitution,
     ReplaceStringSubstitution,
     RewrittenYamlSubstitution,
     TextSubstitution,
+    ThisDirectorySubstitution,
     UnlessCondition,
     const_substitution,
     const_text,
-    LaunchArgument,
-    LaunchConfiguration,
-    LaunchDescription,
-    LaunchInclusion,
-    LaunchNode,
-    LaunchSubstitution,
-    ThisDirectorySubstitution,
     unknown_parameter_list,
     unknown_remap_list,
     unknown_substitution,

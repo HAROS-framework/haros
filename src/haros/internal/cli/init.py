@@ -53,7 +53,7 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
         nargs='?',
         default=home.DEFAULT_PATH,
         type=Path,
-        help=f'HAROS home directory path. Defaults to {home.DEFAULT_PATH}.'
+        help=f'HAROS home directory path. Defaults to {home.DEFAULT_PATH}.',
     )
 
     args = parser.parse_args(args=argv)

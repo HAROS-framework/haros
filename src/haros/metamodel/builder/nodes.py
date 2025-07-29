@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 
 from haros.analysis.cmake import get_targets_from_cmake
-from haros.metamodel.ros import NodeModel, Languages, uid_file
+from haros.metamodel.ros import Languages, NodeModel, uid_file
 from haros.parsing.cmake import parser as cmake_parser
 
 ###############################################################################

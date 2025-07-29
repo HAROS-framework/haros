@@ -10,7 +10,6 @@ from typing import Any, Collection, Iterable, List, Optional, Tuple, Union
 import re
 
 from attrs import frozen
-from haros.parsing.python.ast.common import PythonHelperNode
 from lark import Token, Transformer, v_args
 
 from haros.parsing.python.ast import (
@@ -48,8 +47,8 @@ from haros.parsing.python.ast import (
     PythonGenerator,
     PythonIfStatement,
     PythonImportBase,
-    PythonImportStatement,
     PythonImportedName,
+    PythonImportStatement,
     PythonItemAccess,
     PythonIterator,
     PythonKeyAccess,
@@ -88,6 +87,7 @@ from haros.parsing.python.ast import (
     PythonWithStatement,
     PythonYieldExpression,
 )
+from haros.parsing.python.ast.common import PythonHelperNode
 
 ###############################################################################
 # Transformer

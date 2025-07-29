@@ -142,6 +142,6 @@ def _solve_number(expr: PythonExpression) -> Optional[int]:
             if expr.operator == '//':
                 return a // b
             if expr.operator == '**':
-                return a ** b
+                return a**b
 
     return None

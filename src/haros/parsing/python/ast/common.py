@@ -153,6 +153,7 @@ class PythonAstNodeMetadata:
     column: int = 0
     annotations: Dict[str, Any] = field(factory=dict, eq=False, hash=False)
 
+
 @frozen
 class PythonAst:
     meta: PythonAstNodeMetadata

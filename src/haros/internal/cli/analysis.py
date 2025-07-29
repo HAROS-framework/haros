@@ -17,8 +17,8 @@ import logging
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_description
-from haros.export.json import launch_feature, export_project
-from haros.internal.fsutil import is_ros_package, is_workspace, StorageManager
+from haros.export.json import export_project, launch_feature
+from haros.internal.fsutil import StorageManager, is_ros_package, is_workspace
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.plugins import load as load_plugins
 from haros.internal.settings import Settings
@@ -65,11 +65,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     logger.info(f'analysis: packages: {storage.packages}')
     plugins.on_analysis_begin()
     # print(f'analysis: packages: {list(storage.packages.keys())}')
-    output = {
-        'launch': {
-            'models': []
-        }
-    }
+    output = {'launch': {'models': []}}
     model = build_from_package_paths(args['name'], storage.packages)
     system = _setup_interface(storage, model)
     print('project:', model.name)

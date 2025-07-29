@@ -24,10 +24,11 @@ import argparse
 import json
 import logging
 from pathlib import Path
-import time
 import sys
+import time
 
 from bottle import request, route, run, static_file
+
 from harosviz import __version__ as current_version
 
 ###############################################################################
@@ -43,7 +44,7 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
         '--version',
         action='version',
         version=f'{current_version}',
-        help='Prints the program version.'
+        help='Prints the program version.',
     )
 
     parser.add_argument(
@@ -158,6 +159,7 @@ def timed(fun):
         else:
             print(f'<done in {delta:.2f} seconds>')
         return res
+
     return wrapper
 
 
@@ -271,18 +273,21 @@ def _load_project_nodes(root):
     nodes = []
     for item in data:
         package = item['package']
-        nodes.append(Node(
-            package,
-            item['nodelet'] or item['name'],
-            files=[FileId(f'{package}/{fp}') for fp in item['files']],
-            advertise_calls=item['advertise'],
-            subscribe_calls=item['subscribe'],
-            srv_server_calls=item['service'],
-            srv_client_calls=item['client'],
-            param_get_calls=item['readParam'],
-            param_set_calls=item['writeParam'],
-        ))
+        nodes.append(
+            Node(
+                package,
+                item['nodelet'] or item['name'],
+                files=[FileId(f'{package}/{fp}') for fp in item['files']],
+                advertise_calls=item['advertise'],
+                subscribe_calls=item['subscribe'],
+                srv_server_calls=item['service'],
+                srv_client_calls=item['client'],
+                param_get_calls=item['readParam'],
+                param_set_calls=item['writeParam'],
+            )
+        )
     return nodes
+
 
 ###############################################################################
 # Entry Point

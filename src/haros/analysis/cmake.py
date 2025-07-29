@@ -13,8 +13,7 @@ import re
 
 from attrs import field, frozen
 
-from haros.parsing.cmake import CMakeArgument
-from haros.parsing.cmake import parser as cmake_parser
+from haros.parsing.cmake import CMakeArgument, parser as cmake_parser
 
 ###############################################################################
 # Constants
@@ -70,7 +69,7 @@ class CMakeContext:
         i = 0
         parts = []
         while match:
-            parts.append(value[i:match.start()])
+            parts.append(value[i : match.start()])
             key = match.group(1)
             replacement = self.variables.get(key, self.cache.get(key, ''))
             parts.append(replacement)
@@ -116,9 +115,9 @@ class CMakeContext:
                 values.append(args[i])
             value = ' '.join(values)
             if args[i] == 'CACHE':
-                var_type = args[i+1]
-                docstring = args[i+2]
-                force = i+3 < len(args) and args[i+3] == 'FORCE'
+                var_type = args[i + 1]
+                docstring = args[i + 2]
+                force = i + 3 < len(args) and args[i + 3] == 'FORCE'
                 if force or name not in cache:
                     self.cache[name] = (value, var_type, docstring)
             else:

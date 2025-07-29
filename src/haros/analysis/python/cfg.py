@@ -21,9 +21,9 @@ from haros.parsing.python.ast import (
     PythonForStatement,
     PythonModule,
     PythonStatement,
-    PythonWhileStatement,
     PythonTryStatement,
     PythonTupleLiteral,
+    PythonWhileStatement,
 )
 
 ###############################################################################

@@ -382,9 +382,7 @@ class LogicAnd(LogicValue):
             # go for the first thing
             return self.operands[0].make_false(full=False)
         return {
-            name: value
-            for op in self.operands
-            for name, value in op.make_false(full=True).items()
+            name: value for op in self.operands for name, value in op.make_false(full=True).items()
         }
 
     def serialize(self) -> Any:
@@ -485,9 +483,7 @@ class LogicOr(LogicValue):
             # go for the first thing
             return self.operands[0].make_true(full=False)
         return {
-            name: value
-            for op in self.operands
-            for name, value in op.make_true(full=True).items()
+            name: value for op in self.operands for name, value in op.make_true(full=True).items()
         }
 
     def make_false(self, full: bool = False) -> Mapping[str, bool]:

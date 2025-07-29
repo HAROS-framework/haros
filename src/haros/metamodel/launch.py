@@ -5,6 +5,7 @@
 # Imports
 ###############################################################################
 
+from types import ModuleType
 from typing import (
     Any,
     Collection,
@@ -25,7 +26,6 @@ import importlib
 import logging
 from pathlib import Path
 import tempfile
-from types import ModuleType
 
 from attrs import asdict, define, field, frozen
 import yaml
