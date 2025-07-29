@@ -5,12 +5,11 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Iterable, Optional, Set, TypeVar
+from typing import Callable, Iterable, Optional, Set, TypeVar
 
 from attrs import define
 
 from haros.parsing.python.ast import (
-    PythonAst,
     PythonExpression,
     PythonFunctionDefStatement,
     PythonImportStatement,

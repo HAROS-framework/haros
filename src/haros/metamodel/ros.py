@@ -191,7 +191,7 @@ class RosName:
         return cls('/')
 
     def join(self, other: 'RosName') -> 'RosName':
-        """Uses `self` as a namespace to join with `other`."""
+        """Use `self` as a namespace to join with `other`."""
         if other.is_global:
             return other
         suffix: str = other.text
@@ -207,7 +207,7 @@ class RosName:
         return RosName(name)
 
     def resolve(self, ns: 'RosName', private_ns: 'RosName') -> 'RosName':
-        """Resolves `self` relative to `ns` or `private_ns`."""
+        """Resolve `self` relative to `ns` or `private_ns`."""
         if self.is_global:
             return self
         if self.is_private:

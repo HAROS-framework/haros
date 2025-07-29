@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
-"""
-Module that contains the command line sub-program.
-"""
+"""Module that contains the command line sub-program."""
 
 ###############################################################################
 # Imports
@@ -125,7 +123,7 @@ def _parser_new(subparsers):
 def _parser_build(subparsers):
     parser = subparsers.add_parser('build')
 
-    default_path = Path.cwd() / 'project.haros.yaml'
+    # default_path = Path.cwd() / 'project.haros.yaml'
     parser.add_argument(
         'path',
         nargs='?',

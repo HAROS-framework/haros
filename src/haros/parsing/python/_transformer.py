@@ -257,7 +257,7 @@ class ToAst(Transformer):
 
     @v_args(inline=True)
     def del_stmt(self, expressions: Tuple[PythonExpression]) -> PythonDeleteStatement:
-        assert len(expressions) > 0, str(children)
+        assert len(expressions) > 0, str(expressions)
         line = getattr(expressions[0], 'line', 0)
         column = getattr(expressions[0], 'column', 0)
         return self._new_node(PythonDeleteStatement, expressions, line=line, column=column)
@@ -801,7 +801,7 @@ class ToAst(Transformer):
     ) -> Tuple[PythonFunctionParameter]:
         if name is not None:
             # square brackets places a None if no matches occurred
-            assert isinstance(name, Token), f'lambda_starparams: {children}'
+            assert isinstance(name, Token), f'lambda_starparams: {(name, params)!r}'
             param = self._new_node(
                 PythonFunctionParameter,
                 name,
@@ -1320,9 +1320,9 @@ class ToAst(Transformer):
                 if arg.is_argument:
                     args.append(arg)
                 else:
-                    assert False, f'unexpected argument: {arg}'
+                    raise AssertionError(f'unexpected argument: {arg}')
             else:
-                assert False, f'unexpected argument: {arg}'
+                raise AssertionError(f'unexpected argument: {arg}')
         return tuple(args)
 
     def starargs(
@@ -1340,9 +1340,9 @@ class ToAst(Transformer):
                 if arg.is_argument:
                     args.append(arg)
                 else:
-                    assert False, f'unexpected argument: {arg}'
+                    raise AssertionError(f'unexpected argument: {arg}')
             else:
-                assert False, f'unexpected argument: {arg}'
+                raise AssertionError(f'unexpected argument: {arg}')
         return tuple(args)
 
     @v_args(inline=True)
@@ -1435,7 +1435,7 @@ class ToAst(Transformer):
         assert match is not None, f'expected a match: {s}'
         prefix = match.group(1)
         is_raw = 'r' in prefix
-        is_unicode = not 'b' in prefix
+        is_unicode = 'b' not in prefix
         is_format = 'f' in prefix
         value = s[match.end() : -1]
         return self._new_node(
@@ -1454,7 +1454,7 @@ class ToAst(Transformer):
         assert match is not None, f'expected a match: {s}'
         prefix = match.group(1)
         is_raw = 'r' in prefix
-        is_unicode = not 'b' in prefix
+        is_unicode = 'b' not in prefix
         is_format = 'f' in prefix
         value = s[match.end() + 2 : -3]
         return self._new_node(

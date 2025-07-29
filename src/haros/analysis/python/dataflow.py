@@ -14,7 +14,7 @@ from attrs import define, evolve, field, frozen
 from haros.errors import DataFlowError
 from haros.metamodel.common import SourceCodeLocation, TrackedCode, VariantData
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
-from haros.metamodel.result import Result, T, TypeToken, V
+from haros.metamodel.result import Result, T, TypeToken
 from haros.parsing.python.ast import (
     PythonAssignmentStatement,
     PythonAst,

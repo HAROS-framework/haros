@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Iterable, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 from attrs import field, frozen
 

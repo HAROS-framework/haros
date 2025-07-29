@@ -111,7 +111,7 @@ def _solve_number(expr: PythonExpression) -> Optional[int]:
         if expr.is_number:
             return expr.value
         if expr.is_bool:
-            return int(value)
+            return int(expr.value)
         return None
 
     if expr.is_operator:

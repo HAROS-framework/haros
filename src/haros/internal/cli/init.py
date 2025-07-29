@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
-"""
-Module that contains the command line sub-program.
-"""
+"""Module that contains the command line sub-program."""
 
 ###############################################################################
 # Imports

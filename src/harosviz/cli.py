@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
+# flake8: noqa
+
 """
 Module that contains the command line program.
 
@@ -29,6 +31,7 @@ import time
 
 from bottle import request, route, run, static_file
 
+from haros.metamodel.ros import NodeModel, ProjectModel
 from harosviz import __version__ as current_version
 
 ###############################################################################
@@ -105,12 +108,12 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     if not path.is_dir():
         raise ValueError(f'"{root}" is not a directory')
 
-    global workspace
-    workspace = fsys.Workspace(list(args['src']))
-    workspace.find_packages()
-    global ros_iface
-    ros_iface = SimpleRosInterface(strict=True, pkgs=workspace.packages)
-    ros_iface.executables = get_all_package_executables()
+    # global workspace
+    # workspace = fsys.Workspace(list(args['src']))
+    # workspace.find_packages()
+    # global ros_iface
+    # ros_iface = SimpleRosInterface(strict=True, pkgs=workspace.packages)
+    # ros_iface.executables = get_all_package_executables()
 
     set_routes(str(path), configs)
     run(host='localhost', port=8080)
@@ -274,7 +277,7 @@ def _load_project_nodes(root):
     for item in data:
         package = item['package']
         nodes.append(
-            Node(
+            NodeModel(
                 package,
                 item['nodelet'] or item['name'],
                 files=[FileId(f'{package}/{fp}') for fp in item['files']],

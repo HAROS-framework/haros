@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
-"""
-Module that contains the command line sub-program.
-"""
+"""Module that contains the command line sub-program."""
 
 ###############################################################################
 # Imports
@@ -210,7 +208,7 @@ def print_mapping(mapping: Mapping[Result[Any], Result[Any]], indent: int = 0):
 
 
 def print_subgraphs(builder: ProgramGraphBuilder):
-    for name, statement in builder.nested_graphs.items():
+    for name, _statement in builder.nested_graphs.items():
         # full_name = f'{builder.name}/{name}'
         print('')
         print(f'>> {name}')
@@ -219,13 +217,13 @@ def print_subgraphs(builder: ProgramGraphBuilder):
         subgraph, data = subbuilder.build()
         print(subgraph.pretty())
 
-        print(f'\nReachable:')
+        print('\nReachable:')
         for node in subgraph.nodes.values():
             if node.id == subgraph.root_id or not node.is_unreachable:
                 print('')
                 print(node.pretty())
 
-        print(f'\nUnreachable:')
+        print('\nUnreachable:')
         for node in subgraph.nodes.values():
             if node.id != subgraph.root_id and node.is_unreachable:
                 print('')

@@ -288,7 +288,7 @@ LAUNCH_SYMBOLS = {
     'launch.conditions.if_condition.IfCondition': if_condition_function,
     'launch.conditions.UnlessCondition': unless_condition_function,
     'launch.conditions.unless_condition.UnlessCondition': unless_condition_function,
-    'launch.launch_description_sources.PythonLaunchDescriptionSource': python_launch_description_source_function,
+    'launch.launch_description_sources.PythonLaunchDescriptionSource': python_launch_description_source_function,  # noqa: E501
     'launch.substitutions.EqualsSubstitution': EqualsSubstitution,
     'launch.substitutions.LaunchConfiguration': launch_configuration_function,
     'launch.substitutions.NotEqualsSubstitution': NotEqualsSubstitution,

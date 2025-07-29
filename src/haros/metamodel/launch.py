@@ -271,10 +271,7 @@ class PackageShareDirectorySubstitution(LaunchSubstitution):
 
 @frozen
 class LaunchArgumentSubstitution(LaunchSubstitution):
-    """
-    This substitution gets the value of a launch description argument,
-    as a string, by name.
-    """
+    """Gets the value of a launch description argument, as a string, by name."""
 
     name: str
 
@@ -342,7 +339,7 @@ class PythonExpressionSubstitution(LaunchSubstitution):
         try:
             end_result = str(eval(expression, {}, expression_locals))
             return Result.of_string(end_result, source=source)
-        except:
+        except Exception:
             pass
         return Result.of_string(source=source)
 
@@ -352,10 +349,7 @@ class PythonExpressionSubstitution(LaunchSubstitution):
 
 @frozen
 class EnvironmentSubstitution(LaunchSubstitution):
-    """
-    This substitution gets an environment variable value,
-    as a string, by name.
-    """
+    """Gets an environment variable value, as a string, by name."""
 
     name: str
 
@@ -372,10 +366,7 @@ class EnvironmentSubstitution(LaunchSubstitution):
 
 @frozen
 class FindExecutableSubstitution(LaunchSubstitution):
-    """
-    This substitution locates the full path to an executable
-    on the PATH if it exists.
-    """
+    """Locates the full path to an executable on the PATH if it exists."""
 
     name: str
 
@@ -394,8 +385,8 @@ class FindExecutableSubstitution(LaunchSubstitution):
 class LocalSubstitution(LaunchSubstitution):
     """
     This substitution gets a "local" variable out of the context.
-    This is a mechanism that allows a "parent" action to pass
-    information to sub actions.
+
+    This is a mechanism that allows a "parent" action to pass information to sub actions.
     """
 
     expression: str
@@ -415,6 +406,7 @@ class LocalSubstitution(LaunchSubstitution):
 class CommandSubstitution(LaunchSubstitution):
     """
     Substitution that gets the output of a command as a string.
+
     If the command is not found or fails a `SubstitutionFailure` error is raised.
     Behavior on stderr output is configurable, see constructor.
     """
@@ -428,7 +420,7 @@ class CommandSubstitution(LaunchSubstitution):
     """
     :on_stderr: specifies what to do when there is stderr output.
     Can be one of:
-    - 'fail': raises `SubstitutionFailere` when stderr output is detected.
+    - 'fail': raises `SubstitutionFailure` when stderr output is detected.
     - 'ignore': `stderr` output is ignored.
     - 'warn': The `stderr` output is ignored, but a warning is logged if detected.
     - 'capture': The `stderr` output will be captured, together with stdout.
@@ -451,6 +443,7 @@ class CommandSubstitution(LaunchSubstitution):
 class AnonymousNameSubstitution(LaunchSubstitution):
     """
     Generates an anonymous id based on name.
+
     Name itself is a unique identifier: multiple uses of anon with
     the same parameter name will create the same "anonymized" name.
     """
@@ -489,10 +482,7 @@ class ThisLaunchFileSubstitution(LaunchSubstitution):
 
 @frozen
 class ThisDirectorySubstitution(LaunchSubstitution):
-    """
-    Substitution that returns the absolute path to the current launch file's
-    containing directory.
-    """
+    """Returns the absolute path to the current launch file's containing directory."""
 
     def resolve(
         self,
@@ -1020,7 +1010,7 @@ class ParameterFileDescription:
 
         try:
             raw_data = ctx.read_yaml_file(filepath.value)
-        except (FileNotFoundError, IOError):
+        except IOError:
             return Result.of_dict(source=source)
 
         data: Dict[Result[str], Result[Any]] = {}
@@ -1124,7 +1114,7 @@ def empty_remap_list(source: Optional[TrackedCode] = None) -> LaunchNodeRemapLis
 @frozen
 class LaunchNode(LaunchEntity):
     """
-    From `launch_ros.actions.Node` documentation:
+    From `launch_ros.actions.Node` documentation.
 
     «If the name is not given (or is None) then no name is passed to
     the node on creation. The default name specified within the

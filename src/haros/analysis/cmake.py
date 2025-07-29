@@ -118,7 +118,7 @@ class CMakeContext:
                 var_type = args[i + 1]
                 docstring = args[i + 2]
                 force = i + 3 < len(args) and args[i + 3] == 'FORCE'
-                if force or name not in cache:
+                if force or name not in self.cache:
                     self.cache[name] = (value, var_type, docstring)
             else:
                 if on_parent:
@@ -173,8 +173,8 @@ class CMakeContext:
             # New in version 3.11: The source files can be omitted
             # if they are added later using target_sources().
             raise ValueError(f'no sources: add_executable({", ".join(args)})')
-        for i in range(i, len(args)):
-            target.sources.append(args[i])
+        for j in range(i, len(args)):
+            target.sources.append(args[j])
 
     def cmake_add_library(self, args: Iterable[str]):
         if len(args) < 1:
@@ -210,8 +210,8 @@ class CMakeContext:
             # New in version 3.11: The source files can be omitted
             # if they are added later using target_sources().
             raise ValueError(f'no sources: add_library({", ".join(args)})')
-        for i in range(i, len(args)):
-            target.sources.append(args[i])
+        for j in range(i, len(args)):
+            target.sources.append(args[j])
 
     def cmake_ament_target_dependencies(self, args: Iterable[str]):
         msg = '{}: ament_target_dependencies({})'

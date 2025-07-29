@@ -30,7 +30,6 @@ AnyPath: Final[Type] = Union[str, Path]
 
 def generate_dir(path: Path, structure: Dict[str, Any], overwrite: bool = True):
     """Recursively create a given directory structure."""
-
     # log.debug(f'generate_dir({path}, {structure})')
     for name, contents in structure.items():
         new_path = (path / name).resolve()
@@ -53,7 +52,6 @@ def generate_dir(path: Path, structure: Dict[str, Any], overwrite: bool = True):
 
 def ensure_structure(path: Path, structure: Dict[str, Any]):
     """Ensure that the given path contains the given structure."""
-
     for name, contents in structure.items():
         new_path = (path / name).resolve()
         if isinstance(contents, str):
@@ -66,7 +64,6 @@ def ensure_structure(path: Path, structure: Dict[str, Any]):
 
 def is_workspace(path: Path) -> bool:
     """Check whether the given path is likely to be a ROS workspace."""
-
     try:
         ws = path.resolve(strict=True)
     except FileNotFoundError:
@@ -84,7 +81,6 @@ def is_workspace(path: Path) -> bool:
 
 def is_ros_package(path: Path) -> bool:
     """Check whether the given path is likely to be a ROS package."""
-
     try:
         pkg = path.resolve(strict=True)
     except FileNotFoundError:
@@ -144,7 +140,7 @@ def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
 
 
 def crawl_package(pkg: Path) -> List[Path]:
-    """Returns a list of file paths found within the given package."""
+    """Return a list of file paths found within the given package."""
     if is_ignored_dir(pkg):
         return []
     files = []
@@ -197,10 +193,10 @@ RESOURCE_INDEX_SUBFOLDER: Final[str] = 'share/ament_index/resource_index'
 def _get_installed_package_path(name: str) -> Path:
     """
     Find the file system path for a given ROS package's 'share' directory.
+
     This essentially duplicates the behaviour of ament.
     See https://github.com/ros2/ros2cli/tree/master/ros2pkg for the original.
     """
-
     # from ament_index_python import get_package_prefix
     # from ament_index_python import get_packages_with_prefixes
 

@@ -158,7 +158,7 @@ class LaunchScope(LaunchScopeContext):
                         return Result.of_bool(True, source=condition.source)
             # TODO LaunchConfigurationEquals
             # TODO LaunchConfigurationNotEquals
-            # FIXME https://github.com/ros2/launch/blob/rolling/launch/launch/conditions/launch_configuration_equals.py
+            # FIXME https://github.com/ros2/launch/blob/rolling/launch/launch/conditions/launch_configuration_equals.py # noqa: E501
         return Result.of_bool(source=condition.source)
 
     def duplicate(self, join_condition: LogicValue = TRUE) -> 'LaunchScope':
@@ -292,10 +292,10 @@ class LaunchFeatureModelBuilder:
             return
         self.included_files.add(uid)
         self.scope_stack.append(self.scope.duplicate(join_condition=phi))
-        if include.namespace is None:
-            namespace: Result[str] = Result.of_string('/')
-        else:
-            namespace: Result[str] = substitute(include.namespace, self.scope)
+        # if include.namespace is None:
+        #     namespace: Result[str] = Result.of_string('/')
+        # else:
+        #     namespace: Result[str] = substitute(include.namespace, self.scope)
         try:
             description = self.system.get_launch_description(file.value)
             logger.info(f'parsed included launch file: {file.value}')

@@ -5,4 +5,4 @@
 # Imports
 ###############################################################################
 
-from haros.internal.constants import *
+from haros.internal.constants import AnyPath  # noqa: F401

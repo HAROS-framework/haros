@@ -14,8 +14,6 @@ from pathlib import Path
 
 from attrs import field, frozen
 
-from haros.internal.settings import Settings
-
 ###############################################################################
 # Constants
 ###############################################################################

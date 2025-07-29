@@ -16,7 +16,6 @@ from attrs import define, frozen
 
 from haros.analysis.python.dataflow import BUILTINS_MODULE, MockObject, StrictFunctionCaller
 from haros.internal.interface import AnalysisSystemInterface, PathType
-from haros.metamodel.common import T
 from haros.metamodel.result import Result
 
 ###############################################################################

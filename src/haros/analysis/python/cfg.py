@@ -5,25 +5,14 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
+from typing import Dict, Final, List, NewType, Union
 
 from attrs import define, field, frozen
 
-from haros.analysis.python import logic as PythonLogic
 from haros.errors import ControlFlowError
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
-    PythonAst,
-    PythonAstNodeId,
-    PythonBinaryOperator,
-    PythonBooleanLiteral,
-    PythonExpression,
-    PythonForStatement,
-    PythonModule,
     PythonStatement,
-    PythonTryStatement,
-    PythonTupleLiteral,
-    PythonWhileStatement,
 )
 
 ###############################################################################

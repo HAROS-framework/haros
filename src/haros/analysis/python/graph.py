@@ -9,7 +9,6 @@ from types import SimpleNamespace
 from typing import (
     Any,
     Callable,
-    Collection,
     Dict,
     Final,
     Iterable,
@@ -25,7 +24,7 @@ import logging
 from attrs import define, field, frozen
 
 from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph, ControlNodeId
-from haros.analysis.python.dataflow import BUILTINS_MODULE, DataScope, tracked
+from haros.analysis.python.dataflow import DataScope, tracked
 from haros.analysis.python.logic import to_condition
 from haros.errors import AnalysisError
 from haros.metamodel.common import VariantData
@@ -43,7 +42,6 @@ from haros.parsing.python.ast import (
     PythonTupleLiteral,
 )
 from haros.parsing.python.ast.expressions import PythonAssignmentExpression
-from haros.parsing.python.ast.helpers import PythonFunctionParameter
 from haros.parsing.python.ast.statements import PythonExpressionStatement, PythonWithStatement
 
 ###############################################################################
@@ -328,10 +326,10 @@ class ProgramGraphBuilder:
 
             elif statement.is_function_def or statement.is_class_def:
                 if statement.is_class_def:
-                    asynchronous = False
+                    # asynchronous = False
                     self.data.add_class_def(statement)
                 else:
-                    asynchronous = statement.asynchronous
+                    # asynchronous = statement.asynchronous
                     cb = self._function_interpreter(statement)
                     self.data.add_function_def(statement, fun=cb)
                 self.nested_graphs[statement.name] = statement
@@ -356,8 +354,10 @@ class ProgramGraphBuilder:
         #         # id: ProgramNodeId
         #         # ast: PythonStatement
         #         # condition: LogicValue = field(default=TRUE)
-        #         # incoming: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
-        #         # outgoing: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+        #         # incoming: Dict[ProgramNodeId, LogicValue] = field(
+        #         #     factory=dict, eq=False, hash=False)
+        #         # outgoing: Dict[ProgramNodeId, LogicValue] = field(
+        #         #     factory=dict, eq=False, hash=False)
         #         node = ProgramNode(
         #             ProgramNodeId(cid),
         #             statement,
@@ -382,7 +382,7 @@ class ProgramGraphBuilder:
         try:
             for stmt in statement.body:
                 builder.add_statement(stmt)
-        except Exception as e:
+        except Exception:
             logger.exception(f'error processing statement of "{name}"')
             logger.error(f'add_statement({stmt!r})')
         builder.clean_up()

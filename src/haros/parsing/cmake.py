@@ -9,7 +9,6 @@ from typing import Final, List, Tuple
 
 from pathlib import Path
 import re
-import sys
 
 from attrs import field, frozen
 from lark import Lark, Transformer, v_args

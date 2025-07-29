@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
-"""
-Module that contains the command line sub-program.
-"""
+"""Module that contains the command line sub-program."""
 
 ###############################################################################
 # Imports
@@ -119,7 +117,7 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
         '-p',
         '--packages',
         action='store_true',
-        help=f'process args as package names',
+        help='process args as package names',
     )
 
     parser.add_argument(
@@ -161,7 +159,7 @@ def process_paths(paths: List[Path]) -> StorageManager:
 
 def _setup_interface(storage: StorageManager, model: ProjectModel) -> AnalysisSystemInterface:
     workspace = Path.cwd() / 'tests' / 'ws1'  # FIXME
-    repo = workspace / 'src' / 'repo'
+    # repo = workspace / 'src' / 'repo'
     return AnalysisSystemInterface(
         workspace=str(workspace),
         packages={name: path.as_posix() for name, path in storage.packages.items()},
