@@ -9,10 +9,8 @@ from types import SimpleNamespace
 from typing import (
     Any,
     Callable,
-    Dict,
     Final,
     Iterable,
-    List,
     Mapping,
     NewType,
     Optional,
@@ -79,8 +77,8 @@ class ProgramNode:
     id: ProgramNodeId
     ast: PythonStatement
     condition: LogicValue = field(default=TRUE)
-    incoming: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
-    outgoing: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    incoming: dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    outgoing: dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
 
 @frozen
@@ -179,7 +177,7 @@ def statement_to_node(statement: PythonStatement, uid: ProgramNodeId) -> Program
 class ProgramGraph:
     name: str
     root_id: ProgramNodeId = field()
-    nodes: Dict[ProgramNodeId, ProgramNode] = field(factory=dict)
+    nodes: dict[ProgramNodeId, ProgramNode] = field(factory=dict)
     asynchronous: bool = False
 
     @root_id.validator
@@ -204,7 +202,7 @@ class ProgramGraphBuilder:
     name: str = '__main__'
     cfg: BasicControlFlowGraphBuilder = field(factory=BasicControlFlowGraphBuilder.from_scratch)
     data: DataScope = field(factory=DataScope.with_builtins)
-    nested_graphs: Dict[str, PythonStatement] = field(factory=dict)
+    nested_graphs: dict[str, PythonStatement] = field(factory=dict)
     _pid: int = 0
 
     @classmethod
@@ -354,9 +352,9 @@ class ProgramGraphBuilder:
         #         # id: ProgramNodeId
         #         # ast: PythonStatement
         #         # condition: LogicValue = field(default=TRUE)
-        #         # incoming: Dict[ProgramNodeId, LogicValue] = field(
+        #         # incoming: dict[ProgramNodeId, LogicValue] = field(
         #         #     factory=dict, eq=False, hash=False)
-        #         # outgoing: Dict[ProgramNodeId, LogicValue] = field(
+        #         # outgoing: dict[ProgramNodeId, LogicValue] = field(
         #         #     factory=dict, eq=False, hash=False)
         #         node = ProgramNode(
         #             ProgramNodeId(cid),
@@ -560,7 +558,7 @@ def _split_names(full_name: str) -> Tuple[str, str]:
     return name, module
 
 
-def find_qualified_name(graph: ControlFlowGraph, full_name: str) -> List[PythonAst]:
+def find_qualified_name(graph: ControlFlowGraph, full_name: str) -> list[PythonAst]:
     data = DataScope.with_builtins()
     matches = find_name_in_graph(graph, full_name, data)
     return list(dict.fromkeys(matches))
@@ -570,7 +568,7 @@ def find_name_in_graph(
     graph: ControlFlowGraph,
     full_name: str,
     data: DataScope,
-) -> List[PythonExpression]:
+) -> list[PythonExpression]:
     references = []
     branch_queue = [graph.root_node]
     while branch_queue:
@@ -610,7 +608,7 @@ def find_name_in_expression(
     expression: PythonExpression,
     full_name: str,
     data: DataScope,
-) -> List[PythonExpression]:
+) -> list[PythonExpression]:
     references = []
     if expression.is_literal:
         pass  # FIXME TODO
@@ -651,7 +649,7 @@ def compare_qualified_names(full_name: str, import_base: str, local_name: str) -
 
 def find_qualified_function_call(
     graph: ControlFlowGraph, full_name: str
-) -> List[PythonFunctionCall]:
+) -> list[PythonFunctionCall]:
     data = DataScope.with_builtins()
     matches = find_function_call_in_graph(graph, full_name, data)
     return list(dict.fromkeys(matches))
@@ -661,7 +659,7 @@ def find_function_call_in_graph(
     graph: ControlFlowGraph,
     full_name: str,
     starting_data: DataScope,
-) -> List[PythonFunctionCall]:
+) -> list[PythonFunctionCall]:
     calls = []
     branch_queue = [(graph.root_node, starting_data)]
     while branch_queue:
@@ -701,7 +699,7 @@ def find_function_call_in_expression(
     expression: PythonExpression,
     full_name: str,
     data: DataScope,
-) -> List[PythonFunctionCall]:
+) -> list[PythonFunctionCall]:
     calls = []
     if expression.is_function_call:
         if find_name_in_expression(expression.function, full_name, data):

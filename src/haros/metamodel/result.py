@@ -7,11 +7,9 @@
 
 from typing import (
     Any,
-    Dict,
     Final,
     Iterable,
     Iterator,
-    List,
     Mapping,
     Optional,
     Set,
@@ -105,7 +103,7 @@ class TypeToken[V]:
         return cls(IterableType)
 
     @classmethod
-    def of_list(cls) -> 'TypeToken[List[T]]':
+    def of_list(cls) -> 'TypeToken[list[T]]':
         return cls(list)
 
     @classmethod
@@ -121,7 +119,7 @@ class TypeToken[V]:
         return cls(MappingType)
 
     @classmethod
-    def of_dict(cls) -> 'TypeToken[Dict[K, T]]':
+    def of_dict(cls) -> 'TypeToken[dict[K, T]]':
         return cls(dict)
 
     @property
@@ -400,9 +398,9 @@ class Result[V]:
     @classmethod
     def of_list(
         cls,
-        value: Union[List[T], UnknownValue] = UNKNOWN_VALUE,
+        value: Union[list[T], UnknownValue] = UNKNOWN_VALUE,
         source: Optional[TrackedCode] = None,
-    ) -> 'Result[List[T]]':
+    ) -> 'Result[list[T]]':
         assert isinstance(value, (list, UnknownValue))
         return cls(value, TYPE_TOKEN_LIST, source)
 
@@ -418,9 +416,9 @@ class Result[V]:
     @classmethod
     def of_dict(
         cls,
-        value: Union[Dict[K, T], UnknownValue] = UNKNOWN_VALUE,
+        value: Union[dict[K, T], UnknownValue] = UNKNOWN_VALUE,
         source: Optional[TrackedCode] = None,
-    ) -> 'Result[Dict[K, T]]':
+    ) -> 'Result[dict[K, T]]':
         assert isinstance(value, (dict, UnknownValue))
         return cls(value, TYPE_TOKEN_DICT, source)
 

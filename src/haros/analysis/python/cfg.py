@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Dict, Final, List, NewType, Union
+from typing import Final, List, NewType, Union
 
 from attrs import define, field, frozen
 
@@ -47,8 +47,8 @@ class ControlNode:
     id: ControlNodeId
     body: List[PythonStatement] = field(factory=list, eq=False, hash=False)
     condition: LogicValue = field(default=TRUE, eq=False, hash=False)
-    incoming: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
-    outgoing: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    incoming: dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    outgoing: dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
     @property
     def is_empty(self) -> bool:
@@ -91,7 +91,7 @@ class ControlNode:
 class ControlFlowGraph:
     name: str
     root_id: ControlNodeId = field()
-    nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
+    nodes: dict[ControlNodeId, ControlNode] = field(factory=dict)
     asynchronous: bool = False
 
     @root_id.validator
@@ -200,10 +200,10 @@ class BasicControlFlowGraphBuilder:
     asynchronous: bool = False
     root_id: ControlNodeId = ROOT_ID
     current_id: ControlNodeId = ROOT_ID
-    nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
+    nodes: dict[ControlNodeId, ControlNode] = field(factory=dict)
     _node_id_counter: int = 0
-    _loop_stack: List[LoopingContext] = field(factory=list, eq=False, hash=False)
-    _branch_stack: List[BranchingContext] = field(factory=list, eq=False, hash=False)
+    _loop_stack: list[LoopingContext] = field(factory=list, eq=False, hash=False)
+    _branch_stack: list[BranchingContext] = field(factory=list, eq=False, hash=False)
 
     @classmethod
     def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):

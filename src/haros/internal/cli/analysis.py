@@ -7,7 +7,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List
+from typing import Any, Final, List
 
 import argparse
 import json
@@ -50,7 +50,7 @@ def subprogram(argv: List[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Settings) -> int:
+def run(args: dict[str, Any], settings: Settings) -> int:
     plugins = load_plugins(settings.home, settings.plugins)
     paths = args['paths']
     if args['packages']:
@@ -101,7 +101,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: List[str]) -> Dict[str, Any]:
+def parse_arguments(argv: List[str]) -> dict[str, Any]:
     msg = 'Run analyses over ROS workspaces and packages'
     parser = argparse.ArgumentParser(prog='haros analysis', description=msg)
 

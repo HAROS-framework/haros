@@ -6,7 +6,7 @@
 ###############################################################################
 
 from types import SimpleNamespace
-from typing import Any, Callable, Dict, Final, Optional
+from typing import Any, Callable, Final, Optional
 
 import logging
 import os
@@ -79,7 +79,7 @@ class BuiltinOpen(MockObject, Callable[[Result[str], Result[str]], Result[LazyFi
 ###############################################################################
 
 
-def standard_symbols(system: AnalysisSystemInterface) -> Dict[str, Any]:
+def standard_symbols(system: AnalysisSystemInterface) -> dict[str, Any]:
     symbols = {
         f'{BUILTINS_MODULE}.open': BuiltinOpen(system),
     }

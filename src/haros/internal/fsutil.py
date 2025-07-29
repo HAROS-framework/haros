@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Type, Union
+from typing import Any, Final, List, Union
 
 import logging
 import os
@@ -21,14 +21,14 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 EXCLUDED_DIRS: Final = ('doc', 'cmake', '__pycache__')
 
-AnyPath: Final[Type] = Union[str, Path]
+type AnyPath = str | Path
 
 ###############################################################################
 # Interface
 ###############################################################################
 
 
-def generate_dir(path: Path, structure: Dict[str, Any], overwrite: bool = True):
+def generate_dir(path: Path, structure: dict[str, Any], overwrite: bool = True):
     """Recursively create a given directory structure."""
     # log.debug(f'generate_dir({path}, {structure})')
     for name, contents in structure.items():
@@ -50,7 +50,7 @@ def generate_dir(path: Path, structure: Dict[str, Any], overwrite: bool = True):
             generate_dir(new_path, contents, overwrite=overwrite)
 
 
-def ensure_structure(path: Path, structure: Dict[str, Any]):
+def ensure_structure(path: Path, structure: dict[str, Any]):
     """Ensure that the given path contains the given structure."""
     for name, contents in structure.items():
         new_path = (path / name).resolve()
@@ -114,7 +114,7 @@ def is_ignored_dir(path: Path) -> bool:
     return False
 
 
-def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
+def crawl_workspace(ws: Path, *, relative: bool = False) -> dict[str, Path]:
     packages = {}
     stack = [ws]
     while stack:
@@ -168,7 +168,7 @@ def crawl_package(pkg: Path) -> List[Path]:
 @frozen
 class StorageManager:
     workspaces: List[Path] = field(factory=list)
-    packages: Dict[str, Path] = field(factory=dict)
+    packages: dict[str, Path] = field(factory=dict)
 
     def crawl(self):
         for ws in self.workspaces:

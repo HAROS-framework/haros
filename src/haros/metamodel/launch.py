@@ -9,11 +9,9 @@ from types import ModuleType
 from typing import (
     Any,
     Collection,
-    Dict,
     Final,
     Iterable,
     Iterator,
-    List,
     NewType,
     Optional,
     Set,
@@ -94,7 +92,7 @@ class LaunchScopeContext:
         logger.debug(f'{self.__class__.__name__}.read_text_file({path!r})')
         raise NotImplementedError()
 
-    def read_yaml_file(self, path: str) -> Dict[Any, Any]:
+    def read_yaml_file(self, path: str) -> dict[Any, Any]:
         logger.debug(f'{self.__class__.__name__}.read_yaml_file({path!r})')
         raise NotImplementedError()
 
@@ -142,7 +140,7 @@ def substitute(
         if isinstance(substitution.value, LaunchSubstitution):
             return substitution.value.resolve(context, source=source)
         if substitution.type.is_iterable:
-            parts: List[str] = []
+            parts: list[str] = []
             for sub in substitution.value:
                 part = sub.value.resolve(context, source=source)
                 if not part.is_resolved:
@@ -180,7 +178,7 @@ def _to_sub_list(
     arg: Result[
         Union[None, str, LaunchSubstitution, Iterable[Result[Union[None, str, LaunchSubstitution]]]]
     ],
-) -> Result[List[Result[LaunchSubstitution]]]:
+) -> Result[list[Result[LaunchSubstitution]]]:
     if not arg.is_resolved:
         return Result.of_list(source=arg.source)
     if arg.value is None:
@@ -206,7 +204,7 @@ def _to_sub_list_or_none(
             ]
         ]
     ],
-) -> Optional[Result[List[Result[LaunchSubstitution]]]]:
+) -> Optional[Result[list[Result[LaunchSubstitution]]]]:
     if arg is None:
         return None
     return _to_sub_list(arg)
@@ -315,8 +313,8 @@ class PythonExpressionSubstitution(LaunchSubstitution):
     ) -> Result[str]:
         if not self.expression.is_resolved or not self.modules.is_resolved:
             return Result.of_string(source=source)
-        known_parts: List[str] = []
-        all_parts: List[Result[str]] = []
+        known_parts: list[str] = []
+        all_parts: list[Result[str]] = []
         for part in self.expression.value:
             value = substitute(part, ctx, source=source)
             all_parts.append(value)
@@ -326,7 +324,7 @@ class PythonExpressionSubstitution(LaunchSubstitution):
             return Result.of_string(UnresolvedString(all_parts), source=self.expression.source)
         expression = ''.join(known_parts)
         # FIXME avoid eval if possible
-        expression_locals: Dict[str, Any] = {}
+        expression_locals: dict[str, Any] = {}
         for item in self.modules.value:
             value = substitute(item, ctx, source=source)
             if not value.is_resolved:
@@ -504,8 +502,8 @@ class ConcatenationSubstitution(LaunchSubstitution):
         ctx: LaunchScopeContext,
         source: Optional[TrackedCode] = None,
     ) -> Result[str]:
-        known_parts: List[str] = []
-        all_parts: List[Result[str]] = []
+        known_parts: list[str] = []
+        all_parts: list[Result[str]] = []
         for part in self.parts:
             value = substitute(part, ctx, source=source)
             all_parts.append(value)
@@ -530,7 +528,7 @@ class PathJoinSubstitution(LaunchSubstitution):
     ) -> Result[str]:
         path = Path()
         is_unknown: bool = False
-        all_parts: List[Result[str]] = []
+        all_parts: list[Result[str]] = []
         for part in self.parts:
             value = substitute(part, ctx, source=source)
             all_parts.append(value)
@@ -658,11 +656,11 @@ class UnlessCondition(LaunchCondition):
 
 
 def _values_to_sub_list(
-    d: Result[Dict[Result[str], Result[Union[None, str, LaunchSubstitution]]]],
-) -> Result[Dict[str, Result[Collection[Result[LaunchSubstitution]]]]]:
+    d: Result[dict[Result[str], Result[Union[None, str, LaunchSubstitution]]]],
+) -> Result[dict[str, Result[Collection[Result[LaunchSubstitution]]]]]:
     if not d.is_resolved:
         return Result.of_dict(source=d.source)
-    o: Dict[str, Result[Collection[Result[LaunchSubstitution]]]] = {}
+    o: dict[str, Result[Collection[Result[LaunchSubstitution]]]] = {}
     for key, value in d.value.items():
         if not key.is_resolved:
             return Result.of_dict(source=d.source)
@@ -674,7 +672,7 @@ def _values_to_sub_list(
 class ReplaceStringSubstitution(LaunchSubstitution):
     # nav2_common/launch/replace_string.py
     source_file: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
-    replacements: Result[Dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+    replacements: Result[dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
         converter=_values_to_sub_list
     )
     condition: Optional[Result[LaunchCondition]] = None
@@ -717,9 +715,9 @@ class ReplaceStringSubstitution(LaunchSubstitution):
         self,
         ctx: LaunchScopeContext,
         source: Optional[TrackedCode],
-    ) -> Result[Dict[str, str]]:
+    ) -> Result[dict[str, str]]:
         assert self.replacements.is_resolved
-        resolved_replacements: Dict[str, Result[str]] = {}
+        resolved_replacements: dict[str, Result[str]] = {}
         for key, replacement in self.replacements.value.items():
             value = substitute(replacement, ctx, source=source)
             if not value.is_resolved:
@@ -727,7 +725,7 @@ class ReplaceStringSubstitution(LaunchSubstitution):
             resolved_replacements[key] = value
         return Result.of_dict(resolved_replacements)
 
-    def _replace(self, input_file, output_file, replacements: Dict[str, str]):
+    def _replace(self, input_file, output_file, replacements: dict[str, str]):
         for line in input_file:
             for key, value in replacements.items():
                 if isinstance(key, str) and isinstance(value, str):
@@ -751,14 +749,14 @@ class ReplaceStringSubstitution(LaunchSubstitution):
 class RewrittenYamlSubstitution(LaunchSubstitution):
     # nav2_common/launch/rewritten_yaml.py
     source_file: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
-    param_rewrites: Result[Dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+    param_rewrites: Result[dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
         converter=_values_to_sub_list,
     )
-    root_key: Optional[Result[List[Result[LaunchSubstitution]]]] = field(
+    root_key: Optional[Result[list[Result[LaunchSubstitution]]]] = field(
         default=None,
         converter=_to_sub_list_or_none,
     )
-    key_rewrites: Result[Dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+    key_rewrites: Result[dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
         default=None,
         converter=lambda d: Result.of_dict({}) if d is None else _values_to_sub_list(d),
     )
@@ -780,7 +778,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
 
         param_rewrites, keys_rewrites = self._resolve_rewrites(ctx)
         yaml_data = ctx.read_yaml_file(yaml_filename.value)
-        data: Result[Dict[Any, Any]] = self._substitute_params(yaml_data, param_rewrites)
+        data: Result[dict[Any, Any]] = self._substitute_params(yaml_data, param_rewrites)
         if not data.is_resolved:
             return yaml_filename
 
@@ -806,18 +804,18 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
 
     def _resolve_rewrites(
         self, context: LaunchScopeContext
-    ) -> Tuple[Dict[str, Result[str]], Dict[str, Result[str]]]:
-        resolved_params: Dict[str, Result[str]] = {}
+    ) -> Tuple[dict[str, Result[str]], dict[str, Result[str]]]:
+        resolved_params: dict[str, Result[str]] = {}
         for key, value in self.param_rewrites.value.items():
             resolved_params[key] = substitute(value, context)
-        resolved_keys: Dict[str, Result[str]] = {}
+        resolved_keys: dict[str, Result[str]] = {}
         for key, value in self.key_rewrites.value.items():
             resolved_keys[key] = substitute(value, context)
         return resolved_params, resolved_keys
 
     def _substitute_params(
-        self, data: Dict[Any, Any], param_rewrites: Dict[str, Result[str]]
-    ) -> Result[Dict[Any, Any]]:
+        self, data: dict[Any, Any], param_rewrites: dict[str, Result[str]]
+    ) -> Result[dict[Any, Any]]:
         # substitute leaf-only parameters
         for key in self._get_leaf_keys(data):
             raw_value = param_rewrites.get(key)
@@ -840,7 +838,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
                 data = self._update_yaml_path_vals(data, yaml_keys, rewrite_val)
         return Result.of_dict(data)
 
-    def _get_leaf_keys(self, data: Dict[Any, Any]) -> Iterator[str]:
+    def _get_leaf_keys(self, data: dict[Any, Any]) -> Iterator[str]:
         for key, value in data.items():
             if isinstance(value, dict):
                 yield from self._get_leaf_keys(value)
@@ -863,7 +861,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
         # nothing else worked so fall through and return text
         return text_value
 
-    def _pathify(self, data: Any, p: str, paths: Dict[str, Any], joinchar='.') -> Dict[str, Any]:
+    def _pathify(self, data: Any, p: str, paths: dict[str, Any], joinchar='.') -> dict[str, Any]:
         pn = p if not p else p + joinchar
         if isinstance(data, dict):
             for k, v in data.items():
@@ -877,10 +875,10 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
 
     def _update_yaml_path_vals(
         self,
-        data: Dict[Any, Any],
-        yaml_key_list: List[str],
+        data: dict[Any, Any],
+        yaml_key_list: list[str],
         rewrite_val: Union[bool, int, float, str],
-    ) -> Dict[Any, Any]:
+    ) -> dict[Any, Any]:
         for key in yaml_key_list:
             if key == yaml_key_list[-1]:
                 data[key] = rewrite_val
@@ -897,10 +895,10 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
         return data
 
     def _add_params(
-        self, data: Dict[Any, Any], param_rewrites: Dict[str, Result[str]]
-    ) -> Result[Dict[Any, Any]]:
+        self, data: dict[Any, Any], param_rewrites: dict[str, Result[str]]
+    ) -> Result[dict[Any, Any]]:
         # add new total path parameters
-        yaml_paths: Dict[str, Any] = self._pathify(data, '', {})
+        yaml_paths: dict[str, Any] = self._pathify(data, '', {})
         for path in param_rewrites:
             if path not in yaml_paths:
                 value = param_rewrites[path]
@@ -913,8 +911,8 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
         return Result.of_dict(data)
 
     def _substitute_keys(
-        self, data: Dict[Any, Any], key_rewrites: Dict[str, Result[str]]
-    ) -> Result[Dict[Any, Any]]:
+        self, data: dict[Any, Any], key_rewrites: dict[str, Result[str]]
+    ) -> Result[dict[Any, Any]]:
         if len(key_rewrites) != 0:
             for key, val in list(data.items()):
                 final_key = key
@@ -949,7 +947,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
 class ParameterFileDescription:
     filepath: Result[LaunchSubstitution]
     allow_subs: Result[Union[bool, LaunchSubstitution]]
-    __cached_result: Optional[Result[Dict[Result[str], Result[Any]]]] = None
+    __cached_result: Optional[Result[dict[Result[str], Result[Any]]]] = None
 
     @classmethod
     def factory(
@@ -968,7 +966,7 @@ class ParameterFileDescription:
         self,
         ctx: LaunchScopeContext,
         source: Optional[TrackedCode] = None,
-    ) -> Result[Dict[Result[str], Result[Any]]]:
+    ) -> Result[dict[Result[str], Result[Any]]]:
         if self.__cached_result is None:
             self.__cached_result = self._evaluate(ctx, source=source)
         return self.__cached_result
@@ -977,7 +975,7 @@ class ParameterFileDescription:
         self,
         ctx: LaunchScopeContext,
         source: Optional[TrackedCode] = None,
-    ) -> Result[Dict[Result[str], Result[Any]]]:
+    ) -> Result[dict[Result[str], Result[Any]]]:
         if not self.filepath.is_resolved:
             return Result.of_dict(source=source)
         if not self.allow_subs.is_resolved:
@@ -1013,7 +1011,7 @@ class ParameterFileDescription:
         except IOError:
             return Result.of_dict(source=source)
 
-        data: Dict[Result[str], Result[Any]] = {}
+        data: dict[Result[str], Result[Any]] = {}
         for key, value in raw_data.items():
             data[Result.of_string(key)] = Result.of(value)
         return Result.of_dict(value=data, source=source)
@@ -1085,9 +1083,9 @@ class LaunchInclusion(LaunchEntity):
         return True
 
 
-LaunchNodeParameterDict = Result[Dict[Result[LaunchSubstitution], Result[LaunchSubstitution]]]
-LaunchNodeParameterItem = Union[Result[LaunchSubstitution], LaunchNodeParameterDict]
-LaunchNodeParameterList = Result[List[LaunchNodeParameterItem]]
+type LaunchNodeParameterDict = Result[dict[Result[LaunchSubstitution], Result[LaunchSubstitution]]]
+type LaunchNodeParameterItem = Union[Result[LaunchSubstitution], LaunchNodeParameterDict]
+type LaunchNodeParameterList = Result[list[LaunchNodeParameterItem]]
 
 
 def unknown_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
@@ -1100,7 +1098,7 @@ def empty_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodePara
 
 LaunchNodeRemapName = Result[Union[str, LaunchSubstitution]]
 LaunchNodeRemapItem = Result[Tuple[LaunchNodeRemapName, LaunchNodeRemapName]]
-LaunchNodeRemapList = Result[List[LaunchNodeRemapItem]]
+LaunchNodeRemapList = Result[list[LaunchNodeRemapItem]]
 
 
 def unknown_remap_list(source: Optional[TrackedCode] = None) -> LaunchNodeRemapList:
@@ -1193,7 +1191,7 @@ class LaunchSetEnvironment(LaunchEntity):
 class LaunchDescription:
     entities: Result[Tuple[Result[LaunchEntity]]]
 
-    def serialize(self) -> Dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -1243,8 +1241,8 @@ class ArgumentFeature(LaunchFeature):
     name: str
     default_value: Optional[Result[str]] = None
     description: Optional[Result[str]] = None
-    # known_possible_values: List[Result[str]] = field(factory=list)
-    known_possible_values: List[str] = field(factory=list)
+    # known_possible_values: list[Result[str]] = field(factory=list)
+    known_possible_values: list[str] = field(factory=list)
     inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
     # affects_cg: bool = False
     # decision_points: int = 0
@@ -1277,7 +1275,7 @@ class NodeFeature(LaunchFeature):
         return self.rosnode.executable
 
     @property
-    def arguments(self) -> Result[List[str]]:
+    def arguments(self) -> Result[list[str]]:
         return self.rosnode.arguments
 
     @property
@@ -1300,16 +1298,16 @@ class NodeFeature(LaunchFeature):
 @frozen
 class LaunchFileFeature(LaunchFeature):
     file: str
-    arguments: Dict[FeatureId, ArgumentFeature] = field(factory=dict)
-    nodes: Dict[FeatureId, NodeFeature] = field(factory=dict)
+    arguments: dict[FeatureId, ArgumentFeature] = field(factory=dict)
+    nodes: dict[FeatureId, NodeFeature] = field(factory=dict)
     inclusions: Set[FeatureId] = field(factory=set)
-    conflicts: Dict[FeatureId, LogicValue] = field(factory=dict)
+    conflicts: dict[FeatureId, LogicValue] = field(factory=dict)
 
     @property
     def is_launch_file(self) -> bool:
         return True
 
-    def features(self) -> Dict[FeatureId, LaunchFeature]:
+    def features(self) -> dict[FeatureId, LaunchFeature]:
         features = dict(self.arguments)
         features.update(self.nodes)
         return features
@@ -1318,4 +1316,4 @@ class LaunchFileFeature(LaunchFeature):
 @frozen
 class LaunchModel:
     name: str
-    files: List[LaunchFileFeature] = field(factory=list)
+    files: list[LaunchFileFeature] = field(factory=list)

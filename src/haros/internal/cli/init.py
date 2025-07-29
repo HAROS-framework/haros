@@ -7,7 +7,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List
+from typing import Any
 
 import argparse
 from pathlib import Path
@@ -20,7 +20,7 @@ from haros.internal.settings import Settings
 ###############################################################################
 
 
-def subprogram(argv: List[str], settings: Settings) -> int:
+def subprogram(argv: list[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -30,7 +30,7 @@ def subprogram(argv: List[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Settings) -> int:
+def run(args: dict[str, Any], settings: Settings) -> int:
     path = args['path'].resolve()
     print('Initializing HAROS home at: ' + str(path))
     home.make_at(path, overwrite=True)
@@ -42,7 +42,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: List[str]) -> Dict[str, Any]:
+def parse_arguments(argv: list[str]) -> dict[str, Any]:
     msg = 'haros init'
     parser = argparse.ArgumentParser(prog='haros init', description=msg)
 

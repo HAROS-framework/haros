@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, Mapping, Optional
+from typing import Any, Final, Iterable, Mapping, Optional
 
 from enum import Enum, Flag, auto, unique
 
@@ -113,7 +113,7 @@ class RosMetamodelEntity:
     def is_runtime_entity(self) -> bool:
         return False
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -167,7 +167,7 @@ class RosName:
 
     @property
     def namespace(self) -> str:
-        parts: List[str] = self.text.rsplit(sep='/', maxsplit=1)
+        parts: list[str] = self.text.rsplit(sep='/', maxsplit=1)
         if len(parts) > 1:
             # e.g. 'a/b', '~a/b' or '/a'
             return parts[0] if parts[0] else '/'
@@ -228,7 +228,7 @@ class RosClientAdvertiseCall(RosSourceEntity):
     name: str
     namespace: str
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -238,16 +238,16 @@ class RosClientSubscribeCall(RosSourceEntity):
     name: str
     namespace: str
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 @frozen
 class RosClientLibraryCalls:
-    advertise: List[RosClientAdvertiseCall] = field(factory=list)
-    subscribe: List[RosClientSubscribeCall] = field(factory=list)
+    advertise: list[RosClientAdvertiseCall] = field(factory=list)
+    subscribe: list[RosClientSubscribeCall] = field(factory=list)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -281,7 +281,7 @@ class FileModel(RosFileSystemEntity):
             return parts[0]
         return '.'
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         data = asdict(self)
         data['uid'] = self.uid
         return data
@@ -292,8 +292,8 @@ class PackageModel(RosFileSystemEntity):
     # Parameters
     name: str = field(validator=matches_re(RE_NAME))
     # Defaults
-    files: List[str] = field(factory=list)
-    nodes: List[str] = field(factory=list)
+    files: list[str] = field(factory=list)
+    nodes: list[str] = field(factory=list)
     # storage: StorageMetadata = field(factory=StorageMetadata)
     metadata: DevelopmentMetadata = field(factory=DevelopmentMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
@@ -302,7 +302,7 @@ class PackageModel(RosFileSystemEntity):
     def uid(self) -> str:
         return self.name
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         data = asdict(self)
         data['uid'] = self.uid
         return data
@@ -316,7 +316,7 @@ class NodeModel(RosFileSystemEntity):
     # Defaults
     is_library: bool = False
     rosname: Optional[RosName] = field(default=None, converter=maybe_str_to_rosname)
-    files: List[str] = field(factory=list)
+    files: list[str] = field(factory=list)
     rcl_calls: RosClientLibraryCalls = field(factory=RosClientLibraryCalls)
     source: SourceCodeMetadata = field(factory=SourceCodeMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
@@ -362,7 +362,7 @@ class RosNodeModel(RosRuntimeEntity):
     rosname: Result[RosName]
     package: Result[str]
     executable: Result[str]
-    arguments: Result[List[str]] = field(factory=Result.of_list)
+    arguments: Result[list[str]] = field(factory=Result.of_list)
     parameters: Result = field(factory=Result.of_dict)
     remappings: Result = field(factory=Result.of_dict)
     output: Result[str] = Result.of_string('log')
@@ -403,7 +403,7 @@ class RosParameterModel(RosRuntimeEntity):
 
 @frozen
 class ComputationGraphModel(RosRuntimeEntity):
-    nodes: List[RosNodeModel] = field(factory=list)
+    nodes: list[RosNodeModel] = field(factory=list)
 
 
 ###############################################################################
@@ -414,13 +414,13 @@ class ComputationGraphModel(RosRuntimeEntity):
 @frozen
 class ProjectModel:
     name: str
-    packages: Dict[str, PackageModel] = field(factory=dict)
-    files: Dict[str, FileModel] = field(factory=dict)
-    nodes: Dict[str, NodeModel] = field(factory=dict)
+    packages: dict[str, PackageModel] = field(factory=dict)
+    files: dict[str, FileModel] = field(factory=dict)
+    nodes: dict[str, NodeModel] = field(factory=dict)
     # NOTE: still not sure whether to include storage here
-    # storage: Dict[str, StorageMetadata] = field(factory=dict)
+    # storage: dict[str, StorageMetadata] = field(factory=dict)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 

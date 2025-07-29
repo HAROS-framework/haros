@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List, NewType, Tuple
+from typing import Any, NewType, Tuple
 
 from enum import Enum, auto
 
@@ -151,7 +151,7 @@ class PythonAstNodeMetadata:
     # type: PythonAstNodeType
     line: int = 0
     column: int = 0
-    annotations: Dict[str, Any] = field(factory=dict, eq=False, hash=False)
+    annotations: dict[str, Any] = field(factory=dict, eq=False, hash=False)
 
 
 @frozen
@@ -310,7 +310,7 @@ class PythonStatement(PythonAst):
     def is_class_def(self) -> bool:
         return False
 
-    def substatements(self) -> List['PythonStatement']:
+    def substatements(self) -> list['PythonStatement']:
         return []
 
 

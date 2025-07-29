@@ -7,7 +7,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List
+from typing import Any, Final
 
 import argparse
 import logging
@@ -29,7 +29,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def subprogram(argv: List[str], settings: Settings) -> int:
+def subprogram(argv: list[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -39,7 +39,7 @@ def subprogram(argv: List[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Settings) -> int:
+def run(args: dict[str, Any], settings: Settings) -> int:
     action = args['action']
     if action == 'new':
         return action_new(args)
@@ -49,7 +49,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     return 1
 
 
-def action_new(args: Dict[str, Any]) -> int:
+def action_new(args: dict[str, Any]) -> int:
     name = args['name']
     path = args['path']
     logger.info(f'project: new ({name}, {path})')
@@ -70,7 +70,7 @@ def action_new(args: Dict[str, Any]) -> int:
     return 0  # success
 
 
-def action_build(args: Dict[str, Any]) -> int:
+def action_build(args: dict[str, Any]) -> int:
     path = args['path']
     logger.info(f'project: build ({path})')
     try:
@@ -94,7 +94,7 @@ def action_build(args: Dict[str, Any]) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: List[str]) -> Dict[str, Any]:
+def parse_arguments(argv: list[str]) -> dict[str, Any]:
     msg = 'haros project'
     parser = argparse.ArgumentParser(prog='haros project', description=msg)
 

@@ -7,7 +7,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, Mapping
+from typing import Any, Final, Iterable, List, Mapping
 
 import argparse
 import json
@@ -46,7 +46,7 @@ def subprogram(argv: List[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Settings) -> int:
+def run(args: dict[str, Any], settings: Settings) -> int:
     try:
         path: Path = args['path'].resolve(strict=True)
     except FileNotFoundError:
@@ -89,7 +89,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 
     # code = path.read_text(encoding='utf-8')
     # ast = parse(code, path=path.as_posix())
-    # symbols: Dict[str, Any] = _prepare_builtin_symbols()
+    # symbols: dict[str, Any] = _prepare_builtin_symbols()
     # symbols.update({
     #     f'{BUILTINS_MODULE}.__file__': str(path),
     #     f'{BUILTINS_MODULE}.open': _builtin_open(system),
@@ -258,7 +258,7 @@ def print_variables(variables):
 ###############################################################################
 
 
-def parse_arguments(argv: List[str]) -> Dict[str, Any]:
+def parse_arguments(argv: List[str]) -> dict[str, Any]:
     parser = argparse.ArgumentParser(
         prog='haros debug',
         description='Manual tests and debugging',

@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List
+from typing import Any, Final, Iterable, List
 
 import logging
 from pathlib import Path
@@ -42,10 +42,10 @@ class CMakeTarget:
 class CMakeContext:
     parser: Any
     parent: Any = None
-    variables: Dict[str, str] = field(factory=dict)
-    environment: Dict[str, str] = field(factory=dict)
-    cache: Dict[str, str] = field(factory=dict)
-    targets: Dict[str, CMakeTarget] = field(factory=dict)
+    variables: dict[str, str] = field(factory=dict)
+    environment: dict[str, str] = field(factory=dict)
+    cache: dict[str, str] = field(factory=dict)
+    targets: dict[str, CMakeTarget] = field(factory=dict)
 
     def process_arguments(self, arguments: List[CMakeArgument]) -> List[str]:
         if not arguments:

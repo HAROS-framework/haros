@@ -18,7 +18,7 @@ Some of the structure of this file came from this StackExchange question:
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Optional
+from typing import Any, Final, List, Optional
 
 import argparse
 import logging
@@ -107,7 +107,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
+def parse_arguments(argv: Optional[List[str]]) -> dict[str, Any]:
     msg = 'The High-Assurance ROS Framework.'
     parser = argparse.ArgumentParser(description=msg)
 

@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, List, Tuple
+from typing import Any, Callable, Final, List, Tuple
 
 from importlib import metadata
 import importlib.util
@@ -43,8 +43,8 @@ class HarosPluginInterface:
     # Attributes
     name: str
     module: Any
-    settings: Dict[str, Any] = field(factory=dict)
-    hooks: Dict[str, Callable] = field(factory=dict)
+    settings: dict[str, Any] = field(factory=dict)
+    hooks: dict[str, Callable] = field(factory=dict)
 
     def __attrs_post_init__(self):
         for name in HOOKS:
@@ -68,7 +68,7 @@ class PluginManager:
     plugins: List[HarosPluginInterface] = field(factory=list)
     # plugin name -> error
     # this serves to disable a plugin after it crashes
-    errors: Dict[str, Exception] = field(factory=dict)
+    errors: dict[str, Exception] = field(factory=dict)
 
     def __attrs_post_init__(self):
         for name in HOOKS:
@@ -93,7 +93,7 @@ class PluginManager:
         return hook
 
 
-def load(haroshome: Path, settings: Dict[str, Dict[str, Any]]) -> PluginManager:
+def load(haroshome: Path, settings: dict[str, dict[str, Any]]) -> PluginManager:
     plugins = _load_from_entrypoints(settings)
     plugins.extend(_load_from_haroshome(haroshome, settings))
     if not plugins:
@@ -106,7 +106,7 @@ def load(haroshome: Path, settings: Dict[str, Dict[str, Any]]) -> PluginManager:
 ###############################################################################
 
 
-def _load_from_entrypoints(settings: Dict[str, Dict[str, Any]]) -> List[HarosPluginInterface]:
+def _load_from_entrypoints(settings: dict[str, dict[str, Any]]) -> List[HarosPluginInterface]:
     logger.info(f'plugins: searching {ENTRY_POINT}')
     plugins = []
     try:
@@ -133,7 +133,7 @@ def _load_from_entrypoints(settings: Dict[str, Dict[str, Any]]) -> List[HarosPlu
 
 def _load_from_haroshome(
     haroshome: Path,
-    settings: Dict[str, Dict[str, Any]],
+    settings: dict[str, dict[str, Any]],
 ) -> List[HarosPluginInterface]:
     try:
         directory = (haroshome / 'plugins').resolve(strict=True)

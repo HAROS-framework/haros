@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Union
+from typing import Any, Final, Union
 
 import os
 from pathlib import Path
@@ -19,7 +19,7 @@ from haros.internal.settings import SETTINGS_FILE, YAML_DEFAULT_SETTINGS
 
 DIR_NAME: Final[str] = '.haros'
 
-DIR_STRUCTURE: Final[Dict[str, Any]] = {
+DIR_STRUCTURE: Final[dict[str, Any]] = {
     'logs': {},
     'extras': {},
     'plugins': {},

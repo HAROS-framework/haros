@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List, Mapping, Optional, Set, TypeVar
+from typing import Any, Mapping, Optional, Set, TypeVar
 
 from collections import defaultdict
 
@@ -48,7 +48,7 @@ class DevelopmentMetadata:
     url_source: Optional[str] = None
     url_tracker: Optional[str] = None
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -57,7 +57,7 @@ class SourceCodeDependencies:
     build: Set[str] = field(factory=set)
     runtime: Set[str] = field(factory=set)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return {
             'build': list(self.build),
             'runtime': list(self.runtime),
@@ -106,7 +106,7 @@ class VariantValue[T]:
 @define
 class VariantData[T]:
     _base_value: Optional[T] = None
-    _variants: List[VariantValue[T]] = field(factory=list)
+    _variants: list[VariantValue[T]] = field(factory=list)
 
     @property
     def has_base_value(self) -> bool:
@@ -124,7 +124,7 @@ class VariantData[T]:
     def with_base_value(cls, value: T) -> 'VariantData':
         return cls(base_value=value)
 
-    def possible_values(self) -> List[VariantValue[T]]:
+    def possible_values(self) -> list[VariantValue[T]]:
         values = list(reversed(self._variants))
         if self._base_value is not None:
             values.append(VariantValue(self._base_value, TRUE))

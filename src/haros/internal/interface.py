@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Iterable, Mapping, Optional, Union
+from typing import Any, Callable, Final, Iterable, Mapping, Optional, Union
 
 from errno import EACCES
 import logging
@@ -126,7 +126,7 @@ class AnalysisSystemInterface:
                 raise ValueError(filepath)
         return Path(filepath).read_text(encoding=encoding)
 
-    def read_yaml_file(self, filepath: PathType, encoding: Optional[str] = None) -> Dict[Any, Any]:
+    def read_yaml_file(self, filepath: PathType, encoding: Optional[str] = None) -> dict[Any, Any]:
         return safe_load(self.read_text_file(filepath, encoding=encoding))
 
     def execute_command(self, cmd: str) -> str:

@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Any, Final, Iterable, Mapping, Optional, Set, Tuple
 
 import logging
 from pathlib import Path
@@ -115,9 +115,9 @@ class LaunchScope(LaunchScopeContext):
     file_path: Path
     system: AnalysisSystemInterface
     condition: LogicValue = field(default=TRUE)
-    args: Dict[str, ArgumentFeatureBuilder] = field(factory=dict)
-    configs: Dict[str, Result] = field(factory=dict)
-    anonymous: Dict[str, str] = field(factory=dict, eq=False)
+    args: dict[str, ArgumentFeatureBuilder] = field(factory=dict)
+    configs: dict[str, Result] = field(factory=dict)
+    anonymous: dict[str, str] = field(factory=dict, eq=False)
 
     def get(self, name: str) -> Optional[Result]:
         value = self.configs.get(name)
@@ -189,7 +189,7 @@ class LaunchScope(LaunchScopeContext):
     def read_text_file(self, path: str) -> str:
         return self.system.read_text_file(path)
 
-    def read_yaml_file(self, path: str) -> Dict[Any, Any]:
+    def read_yaml_file(self, path: str) -> dict[Any, Any]:
         return self.system.read_yaml_file(path)
 
 
@@ -201,8 +201,8 @@ def _empty_args() -> Result[Mapping[str, Result[str]]]:
 class LaunchFeatureModelBuilder:
     file: str
     system: AnalysisSystemInterface = field(factory=AnalysisSystemInterface)
-    nodes: List[NodeFeature] = field(factory=list)
-    scope_stack: List[LaunchScope] = field(factory=list)
+    nodes: list[NodeFeature] = field(factory=list)
+    scope_stack: list[LaunchScope] = field(factory=list)
     included_files: Set[FeatureId] = field(factory=set)
     passed_args: Result[Mapping[str, Result[str]]] = field(factory=_empty_args)
 
@@ -238,7 +238,7 @@ class LaunchFeatureModelBuilder:
             nodes={n.id: n for n in self.nodes},
             inclusions=set(self.included_files),
         )
-        # conflicts: Dict[FeatureId, LogicValue] = field(factory=dict)
+        # conflicts: dict[FeatureId, LogicValue] = field(factory=dict)
 
     def enter_group(self, condition: Optional[Result[LaunchCondition]]):
         boolean: Result[bool] = self.scope.resolve_condition(condition)
@@ -314,7 +314,7 @@ class LaunchFeatureModelBuilder:
             uid: FeatureId = FeatureId(f'node:{len(self.nodes)}')
             self.nodes.append(evolve(node, id=uid))
 
-    def _get_include_arguments(self, include: LaunchInclusion) -> Result[Dict[str, Result[str]]]:
+    def _get_include_arguments(self, include: LaunchInclusion) -> Result[dict[str, Result[str]]]:
         arguments = {}
         for passed_arg in include.arguments:
             if not passed_arg.is_resolved:
@@ -336,7 +336,7 @@ class LaunchFeatureModelBuilder:
         # node_id = uid_node(str(package), str(executable))
         name: str = self._get_node_name(node.name, package, executable)
         # namespace: Optional[LaunchSubstitution]
-        # remaps: Dict[LaunchSubstitution, LaunchSubstitution]
+        # remaps: dict[LaunchSubstitution, LaunchSubstitution]
         output: Result = substitute(node.output, self.scope)
         args: Result = Result.of_list([substitute(arg, self.scope) for arg in node.arguments])
         params: Result = self.parameters_from_list(node.parameters, node=name)
@@ -370,7 +370,7 @@ class LaunchFeatureModelBuilder:
         if not parameters.is_resolved:
             return Result.of_dict(source=parameters.source)
         result: Result = Result.of_dict({})
-        param_dict: Dict[str, Result] = result.value  # FIXME key is probably Result[str]
+        param_dict: dict[str, Result] = result.value  # FIXME key is probably Result[str]
         for item in parameters.value:
             assert isinstance(item, Result), f'unexpected launch node parameter: {item!r}'
             try:
@@ -397,7 +397,7 @@ class LaunchFeatureModelBuilder:
                 logger.warning('unable to resolve parameter list item')
                 return Result.of_dict(source=mapping.source)
             # FIXME loss of unresolved information
-            data: Dict[str, Any] = {
+            data: dict[str, Any] = {
                 key.value: val.value
                 for key, val in mapping.value.items()
                 if key.is_resolved and val.is_resolved
@@ -416,8 +416,8 @@ class LaunchFeatureModelBuilder:
                 return Result.of_dict(source=path.source)
 
         if item.type.is_mapping:
-            result: Dict[str, Any] = {}
-            param_dict: Dict[Result[Any], Result[Any]] = item.value
+            result: dict[str, Any] = {}
+            param_dict: dict[Result[Any], Result[Any]] = item.value
             for key, sub in param_dict.items():
                 if key.is_resolved and isinstance(key.value, str):
                     name: Result[str] = Result.of_string(key.value, source=key.source)
@@ -456,8 +456,8 @@ class LaunchFeatureModelBuilder:
         # return Result.of_dict({'TODO': Result.of_string(str(path))})
         return self._parameters_from_dict(data, node=node)
 
-    def _parameters_from_dict(self, data: Dict[str, Any], node: Optional[str] = None) -> Result:
-        params: Dict[str, Result[Any]] = data
+    def _parameters_from_dict(self, data: dict[str, Any], node: Optional[str] = None) -> Result:
+        params: dict[str, Result[Any]] = data
         if node:
             params = {}
             parts = node.split('/')
@@ -465,7 +465,7 @@ class LaunchFeatureModelBuilder:
             current = data
             while parts:
                 name = parts.pop()
-                current: Dict[str, Any] = current.get(name, current.get(f'/{name}', {}))
+                current: dict[str, Any] = current.get(name, current.get(f'/{name}', {}))
                 if current:
                     params.update(current.get('ros__parameters', {}))
             current = data.get(node, {})
@@ -485,11 +485,11 @@ class LaunchFeatureModelBuilder:
         params = {key: Result.of(value) for key, value in params.items()}
         return Result.of_dict(value=params)
 
-    def remappings_from_list(self, remaps: LaunchNodeRemapList) -> Result[Dict[str, Result[str]]]:
+    def remappings_from_list(self, remaps: LaunchNodeRemapList) -> Result[dict[str, Result[str]]]:
         if not remaps.is_resolved:
             return Result.of_dict(source=remaps.source)
         has_unknown: bool = False
-        remap_dict: Dict[str, Result[str]] = {}
+        remap_dict: dict[str, Result[str]] = {}
         for rule in remaps.value:
             assert isinstance(rule, Result), f'unexpected launch remap rule: {rule!r}'
             if not rule.is_resolved:
@@ -545,7 +545,7 @@ def model_from_description(
     cmd_args: Optional[Mapping[str, Optional[str]]] = None,
 ) -> LaunchFileFeature:
     logger.debug(f'model_from_description({path}, {description}, {system}, cmd_args={cmd_args})')
-    args: Dict[str, Result[str]] = {}
+    args: dict[str, Result[str]] = {}
     if cmd_args is not None:
         for key, value in cmd_args.items():
             if value is None:

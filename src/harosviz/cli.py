@@ -20,7 +20,7 @@ Some of the structure of this file came from this StackExchange question:
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import argparse
 import json
@@ -39,7 +39,7 @@ from harosviz import __version__ as current_version
 ###############################################################################
 
 
-def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
+def parse_arguments(argv: Optional[list[str]]) -> dict[str, Any]:
     msg = 'HAROSViz: Visualizer for ROS applications.'
     parser = argparse.ArgumentParser(description=msg)
 
@@ -74,9 +74,9 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
 ###############################################################################
 
 
-def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
+def load_configs(args: dict[str, Any]) -> dict[str, Any]:
     try:
-        config: Dict[str, Any] = {}
+        config: dict[str, Any] = {}
         # with open(args['config_path'], 'r') as file_pointer:
         # yaml.safe_load(file_pointer)
 
@@ -90,7 +90,7 @@ def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
             raise err
 
         # Optional: return some sane fallback defaults.
-        sane_defaults: Dict[str, Any] = {}
+        sane_defaults: dict[str, Any] = {}
         return sane_defaults
 
 
@@ -99,7 +99,7 @@ def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
 ###############################################################################
 
 
-def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
+def workflow(args: dict[str, Any], configs: dict[str, Any]) -> None:
     print(f'Arguments: {args}')
     print(f'Configurations: {configs}')
 
@@ -124,7 +124,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
 ###############################################################################
 
 
-def set_routes(root: str, configs: Dict[str, Any]):
+def set_routes(root: str, configs: dict[str, Any]):
     logger = configs['logger']
 
     def serve_file(filepath):
@@ -171,7 +171,7 @@ def timed(fun):
 ###############################################################################
 
 project_model: ProjectModel = None
-project_nodes: List[Any] = []
+project_nodes: list[Any] = []
 current_cg: RosComputationGraph = None
 query_engine = None
 workspace = None
@@ -297,7 +297,7 @@ def _load_project_nodes(root):
 ###############################################################################
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Optional[list[str]] = None) -> int:
     args = parse_arguments(argv)
     try:
         config = load_configs(args)

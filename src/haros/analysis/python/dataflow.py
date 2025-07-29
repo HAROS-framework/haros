@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, List, Optional, Type
+from typing import Any, Callable, Final, Optional, Type
 
 import logging
 
@@ -39,7 +39,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 BUILTINS_MODULE: Final[str] = '__builtins__'
 
-BUILTIN_FUNCTIONS: Final[List[str]] = [
+BUILTIN_FUNCTIONS: Final[list[str]] = [
     'abs',
     'all',
     'any',
@@ -93,7 +93,7 @@ BUILTIN_FUNCTIONS: Final[List[str]] = [
     # '__import__',
 ]
 
-BUILTIN_CLASSES: Final[List[str]] = [
+BUILTIN_CLASSES: Final[list[str]] = [
     'bool',
     'bytearray',
     'bytes',
@@ -114,7 +114,7 @@ BUILTIN_CLASSES: Final[List[str]] = [
     'type',
 ]
 
-BUILTIN_EXCEPTIONS: Final[List[str]] = [
+BUILTIN_EXCEPTIONS: Final[list[str]] = [
     'BaseException',
     'Exception',
     'ArithmeticError',
@@ -305,10 +305,10 @@ def _default_return_value() -> VariantData[Result[Any]]:
 
 @define
 class DataScope:
-    variables: Dict[str, VariantData[Definition]] = field(factory=dict)
+    variables: dict[str, VariantData[Definition]] = field(factory=dict)
     return_values: VariantData[Result[Any]] = field(factory=_default_return_value)
-    _condition_stack: List[LogicValue] = field(init=False, factory=list)
-    _symbols: Dict[str, Any] = field(factory=dict)
+    _condition_stack: list[LogicValue] = field(init=False, factory=list)
+    _symbols: dict[str, Any] = field(factory=dict)
 
     @property
     def condition(self) -> LogicValue:
@@ -646,8 +646,8 @@ class DataScope:
         assert callable(function.value), f'not callable: {repr(function.value)}'
         if not call.arguments:
             return function.call().trace_to(tracked(call))
-        args: List[Result[Any]] = []
-        kwargs: Dict[str, Result[Any]] = {}
+        args: list[Result[Any]] = []
+        kwargs: dict[str, Result[Any]] = {}
         for argument in call.arguments:
             arg: Result[Any] = self.value_from_expression(argument.value)
             if argument.is_positional:

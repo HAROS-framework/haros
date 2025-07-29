@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final
+from typing import Any, Final
 
 from pathlib import Path
 
@@ -24,7 +24,7 @@ from yaml import dump, safe_load
 SETTINGS_FILE: Final[str] = 'config.yaml'
 
 
-def _default_logging_formatters() -> Dict[str, Any]:
+def _default_logging_formatters() -> dict[str, Any]:
     return {
         'screenFormat': {
             'format': '[HAROS - %(levelname)s]: %(message)s',
@@ -35,7 +35,7 @@ def _default_logging_formatters() -> Dict[str, Any]:
     }
 
 
-def _default_logging_handlers() -> Dict[str, Any]:
+def _default_logging_handlers() -> dict[str, Any]:
     return {
         'console': {
             'class': 'logging.StreamHandler',
@@ -54,26 +54,26 @@ def _default_logging_handlers() -> Dict[str, Any]:
     }
 
 
-def _default_logging_root() -> Dict[str, Any]:
+def _default_logging_root() -> dict[str, Any]:
     return {'level': 'DEBUG', 'handlers': ['console', 'logfile']}
 
 
-# follows Python's Dictionary configuration schema
+# follows Python's dictionary configuration schema
 # https://docs.python.org/3.12/library/logging.config.html#dictionary-schema-details
-DEFAULT_SETTINGS_LOGGING: Final[Dict[str, Any]] = {
+DEFAULT_SETTINGS_LOGGING: Final[dict[str, Any]] = {
     'version': 1,
     'formatters': _default_logging_formatters(),
     'handlers': _default_logging_handlers(),
     'root': _default_logging_root(),
 }
 
-DEFAULT_SETTINGS_ENVIRONMENT: Final[Dict[str, Any]] = {
+DEFAULT_SETTINGS_ENVIRONMENT: Final[dict[str, Any]] = {
     'copy': True,  # whether to copy the current environment
-    'variables': {},  # Dict[str, str]: override variables with these values
+    'variables': {},  # dict[str, str]: override variables with these values
 }
 
 
-def _default_plugin_settings() -> Dict[str, Any]:
+def _default_plugin_settings() -> dict[str, Any]:
     return {
         'enabled': True,
         'setup': {},  # keyword arguments provided at load/setup
@@ -81,20 +81,20 @@ def _default_plugin_settings() -> Dict[str, Any]:
     }
 
 
-DEFAULT_SETTINGS_PLUGINS: Final[Dict[str, Any]] = {
+DEFAULT_SETTINGS_PLUGINS: Final[dict[str, Any]] = {
     'dummy': _default_plugin_settings(),
 }
 
 
-def _default_parsing_cpp() -> Dict[str, Any]:
+def _default_parsing_cpp() -> dict[str, Any]:
     return {'parser': 'clang'}
 
 
-DEFAULT_SETTINGS_PARSING: Final[Dict[str, Any]] = {
+DEFAULT_SETTINGS_PARSING: Final[dict[str, Any]] = {
     'cpp': _default_parsing_cpp(),
 }
 
-DEFAULT_SETTINGS: Final[Dict[str, Any]] = {
+DEFAULT_SETTINGS: Final[dict[str, Any]] = {
     'logging': DEFAULT_SETTINGS_LOGGING,
     'environment': DEFAULT_SETTINGS_ENVIRONMENT,
     'plugins': DEFAULT_SETTINGS_PLUGINS,
@@ -102,12 +102,10 @@ DEFAULT_SETTINGS: Final[Dict[str, Any]] = {
 }
 
 YAML_DEFAULT_SETTINGS: Final[str] = (
-    r"""%YAML 1.1
+    rf"""%YAML 1.1
 ---
-{}
-""".format(
-        dump(DEFAULT_SETTINGS, Dumper=Dumper)
-    )
+{dump(DEFAULT_SETTINGS, Dumper=Dumper)}
+"""
 )
 
 ###############################################################################
@@ -118,30 +116,30 @@ YAML_DEFAULT_SETTINGS: Final[str] = (
 @define
 class EnvironmentSettings:
     copy: bool = DEFAULT_SETTINGS_ENVIRONMENT['copy']
-    variables: Dict[str, str] = field(factory=dict)
+    variables: dict[str, str] = field(factory=dict)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 @define
 class LoggingSettings:
-    # follows Python's Dictionary configuration schema
+    # follows Python's dictionary configuration schema
     # https://docs.python.org/3.12/library/logging.config.html#dictionary-schema-details
     version: int = DEFAULT_SETTINGS_LOGGING['version']
-    formatters: Dict[str, Any] = field(factory=_default_logging_formatters)
-    handlers: Dict[str, Any] = field(factory=_default_logging_handlers)
-    root: Dict[str, Any] = field(factory=_default_logging_root)
+    formatters: dict[str, Any] = field(factory=_default_logging_formatters)
+    handlers: dict[str, Any] = field(factory=_default_logging_handlers)
+    root: dict[str, Any] = field(factory=_default_logging_root)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 @define
 class ParsingSettings:
-    cpp: Dict[str, str] = field(factory=_default_parsing_cpp)
+    cpp: dict[str, str] = field(factory=_default_parsing_cpp)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -150,10 +148,10 @@ class Settings:
     home: Path
     environment: EnvironmentSettings = field(factory=EnvironmentSettings)
     logging: LoggingSettings = field(factory=LoggingSettings)
-    plugins: Dict[str, Dict[str, Any]] = field(factory=dict)
+    plugins: dict[str, dict[str, Any]] = field(factory=dict)
     parsing: ParsingSettings = field(factory=ParsingSettings)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -162,7 +160,7 @@ class Settings:
 ###############################################################################
 
 
-def load_as_dict(haroshome: Path) -> Dict[str, Any]:
+def load_as_dict(haroshome: Path) -> dict[str, Any]:
     path = haroshome / SETTINGS_FILE
     path = path.resolve()
     with path.open(mode='r', encoding='utf-8') as f:
@@ -182,11 +180,11 @@ def load(haroshome: Path) -> Settings:
     )
 
 
-def defaults_as_dict() -> Dict[str, Any]:
+def defaults_as_dict() -> dict[str, Any]:
     return dict(DEFAULT_SETTINGS)
 
 
-def defaults() -> Dict[str, Any]:
+def defaults() -> dict[str, Any]:
     return Settings(
         home=Path.cwd(),  # FIXME
         environment=EnvironmentSettings(**DEFAULT_SETTINGS_ENVIRONMENT),
