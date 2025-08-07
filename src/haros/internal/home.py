@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Union
+from typing import Any, Final
 
 import os
 from pathlib import Path
@@ -37,7 +37,7 @@ DEFAULT_PATH: Final[Path] = Path.home() / DIR_NAME
 ###############################################################################
 
 
-def make_at(dirpath: Union[str, Path], overwrite: bool = False):
+def make_at(dirpath: str | Path, overwrite: bool = False):
     # ensures a '.haros' directory
     # uses the given path directly, if it ends with '.haros', or uses it
     # as a parent for a new '.haros' directory

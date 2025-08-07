@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Optional, Union
+from typing import Optional
 
 from collections.abc import Sequence
 
@@ -104,7 +104,7 @@ class PythonBooleanLiteral(PythonLiteral):
 
 @frozen
 class PythonNumberLiteral(PythonLiteral):
-    value: Union[int, float, complex]
+    value: int | float | complex
 
     @property
     def is_number(self) -> bool:

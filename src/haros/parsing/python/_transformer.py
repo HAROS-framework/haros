@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from collections.abc import Iterable, Sequence
 import re
@@ -94,17 +94,17 @@ from haros.parsing.python.ast.common import PythonHelperNode
 # Transformer
 ###############################################################################
 
-type PythonDefinition = Union[PythonFunctionDefStatement, PythonClassDefStatement]
+type PythonDefinition = PythonFunctionDefStatement | PythonClassDefStatement
 
-type MaybeParams = Optional[Union[PythonFunctionParameter, Sequence[PythonFunctionParameter]]]
+type MaybeParams = Optional[PythonFunctionParameter | Sequence[PythonFunctionParameter]]
 
-type SomeExpressions = Union[PythonExpression, Sequence[PythonExpression]]
+type SomeExpressions = PythonExpression | Sequence[PythonExpression]
 type MaybeExpressions = Optional[Sequence[PythonExpression]]
 
-type SomeStatements = Union[PythonStatement, Sequence[PythonStatement]]
+type SomeStatements = PythonStatement | Sequence[PythonStatement]
 type MaybeStatements = Optional[Sequence[PythonStatement]]
 
-type OperatorSequence = Iterable[Union[str, PythonExpression]]
+type OperatorSequence = Iterable[str | PythonExpression]
 
 
 @frozen
@@ -231,7 +231,7 @@ class ToAst(Transformer):
 
     def simple_stmt(
         self,
-        children: Iterable[Union[PythonStatement, Sequence[PythonStatement]]],
+        children: Iterable[PythonStatement | Sequence[PythonStatement]],
     ) -> Sequence[PythonStatement]:
         return self._flatten_statements(children)
 
@@ -511,7 +511,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def starparams(
         self,
-        starparam: Union[PythonFunctionParameter, Token],
+        starparam: PythonFunctionParameter | Token,
         poststarparams: Iterable[PythonFunctionParameter],
     ) -> Sequence[PythonFunctionParameter]:
         if starparam == '*':
@@ -521,7 +521,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def starparam(
         self,
-        param: Union[PythonFunctionParameter, Token],
+        param: PythonFunctionParameter | Token,
     ) -> PythonFunctionParameter:
         if not isinstance(param, PythonFunctionParameter):
             param = self._new_node(
@@ -533,7 +533,7 @@ class ToAst(Transformer):
 
     def poststarparams(
         self,
-        children: Iterable[Union[PythonFunctionParameter, Token]],
+        children: Iterable[PythonFunctionParameter | Token],
     ) -> Sequence[PythonFunctionParameter]:
         params = []
         for param in children:
@@ -558,7 +558,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def kwparams(
         self,
-        param: Union[PythonFunctionParameter, Token],
+        param: PythonFunctionParameter | Token,
     ) -> PythonFunctionParameter:
         if not isinstance(param, PythonFunctionParameter):
             param = self._new_node(
@@ -574,7 +574,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def paramvalue(
         self,
-        param: Union[PythonFunctionParameter, Token],
+        param: PythonFunctionParameter | Token,
         default_value: Optional[PythonExpression] = None,
     ) -> PythonFunctionParameter:
         if isinstance(param, PythonFunctionParameter):
@@ -833,7 +833,7 @@ class ToAst(Transformer):
 
     def match_stmt(
         self,
-        children: Iterable[Union[PythonExpression, PythonCaseStatement]],
+        children: Iterable[PythonExpression | PythonCaseStatement],
     ) -> PythonMatchStatement:
         assert len(children) >= 2, f'match_stmt: {children!r}'
         value = children[0]
@@ -898,7 +898,7 @@ class ToAst(Transformer):
 
     def mapping_star_pattern(
         self,
-        children: Iterable[Union[PythonKeyCasePattern, Token]],
+        children: Iterable[PythonKeyCasePattern | Token],
     ) -> PythonMappingCasePattern:
         assert len(children) >= 2, f'mapping_star_pattern: {children!r}'
         patterns = list(children)
@@ -1270,7 +1270,7 @@ class ToAst(Transformer):
         )
 
     @v_args(inline=True)
-    def subscript(self, subscript: Union[PythonExpression, PythonSlice]) -> PythonSubscript:
+    def subscript(self, subscript: PythonExpression | PythonSlice) -> PythonSubscript:
         if isinstance(subscript, PythonSubscript):
             return subscript
         assert isinstance(subscript, PythonExpression), f'subscript: {subscript!r}'
@@ -1308,7 +1308,7 @@ class ToAst(Transformer):
 
     def arguments(
         self,
-        children: Iterable[Union[None, PythonAst, Sequence[PythonAst]]],
+        children: Iterable[None | PythonAst | Sequence[PythonAst]],
     ) -> Sequence[PythonArgument]:
         args = []
         for arg in children:
@@ -1330,7 +1330,7 @@ class ToAst(Transformer):
 
     def starargs(
         self,
-        children: Iterable[Union[PythonAst, Sequence[PythonAst]]],
+        children: Iterable[PythonAst | Sequence[PythonAst]],
     ) -> Sequence[PythonArgument]:
         args = []
         for arg in children:
@@ -1360,7 +1360,7 @@ class ToAst(Transformer):
 
     def kwargs(
         self,
-        children: Sequence[Union[PythonExpression, PythonArgument]],
+        children: Sequence[PythonExpression | PythonArgument],
     ) -> Sequence[PythonArgument]:
         assert len(children) >= 1
         args: list[PythonArgument] = []

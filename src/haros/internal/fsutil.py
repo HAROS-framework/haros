@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Union
+from typing import Any, Final
 
 from collections.abc import Mapping, MutableSequence
 import logging
@@ -176,7 +176,7 @@ class StorageManager:
             packages = crawl_workspace(ws, relative=False)
             self.packages.update(packages)
 
-    def get_file_path(self, pkg: str, relative_path: Union[str, Path]) -> Path:
+    def get_file_path(self, pkg: str, relative_path: str | Path) -> Path:
         # raise KeyError
         path = self.packages[pkg] / Path(relative_path)
         # raise FileNotFoundError

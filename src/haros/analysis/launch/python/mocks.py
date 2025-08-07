@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional, Union
+from typing import Any, Final, Optional
 
 from collections.abc import Iterable, MutableSequence, Sequence
 import logging
@@ -84,13 +84,13 @@ class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
 ###############################################################################
 
 
-def if_condition_function(expr: Result[Union[str, LaunchSubstitution]]) -> IfCondition:
+def if_condition_function(expr: Result[str | LaunchSubstitution]) -> IfCondition:
     if expr.is_resolved and expr.type.is_string:
         expr = const_text(expr.value, source=expr.source)
     return IfCondition(expr)
 
 
-def unless_condition_function(expr: Result[Union[str, LaunchSubstitution]]) -> UnlessCondition:
+def unless_condition_function(expr: Result[str | LaunchSubstitution]) -> UnlessCondition:
     if expr.is_resolved and expr.type.is_string:
         expr = const_text(expr.value, source=expr.source)
     return UnlessCondition(expr)
@@ -155,9 +155,9 @@ def launch_configuration_function(
     )
 
 
-type StringOrSubstitution = Result[Union[str, LaunchSubstitution]]
+type StringOrSubstitution = Result[str | LaunchSubstitution]
 type SubstitutionPair = tuple[StringOrSubstitution, StringOrSubstitution]
-type LaunchArgumentKeyValue = Union[SubstitutionPair, Result[SubstitutionPair]]
+type LaunchArgumentKeyValue = SubstitutionPair | Result[SubstitutionPair]
 
 
 def include_launch_description_function(

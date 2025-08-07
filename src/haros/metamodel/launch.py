@@ -11,7 +11,6 @@ from typing import (
     Final,
     NewType,
     Optional,
-    Union,
 )
 
 from collections.abc import Iterable, Iterator, Mapping, MutableSequence, Sequence, Set
@@ -123,7 +122,7 @@ def const_substitution(
 
 
 def substitute(
-    substitution: Optional[Result[Union[LaunchSubstitution, Sequence[Result[LaunchSubstitution]]]]],
+    substitution: Optional[Result[LaunchSubstitution | Sequence[Result[LaunchSubstitution]]]],
     context: LaunchScopeContext,
     source: Optional[TrackedCode] = None,
 ) -> Result[str]:
@@ -156,7 +155,7 @@ def substitute_optional(
     return Result.of_string(source=substitution.source)
 
 
-def _to_sub(arg: Result[Union[None, str, LaunchSubstitution]]) -> Result[LaunchSubstitution]:
+def _to_sub(arg: Result[None | str | LaunchSubstitution]) -> Result[LaunchSubstitution]:
     if not arg.is_resolved:
         return Result.unknown_value(source=arg.source)
     if arg.value is None:
@@ -170,7 +169,7 @@ def _to_sub(arg: Result[Union[None, str, LaunchSubstitution]]) -> Result[LaunchS
 
 def _to_sub_list(
     arg: Result[
-        Union[None, str, LaunchSubstitution, Iterable[Result[Union[None, str, LaunchSubstitution]]]]
+        None | str | LaunchSubstitution | Iterable[Result[None | str | LaunchSubstitution]]
     ],
 ) -> Result[list[Result[LaunchSubstitution]]]:
     if not arg.is_resolved:
@@ -189,14 +188,7 @@ def _to_sub_list(
 
 def _to_sub_list_or_none(
     arg: Optional[
-        Result[
-            Union[
-                None,
-                str,
-                LaunchSubstitution,
-                Iterable[Result[Union[None, str, LaunchSubstitution]]],
-            ]
-        ]
+        Result[None | str | LaunchSubstitution | Iterable[Result[None | str | LaunchSubstitution]]]
     ],
 ) -> Optional[Result[list[Result[LaunchSubstitution]]]]:
     if arg is None:
@@ -650,7 +642,7 @@ class UnlessCondition(LaunchCondition):
 
 
 def _values_to_sub_list(
-    d: Result[Mapping[Result[str], Result[Union[None, str, LaunchSubstitution]]]],
+    d: Result[Mapping[Result[str], Result[None | str | LaunchSubstitution]]],
 ) -> Result[dict[str, Result[Sequence[Result[LaunchSubstitution]]]]]:
     if not d.is_resolved:
         return Result.of_dict(source=d.source)
@@ -838,7 +830,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
                 yield from self._get_leaf_keys(value)
             yield key
 
-    def _convert(self, text_value: str) -> Union[bool, int, float, str]:
+    def _convert(self, text_value: str) -> bool | int | float | str:
         if self.convert_types.value:
             # try converting to int or float
             try:
@@ -871,7 +863,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
         self,
         data: dict[Any, Any],
         yaml_key_list: MutableSequence[str],
-        rewrite_val: Union[bool, int, float, str],
+        rewrite_val: bool | int | float | str,
     ) -> dict[Any, Any]:
         for key in yaml_key_list:
             if key == yaml_key_list[-1]:
@@ -940,14 +932,14 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
 @define
 class ParameterFileDescription:
     filepath: Result[LaunchSubstitution]
-    allow_subs: Result[Union[bool, LaunchSubstitution]]
+    allow_subs: Result[bool | LaunchSubstitution]
     __cached_result: Optional[Result[Mapping[Result[str], Result[Any]]]] = None
 
     @classmethod
     def factory(
         cls,
-        filepath: Result[Union[str, LaunchSubstitution]],
-        allow_substs: Optional[Result[Union[bool, LaunchSubstitution]]] = None,
+        filepath: Result[str | LaunchSubstitution],
+        allow_substs: Optional[Result[bool | LaunchSubstitution]] = None,
     ) -> 'ParameterFileDescription':
         if filepath.is_resolved:
             if not isinstance(filepath.value, LaunchSubstitution):
@@ -1082,7 +1074,7 @@ class LaunchInclusion(LaunchEntity):
 type LaunchNodeParameterDict = Result[
     Mapping[Result[LaunchSubstitution], Result[LaunchSubstitution]]
 ]
-type LaunchNodeParameterItem = Union[Result[LaunchSubstitution], LaunchNodeParameterDict]
+type LaunchNodeParameterItem = Result[LaunchSubstitution] | LaunchNodeParameterDict
 type LaunchNodeParameterList = Result[Sequence[LaunchNodeParameterItem]]
 
 
@@ -1094,7 +1086,7 @@ def empty_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodePara
     return Result.of_list([], source=source)
 
 
-type LaunchNodeRemapName = Result[Union[str, LaunchSubstitution]]
+type LaunchNodeRemapName = Result[str | LaunchSubstitution]
 type LaunchNodeRemapItem = Result[tuple[LaunchNodeRemapName, LaunchNodeRemapName]]
 type LaunchNodeRemapList = Result[Sequence[LaunchNodeRemapItem]]
 

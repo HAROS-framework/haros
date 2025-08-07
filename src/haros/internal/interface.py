@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional, Union
+from typing import Any, Final, Optional
 
 from collections.abc import Callable, Iterable, Mapping
 from errno import EACCES
@@ -26,7 +26,7 @@ from haros.metamodel.ros import NodeModel, ProjectModel, uid_node
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
-PathType = Union[str, Path]
+type PathType = str | Path
 
 PACKAGE_SHARE_DIR = '/usr/share/ros/'
 

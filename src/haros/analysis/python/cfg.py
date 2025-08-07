@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final, NewType, Union
+from typing import Final, NewType
 
 from collections.abc import Mapping, MutableSequence
 
@@ -264,7 +264,7 @@ class BasicControlFlowGraphBuilder:
         self.nodes[uid] = node
         return node
 
-    def switch_to(self, node_or_id: Union[ControlNodeId, ControlNode]):
+    def switch_to(self, node_or_id: ControlNodeId | ControlNode):
         uid = node_or_id
         if isinstance(node_or_id, ControlNode):
             uid = node_or_id.id

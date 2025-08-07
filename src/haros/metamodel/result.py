@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Self, Union
+from typing import Any, Final, Self
 
 from collections.abc import Iterable, Iterator, Mapping, Set
 import logging
@@ -351,7 +351,7 @@ class Result[V]:
         cls,
         value: int | float | complex | UnknownValue = UNKNOWN_VALUE,
         source: TrackedCode | None = None,
-    ) -> 'Result[Union[int, float, complex]]':
+    ) -> 'Result[int | float | complex]':
         if isinstance(value, int):
             return cls.of_int(value=value, source=source)
         if isinstance(value, float):

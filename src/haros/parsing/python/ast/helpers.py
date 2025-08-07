@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from collections.abc import Sequence
 
@@ -34,7 +34,7 @@ class PythonKeyValuePair(PythonHelperNode):
         return f'{ws}Key Value\n{key}\n{value}'
 
 
-PythonDictEntry = Union[PythonKeyValuePair, PythonExpression]
+type PythonDictEntry = PythonKeyValuePair | PythonExpression
 
 ###############################################################################
 # Subscript Helpers
