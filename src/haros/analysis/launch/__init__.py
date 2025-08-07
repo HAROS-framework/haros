@@ -21,7 +21,7 @@ from haros.metamodel.launch import LaunchDescription
 # Constants
 ###############################################################################
 
-PARSERS: Final[tuple[Callable]] = (
+PARSERS: Final[tuple[Callable, ...]] = (
     get_python_launch_description,
     get_xml_launch_description,
     get_yaml_launch_description,

@@ -1062,7 +1062,9 @@ class LaunchArgument(LaunchEntity):
         return f'<arg {" ".join(parts)} />'
 
 
-LaunchArgumentKeyValuePair = Result[tuple[Result[LaunchSubstitution], Result[LaunchSubstitution]]]
+type LaunchArgumentKeyValuePair = Result[
+    tuple[Result[LaunchSubstitution], Result[LaunchSubstitution]]
+]
 
 
 @frozen

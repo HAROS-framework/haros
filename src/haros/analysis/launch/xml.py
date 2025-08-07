@@ -17,7 +17,7 @@ from haros.metamodel.launch import LaunchDescription
 # Constants
 ###############################################################################
 
-EXTENSIONS: Final[tuple[str]] = ('.launch.xml', '.xml', '.launch')
+EXTENSIONS: Final[tuple[str, ...]] = ('.launch.xml', '.xml', '.launch')
 
 ###############################################################################
 # Interface

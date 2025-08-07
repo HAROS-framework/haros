@@ -17,7 +17,7 @@ from haros.metamodel.launch import LaunchDescription
 # Constants
 ###############################################################################
 
-EXTENSIONS: Final[tuple[str]] = ('.launch.yaml', '.launch.yml', '.yaml', '.yml', '.launch')
+EXTENSIONS: Final[tuple[str, ...]] = ('.launch.yaml', '.launch.yml', '.yaml', '.yml', '.launch')
 
 ###############################################################################
 # Interface

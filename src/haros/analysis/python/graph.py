@@ -12,7 +12,7 @@ from typing import (
     Optional,
 )
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 import logging
 from types import SimpleNamespace
 
@@ -130,7 +130,7 @@ class ExpressionNode:
 @frozen
 class FunctionCallNode(ExpressionNode):
     function: VariantData[str] = field(factory=VariantData)
-    arguments: tuple[ExpressionNodeId] = field(factory=tuple)
+    arguments: Sequence[ExpressionNodeId] = field(factory=tuple)
 
 
 def eval_expression(expr: PythonExpression, data: DataScope) -> VariantData[AnalysisExpression]:
