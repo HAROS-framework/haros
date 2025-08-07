@@ -116,9 +116,9 @@ class LaunchScope(LaunchScopeContext):
     file_path: Path
     system: AnalysisSystemInterface
     condition: LogicValue = field(default=TRUE)
-    args: dict[str, ArgumentFeatureBuilder] = field(factory=dict)
-    configs: dict[str, Result] = field(factory=dict)
-    anonymous: dict[str, str] = field(factory=dict, eq=False)
+    args: Mapping[str, ArgumentFeatureBuilder] = field(factory=dict)
+    configs: Mapping[str, Result] = field(factory=dict)
+    anonymous: Mapping[str, str] = field(factory=dict, eq=False)
 
     def get(self, name: str) -> Optional[Result]:
         value = self.configs.get(name)

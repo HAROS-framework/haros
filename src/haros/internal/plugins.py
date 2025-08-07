@@ -7,6 +7,7 @@
 
 from typing import Any, Callable, Final, Tuple
 
+from collections.abc import Mapping
 from importlib import metadata
 import importlib.util
 import logging
@@ -43,8 +44,8 @@ class HarosPluginInterface:
     # Attributes
     name: str
     module: Any
-    settings: dict[str, Any] = field(factory=dict)
-    hooks: dict[str, Callable] = field(factory=dict)
+    settings: Mapping[str, Any] = field(factory=dict)
+    hooks: Mapping[str, Callable] = field(factory=dict)
 
     def __attrs_post_init__(self):
         for name in HOOKS:
@@ -68,7 +69,7 @@ class PluginManager:
     plugins: list[HarosPluginInterface] = field(factory=list)
     # plugin name -> error
     # this serves to disable a plugin after it crashes
-    errors: dict[str, Exception] = field(factory=dict)
+    errors: Mapping[str, Exception] = field(factory=dict)
 
     def __attrs_post_init__(self):
         for name in HOOKS:
@@ -93,7 +94,7 @@ class PluginManager:
         return hook
 
 
-def load(haroshome: Path, settings: dict[str, dict[str, Any]]) -> PluginManager:
+def load(haroshome: Path, settings: Mapping[str, Mapping[str, Any]]) -> PluginManager:
     plugins = _load_from_entrypoints(settings)
     plugins.extend(_load_from_haroshome(haroshome, settings))
     if not plugins:
@@ -106,7 +107,7 @@ def load(haroshome: Path, settings: dict[str, dict[str, Any]]) -> PluginManager:
 ###############################################################################
 
 
-def _load_from_entrypoints(settings: dict[str, dict[str, Any]]) -> list[HarosPluginInterface]:
+def _load_from_entrypoints(settings: Mapping[str, Mapping[str, Any]]) -> list[HarosPluginInterface]:
     logger.info(f'plugins: searching {ENTRY_POINT}')
     plugins = []
     try:
@@ -133,7 +134,7 @@ def _load_from_entrypoints(settings: dict[str, dict[str, Any]]) -> list[HarosPlu
 
 def _load_from_haroshome(
     haroshome: Path,
-    settings: dict[str, dict[str, Any]],
+    settings: Mapping[str, Mapping[str, Any]],
 ) -> list[HarosPluginInterface]:
     try:
         directory = (haroshome / 'plugins').resolve(strict=True)

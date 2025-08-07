@@ -7,6 +7,7 @@
 
 from typing import Any, Final, Union
 
+from collections.abc import Mapping
 import logging
 import os
 from pathlib import Path
@@ -28,7 +29,7 @@ type AnyPath = str | Path
 ###############################################################################
 
 
-def generate_dir(path: Path, structure: dict[str, Any], overwrite: bool = True):
+def generate_dir(path: Path, structure: Mapping[str, Any], overwrite: bool = True):
     """Recursively create a given directory structure."""
     # log.debug(f'generate_dir({path}, {structure})')
     for name, contents in structure.items():
@@ -50,7 +51,7 @@ def generate_dir(path: Path, structure: dict[str, Any], overwrite: bool = True):
             generate_dir(new_path, contents, overwrite=overwrite)
 
 
-def ensure_structure(path: Path, structure: dict[str, Any]):
+def ensure_structure(path: Path, structure: Mapping[str, Any]):
     """Ensure that the given path contains the given structure."""
     for name, contents in structure.items():
         new_path = (path / name).resolve()
@@ -168,7 +169,7 @@ def crawl_package(pkg: Path) -> list[Path]:
 @frozen
 class StorageManager:
     workspaces: list[Path] = field(factory=list)
-    packages: dict[str, Path] = field(factory=dict)
+    packages: Mapping[str, Path] = field(factory=dict)
 
     def crawl(self):
         for ws in self.workspaces:

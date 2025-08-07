@@ -7,6 +7,8 @@
 
 from typing import Final, NewType, Union
 
+from collections.abc import Mapping
+
 from attrs import define, field, frozen
 
 from haros.errors import ControlFlowError
@@ -47,8 +49,8 @@ class ControlNode:
     id: ControlNodeId
     body: list[PythonStatement] = field(factory=list, eq=False, hash=False)
     condition: LogicValue = field(default=TRUE, eq=False, hash=False)
-    incoming: dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
-    outgoing: dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    incoming: Mapping[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    outgoing: Mapping[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
     @property
     def is_empty(self) -> bool:
@@ -91,7 +93,7 @@ class ControlNode:
 class ControlFlowGraph:
     name: str
     root_id: ControlNodeId = field()
-    nodes: dict[ControlNodeId, ControlNode] = field(factory=dict)
+    nodes: Mapping[ControlNodeId, ControlNode] = field(factory=dict)
     asynchronous: bool = False
 
     @root_id.validator
@@ -200,7 +202,7 @@ class BasicControlFlowGraphBuilder:
     asynchronous: bool = False
     root_id: ControlNodeId = ROOT_ID
     current_id: ControlNodeId = ROOT_ID
-    nodes: dict[ControlNodeId, ControlNode] = field(factory=dict)
+    nodes: Mapping[ControlNodeId, ControlNode] = field(factory=dict)
     _node_id_counter: int = 0
     _loop_stack: list[LoopingContext] = field(factory=list, eq=False, hash=False)
     _branch_stack: list[BranchingContext] = field(factory=list, eq=False, hash=False)

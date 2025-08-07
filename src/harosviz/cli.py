@@ -23,6 +23,7 @@ Some of the structure of this file came from this StackExchange question:
 from typing import Any, Optional
 
 import argparse
+from collections.abc import Mapping
 import json
 import logging
 from pathlib import Path
@@ -74,7 +75,7 @@ def parse_arguments(argv: Optional[list[str]]) -> dict[str, Any]:
 ###############################################################################
 
 
-def load_configs(args: dict[str, Any]) -> dict[str, Any]:
+def load_configs(args: Mapping[str, Any]) -> dict[str, Any]:
     try:
         config: dict[str, Any] = {}
         # with open(args['config_path'], 'r') as file_pointer:
@@ -99,7 +100,7 @@ def load_configs(args: dict[str, Any]) -> dict[str, Any]:
 ###############################################################################
 
 
-def workflow(args: dict[str, Any], configs: dict[str, Any]) -> None:
+def workflow(args: Mapping[str, Any], configs: Mapping[str, Any]) -> None:
     print(f'Arguments: {args}')
     print(f'Configurations: {configs}')
 
@@ -124,7 +125,7 @@ def workflow(args: dict[str, Any], configs: dict[str, Any]) -> None:
 ###############################################################################
 
 
-def set_routes(root: str, configs: dict[str, Any]):
+def set_routes(root: str, configs: Mapping[str, Any]):
     logger = configs['logger']
 
     def serve_file(filepath):

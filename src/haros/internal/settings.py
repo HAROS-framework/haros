@@ -7,6 +7,7 @@
 
 from typing import Any, Final
 
+from collections.abc import Mapping
 from pathlib import Path
 
 try:
@@ -116,7 +117,7 @@ YAML_DEFAULT_SETTINGS: Final[str] = (
 @define
 class EnvironmentSettings:
     copy: bool = DEFAULT_SETTINGS_ENVIRONMENT['copy']
-    variables: dict[str, str] = field(factory=dict)
+    variables: Mapping[str, str] = field(factory=dict)
 
     def asdict(self) -> dict[str, Any]:
         return asdict(self)
@@ -127,9 +128,9 @@ class LoggingSettings:
     # follows Python's dictionary configuration schema
     # https://docs.python.org/3.12/library/logging.config.html#dictionary-schema-details
     version: int = DEFAULT_SETTINGS_LOGGING['version']
-    formatters: dict[str, Any] = field(factory=_default_logging_formatters)
-    handlers: dict[str, Any] = field(factory=_default_logging_handlers)
-    root: dict[str, Any] = field(factory=_default_logging_root)
+    formatters: Mapping[str, Any] = field(factory=_default_logging_formatters)
+    handlers: Mapping[str, Any] = field(factory=_default_logging_handlers)
+    root: Mapping[str, Any] = field(factory=_default_logging_root)
 
     def asdict(self) -> dict[str, Any]:
         return asdict(self)
@@ -137,7 +138,7 @@ class LoggingSettings:
 
 @define
 class ParsingSettings:
-    cpp: dict[str, str] = field(factory=_default_parsing_cpp)
+    cpp: Mapping[str, str] = field(factory=_default_parsing_cpp)
 
     def asdict(self) -> dict[str, Any]:
         return asdict(self)
@@ -148,7 +149,7 @@ class Settings:
     home: Path
     environment: EnvironmentSettings = field(factory=EnvironmentSettings)
     logging: LoggingSettings = field(factory=LoggingSettings)
-    plugins: dict[str, dict[str, Any]] = field(factory=dict)
+    plugins: Mapping[str, Mapping[str, Any]] = field(factory=dict)
     parsing: ParsingSettings = field(factory=ParsingSettings)
 
     def asdict(self) -> dict[str, Any]:

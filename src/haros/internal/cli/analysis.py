@@ -10,6 +10,7 @@
 from typing import Any, Final
 
 import argparse
+from collections.abc import Mapping
 import json
 import logging
 from pathlib import Path
@@ -50,7 +51,7 @@ def subprogram(argv: list[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: dict[str, Any], settings: Settings) -> int:
+def run(args: Mapping[str, Any], settings: Settings) -> int:
     plugins = load_plugins(settings.home, settings.plugins)
     paths = args['paths']
     if args['packages']:

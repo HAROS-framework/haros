@@ -10,6 +10,7 @@
 from typing import Any
 
 import argparse
+from collections.abc import Mapping
 from pathlib import Path
 
 from haros.internal import home
@@ -30,7 +31,7 @@ def subprogram(argv: list[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: dict[str, Any], settings: Settings) -> int:
+def run(args: Mapping[str, Any], settings: Settings) -> int:
     path = args['path'].resolve()
     print('Initializing HAROS home at: ' + str(path))
     home.make_at(path, overwrite=True)

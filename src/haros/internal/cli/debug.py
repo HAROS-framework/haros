@@ -7,9 +7,10 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, Mapping
+from typing import Any, Final, Iterable
 
 import argparse
+from collections.abc import Mapping
 import json
 import logging
 from pathlib import Path
@@ -46,7 +47,7 @@ def subprogram(argv: list[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: dict[str, Any], settings: Settings) -> int:
+def run(args: Mapping[str, Any], settings: Settings) -> int:
     try:
         path: Path = args['path'].resolve(strict=True)
     except FileNotFoundError:

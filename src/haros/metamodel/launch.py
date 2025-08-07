@@ -18,7 +18,7 @@ from typing import (
     Union,
 )
 
-from collections.abc import Set
+from collections.abc import Mapping, Set
 from enum import Enum, unique
 import importlib
 import logging
@@ -656,7 +656,7 @@ class UnlessCondition(LaunchCondition):
 
 
 def _values_to_sub_list(
-    d: Result[dict[Result[str], Result[Union[None, str, LaunchSubstitution]]]],
+    d: Result[Mapping[Result[str], Result[Union[None, str, LaunchSubstitution]]]],
 ) -> Result[dict[str, Result[Collection[Result[LaunchSubstitution]]]]]:
     if not d.is_resolved:
         return Result.of_dict(source=d.source)
@@ -672,7 +672,7 @@ def _values_to_sub_list(
 class ReplaceStringSubstitution(LaunchSubstitution):
     # nav2_common/launch/replace_string.py
     source_file: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
-    replacements: Result[dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+    replacements: Result[Mapping[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
         converter=_values_to_sub_list
     )
     condition: Optional[Result[LaunchCondition]] = None
@@ -749,14 +749,14 @@ class ReplaceStringSubstitution(LaunchSubstitution):
 class RewrittenYamlSubstitution(LaunchSubstitution):
     # nav2_common/launch/rewritten_yaml.py
     source_file: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
-    param_rewrites: Result[dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+    param_rewrites: Result[Mapping[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
         converter=_values_to_sub_list,
     )
     root_key: Optional[Result[list[Result[LaunchSubstitution]]]] = field(
         default=None,
         converter=_to_sub_list_or_none,
     )
-    key_rewrites: Result[dict[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+    key_rewrites: Result[Mapping[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
         default=None,
         converter=lambda d: Result.of_dict({}) if d is None else _values_to_sub_list(d),
     )
@@ -895,8 +895,8 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
         return data
 
     def _add_params(
-        self, data: dict[Any, Any], param_rewrites: dict[str, Result[str]]
-    ) -> Result[dict[Any, Any]]:
+        self, data: Mapping[Any, Any], param_rewrites: Mapping[str, Result[str]]
+    ) -> Result[Mapping[Any, Any]]:
         # add new total path parameters
         yaml_paths: dict[str, Any] = self._pathify(data, '', {})
         for path in param_rewrites:
@@ -911,8 +911,8 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
         return Result.of_dict(data)
 
     def _substitute_keys(
-        self, data: dict[Any, Any], key_rewrites: dict[str, Result[str]]
-    ) -> Result[dict[Any, Any]]:
+        self, data: Mapping[Any, Any], key_rewrites: Mapping[str, Result[str]]
+    ) -> Result[Mapping[Any, Any]]:
         if len(key_rewrites) != 0:
             for key, val in list(data.items()):
                 final_key = key
@@ -947,7 +947,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
 class ParameterFileDescription:
     filepath: Result[LaunchSubstitution]
     allow_subs: Result[Union[bool, LaunchSubstitution]]
-    __cached_result: Optional[Result[dict[Result[str], Result[Any]]]] = None
+    __cached_result: Optional[Result[Mapping[Result[str], Result[Any]]]] = None
 
     @classmethod
     def factory(
@@ -1083,7 +1083,9 @@ class LaunchInclusion(LaunchEntity):
         return True
 
 
-type LaunchNodeParameterDict = Result[dict[Result[LaunchSubstitution], Result[LaunchSubstitution]]]
+type LaunchNodeParameterDict = Result[
+    Mapping[Result[LaunchSubstitution], Result[LaunchSubstitution]]
+]
 type LaunchNodeParameterItem = Union[Result[LaunchSubstitution], LaunchNodeParameterDict]
 type LaunchNodeParameterList = Result[list[LaunchNodeParameterItem]]
 
@@ -1298,10 +1300,10 @@ class NodeFeature(LaunchFeature):
 @frozen
 class LaunchFileFeature(LaunchFeature):
     file: str
-    arguments: dict[FeatureId, ArgumentFeature] = field(factory=dict)
-    nodes: dict[FeatureId, NodeFeature] = field(factory=dict)
+    arguments: Mapping[FeatureId, ArgumentFeature] = field(factory=dict)
+    nodes: Mapping[FeatureId, NodeFeature] = field(factory=dict)
     inclusions: Set[FeatureId] = field(factory=set)
-    conflicts: dict[FeatureId, LogicValue] = field(factory=dict)
+    conflicts: Mapping[FeatureId, LogicValue] = field(factory=dict)
 
     @property
     def is_launch_file(self) -> bool:

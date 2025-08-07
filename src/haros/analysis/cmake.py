@@ -7,6 +7,7 @@
 
 from typing import Any, Final, Iterable
 
+from collections.abc import Mapping
 import logging
 from pathlib import Path
 import re
@@ -42,10 +43,10 @@ class CMakeTarget:
 class CMakeContext:
     parser: Any
     parent: Any = None
-    variables: dict[str, str] = field(factory=dict)
-    environment: dict[str, str] = field(factory=dict)
-    cache: dict[str, str] = field(factory=dict)
-    targets: dict[str, CMakeTarget] = field(factory=dict)
+    variables: Mapping[str, str] = field(factory=dict)
+    environment: Mapping[str, str] = field(factory=dict)
+    cache: Mapping[str, str] = field(factory=dict)
+    targets: Mapping[str, CMakeTarget] = field(factory=dict)
 
     def process_arguments(self, arguments: list[CMakeArgument]) -> list[str]:
         if not arguments:

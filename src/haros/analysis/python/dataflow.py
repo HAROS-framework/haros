@@ -7,6 +7,7 @@
 
 from typing import Any, Callable, Final, Optional, Type
 
+from collections.abc import Mapping
 import logging
 
 from attrs import define, evolve, field, frozen
@@ -305,10 +306,10 @@ def _default_return_value() -> VariantData[Result[Any]]:
 
 @define
 class DataScope:
-    variables: dict[str, VariantData[Definition]] = field(factory=dict)
+    variables: Mapping[str, VariantData[Definition]] = field(factory=dict)
     return_values: VariantData[Result[Any]] = field(factory=_default_return_value)
     _condition_stack: list[LogicValue] = field(init=False, factory=list)
-    _symbols: dict[str, Any] = field(factory=dict)
+    _symbols: Mapping[str, Any] = field(factory=dict)
 
     @property
     def condition(self) -> LogicValue:

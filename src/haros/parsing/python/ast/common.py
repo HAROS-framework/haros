@@ -7,6 +7,7 @@
 
 from typing import Any, NewType, Tuple
 
+from collections.abc import Mapping
 from enum import Enum, auto
 
 from attrs import field, frozen
@@ -151,7 +152,7 @@ class PythonAstNodeMetadata:
     # type: PythonAstNodeType
     line: int = 0
     column: int = 0
-    annotations: dict[str, Any] = field(factory=dict, eq=False, hash=False)
+    annotations: Mapping[str, Any] = field(factory=dict, eq=False, hash=False)
 
 
 @frozen

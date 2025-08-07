@@ -5,19 +5,19 @@
 # Imports
 ###############################################################################
 
-from types import SimpleNamespace
 from typing import (
     Any,
     Callable,
     Final,
     Iterable,
-    Mapping,
     NewType,
     Optional,
     Tuple,
 )
 
+from collections.abc import Mapping
 import logging
+from types import SimpleNamespace
 
 from attrs import define, field, frozen
 
@@ -77,8 +77,8 @@ class ProgramNode:
     id: ProgramNodeId
     ast: PythonStatement
     condition: LogicValue = field(default=TRUE)
-    incoming: dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
-    outgoing: dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    incoming: Mapping[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    outgoing: Mapping[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
 
 @frozen
@@ -177,7 +177,7 @@ def statement_to_node(statement: PythonStatement, uid: ProgramNodeId) -> Program
 class ProgramGraph:
     name: str
     root_id: ProgramNodeId = field()
-    nodes: dict[ProgramNodeId, ProgramNode] = field(factory=dict)
+    nodes: Mapping[ProgramNodeId, ProgramNode] = field(factory=dict)
     asynchronous: bool = False
 
     @root_id.validator
@@ -202,7 +202,7 @@ class ProgramGraphBuilder:
     name: str = '__main__'
     cfg: BasicControlFlowGraphBuilder = field(factory=BasicControlFlowGraphBuilder.from_scratch)
     data: DataScope = field(factory=DataScope.with_builtins)
-    nested_graphs: dict[str, PythonStatement] = field(factory=dict)
+    nested_graphs: Mapping[str, PythonStatement] = field(factory=dict)
     _pid: int = 0
 
     @classmethod

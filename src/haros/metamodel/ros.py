@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, Mapping, Optional
+from typing import Any, Final, Iterable, Optional
 
+from collections.abc import Mapping
 from enum import Enum, Flag, auto, unique
 
 from attrs import asdict, field, frozen
@@ -414,11 +415,11 @@ class ComputationGraphModel(RosRuntimeEntity):
 @frozen
 class ProjectModel:
     name: str
-    packages: dict[str, PackageModel] = field(factory=dict)
-    files: dict[str, FileModel] = field(factory=dict)
-    nodes: dict[str, NodeModel] = field(factory=dict)
+    packages: Mapping[str, PackageModel] = field(factory=dict)
+    files: Mapping[str, FileModel] = field(factory=dict)
+    nodes: Mapping[str, NodeModel] = field(factory=dict)
     # NOTE: still not sure whether to include storage here
-    # storage: dict[str, StorageMetadata] = field(factory=dict)
+    # storage: Mapping[str, StorageMetadata] = field(factory=dict)
 
     def asdict(self) -> dict[str, Any]:
         return asdict(self)

@@ -10,6 +10,7 @@
 from typing import Any, Final
 
 import argparse
+from collections.abc import Mapping
 import logging
 from pathlib import Path
 
@@ -39,7 +40,7 @@ def subprogram(argv: list[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: dict[str, Any], settings: Settings) -> int:
+def run(args: Mapping[str, Any], settings: Settings) -> int:
     action = args['action']
     if action == 'new':
         return action_new(args)
@@ -49,7 +50,7 @@ def run(args: dict[str, Any], settings: Settings) -> int:
     return 1
 
 
-def action_new(args: dict[str, Any]) -> int:
+def action_new(args: Mapping[str, Any]) -> int:
     name = args['name']
     path = args['path']
     logger.info(f'project: new ({name}, {path})')
@@ -70,7 +71,7 @@ def action_new(args: dict[str, Any]) -> int:
     return 0  # success
 
 
-def action_build(args: dict[str, Any]) -> int:
+def action_build(args: Mapping[str, Any]) -> int:
     path = args['path']
     logger.info(f'project: build ({path})')
     try:
