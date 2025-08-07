@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Union
+from typing import Any, Final, Self, Union
 
 from collections.abc import Iterable, Iterator, Mapping, Set
 import logging
@@ -213,14 +213,14 @@ UNKNOWN_VALUE: Final[UnknownValue] = UnknownValue()
 
 @frozen
 class BlackHole(UnknownValue):
-    def __getattr__(self, _name: str) -> 'BlackHole':
+    def __getattr__(self, _name: str) -> Self:
         # could be __getattribute__ instead, if needed
         return self
 
-    def __getitem__(self, _key: Any) -> 'BlackHole':
+    def __getitem__(self, _key: Any) -> Self:
         return self
 
-    def __call__(self, *args: Any, **kwds: Any) -> 'BlackHole':
+    def __call__(self, *args: Any, **kwds: Any) -> Self:
         return self
 
 
