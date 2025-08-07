@@ -9,13 +9,12 @@ from types import ModuleType
 from typing import (
     Any,
     Final,
-    Iterator,
     NewType,
     Optional,
     Union,
 )
 
-from collections.abc import Iterable, Mapping, MutableSequence, Sequence, Set
+from collections.abc import Iterable, Iterator, Mapping, MutableSequence, Sequence, Set
 from enum import Enum, unique
 import importlib
 import logging
