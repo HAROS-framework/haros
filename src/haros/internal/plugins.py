@@ -5,9 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final
+from typing import Any, Final
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from importlib import metadata
 import importlib.util
 import logging

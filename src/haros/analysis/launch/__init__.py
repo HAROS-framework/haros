@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Callable, Final
+from typing import Final
 
+from collections.abc import Callable
 from pathlib import Path
 
 from haros.analysis.launch.python import get_python_launch_description

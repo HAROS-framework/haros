@@ -7,13 +7,12 @@
 
 from typing import (
     Any,
-    Callable,
     Final,
     NewType,
     Optional,
 )
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 import logging
 from types import SimpleNamespace
 

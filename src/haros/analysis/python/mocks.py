@@ -6,8 +6,9 @@
 ###############################################################################
 
 from types import SimpleNamespace
-from typing import Any, Callable, Final, Optional
+from typing import Any, Final, Optional
 
+from collections.abc import Callable
 import logging
 import os
 from pathlib import Path

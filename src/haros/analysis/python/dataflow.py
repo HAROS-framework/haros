@@ -5,9 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, Optional
+from typing import Any, Final, Optional
 
-from collections.abc import Mapping, MutableSequence, Sequence
+from collections.abc import Callable, Mapping, MutableSequence, Sequence
 import logging
 
 from attrs import define, evolve, field, frozen
