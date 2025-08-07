@@ -5,9 +5,10 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Mapping, Optional, Set, TypeVar
+from typing import Any, Mapping, Optional, TypeVar
 
 from collections import defaultdict
+from collections.abc import Set
 
 from attrs import asdict, define, field, frozen
 

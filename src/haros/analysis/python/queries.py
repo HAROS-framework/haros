@@ -5,7 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Callable, Iterable, Optional, Set, TypeVar
+from typing import Callable, Iterable, Optional, TypeVar
+
+from collections.abc import Set
 
 from attrs import define
 
@@ -94,7 +96,7 @@ class ModuleQuery(Query[PythonModule]):
         imports = self._find_statements('is_import')
         return ImportQuery(imports)
 
-    def _find_statements(self, is_what: str) -> Set[PythonStatement]:
+    def _find_statements(self, is_what: str) -> set[PythonStatement]:
         found = set()
         for module in self.matches:
             stack = list(reversed(module.statements))

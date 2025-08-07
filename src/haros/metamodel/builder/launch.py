@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, Mapping, Optional, Set, Tuple
+from typing import Any, Final, Iterable, Mapping, Optional, Tuple
 
+from collections.abc import Set
 import logging
 from pathlib import Path
 

@@ -14,11 +14,11 @@ from typing import (
     Iterator,
     NewType,
     Optional,
-    Set,
     Tuple,
     Union,
 )
 
+from collections.abc import Set
 from enum import Enum, unique
 import importlib
 import logging
