@@ -5,9 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable
+from typing import Any, Final
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping, Sequence
 import logging
 from pathlib import Path
 import re
@@ -31,8 +31,8 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 class CMakeTarget:
     name: str
     is_executable: bool = True
-    sources: list[str] = field(factory=list)
-    dependencies: list[str] = field(factory=list)
+    sources: Sequence[str] = field(factory=list)
+    dependencies: Sequence[str] = field(factory=list)
 
     @property
     def is_library(self) -> bool:
@@ -48,7 +48,7 @@ class CMakeContext:
     cache: Mapping[str, str] = field(factory=dict)
     targets: Mapping[str, CMakeTarget] = field(factory=dict)
 
-    def process_arguments(self, arguments: list[CMakeArgument]) -> list[str]:
+    def process_arguments(self, arguments: Iterable[CMakeArgument]) -> list[str]:
         if not arguments:
             return []
         # first pass: variable substitution

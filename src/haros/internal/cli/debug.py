@@ -10,7 +10,7 @@
 from typing import Any, Final, Iterable
 
 import argparse
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 import json
 import logging
 from pathlib import Path
@@ -37,7 +37,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def subprogram(argv: list[str], settings: Settings) -> int:
+def subprogram(argv: Sequence[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -259,7 +259,7 @@ def print_variables(variables):
 ###############################################################################
 
 
-def parse_arguments(argv: list[str]) -> dict[str, Any]:
+def parse_arguments(argv: Sequence[str]) -> dict[str, Any]:
     parser = argparse.ArgumentParser(
         prog='haros debug',
         description='Manual tests and debugging',

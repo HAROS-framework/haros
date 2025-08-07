@@ -7,7 +7,7 @@
 
 from typing import Any, Callable, Final, Tuple
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from importlib import metadata
 import importlib.util
 import logging
@@ -66,7 +66,7 @@ class HarosPluginInterface:
 
 @frozen(slots=False)
 class PluginManager:
-    plugins: list[HarosPluginInterface] = field(factory=list)
+    plugins: Sequence[HarosPluginInterface] = field(factory=list)
     # plugin name -> error
     # this serves to disable a plugin after it crashes
     errors: Mapping[str, Exception] = field(factory=dict)

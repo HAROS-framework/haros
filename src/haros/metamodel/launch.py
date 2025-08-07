@@ -8,9 +8,7 @@
 from types import ModuleType
 from typing import (
     Any,
-    Collection,
     Final,
-    Iterable,
     Iterator,
     NewType,
     Optional,
@@ -18,7 +16,7 @@ from typing import (
     Union,
 )
 
-from collections.abc import Mapping, Set
+from collections.abc import Iterable, Mapping, Sequence, Set
 from enum import Enum, unique
 import importlib
 import logging
@@ -127,9 +125,7 @@ def const_substitution(
 
 
 def substitute(
-    substitution: Optional[
-        Result[Union[LaunchSubstitution, Collection[Result[LaunchSubstitution]]]]
-    ],
+    substitution: Optional[Result[Union[LaunchSubstitution, Sequence[Result[LaunchSubstitution]]]]],
     context: LaunchScopeContext,
     source: Optional[TrackedCode] = None,
 ) -> Result[str]:
@@ -300,8 +296,8 @@ class PythonExpressionSubstitution(LaunchSubstitution):
     """
 
     # https://github.com/ros2/launch/blob/rolling/launch/launch/substitutions/python_expression.py
-    expression: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
-    modules: Result[Collection[Result[LaunchSubstitution]]] = field(
+    expression: Result[Sequence[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
+    modules: Result[Sequence[Result[LaunchSubstitution]]] = field(
         converter=_to_sub_list,
         factory=_default_python_modules,
     )
@@ -657,10 +653,10 @@ class UnlessCondition(LaunchCondition):
 
 def _values_to_sub_list(
     d: Result[Mapping[Result[str], Result[Union[None, str, LaunchSubstitution]]]],
-) -> Result[dict[str, Result[Collection[Result[LaunchSubstitution]]]]]:
+) -> Result[dict[str, Result[Sequence[Result[LaunchSubstitution]]]]]:
     if not d.is_resolved:
         return Result.of_dict(source=d.source)
-    o: dict[str, Result[Collection[Result[LaunchSubstitution]]]] = {}
+    o: dict[str, Result[Sequence[Result[LaunchSubstitution]]]] = {}
     for key, value in d.value.items():
         if not key.is_resolved:
             return Result.of_dict(source=d.source)
@@ -671,8 +667,8 @@ def _values_to_sub_list(
 @frozen
 class ReplaceStringSubstitution(LaunchSubstitution):
     # nav2_common/launch/replace_string.py
-    source_file: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
-    replacements: Result[Mapping[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+    source_file: Result[Sequence[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
+    replacements: Result[Mapping[str, Result[Sequence[Result[LaunchSubstitution]]]]] = field(
         converter=_values_to_sub_list
     )
     condition: Optional[Result[LaunchCondition]] = None
@@ -748,15 +744,15 @@ class ReplaceStringSubstitution(LaunchSubstitution):
 @frozen
 class RewrittenYamlSubstitution(LaunchSubstitution):
     # nav2_common/launch/rewritten_yaml.py
-    source_file: Result[Collection[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
-    param_rewrites: Result[Mapping[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+    source_file: Result[Sequence[Result[LaunchSubstitution]]] = field(converter=_to_sub_list)
+    param_rewrites: Result[Mapping[str, Result[Sequence[Result[LaunchSubstitution]]]]] = field(
         converter=_values_to_sub_list,
     )
-    root_key: Optional[Result[list[Result[LaunchSubstitution]]]] = field(
+    root_key: Optional[Result[Sequence[Result[LaunchSubstitution]]]] = field(
         default=None,
         converter=_to_sub_list_or_none,
     )
-    key_rewrites: Result[Mapping[str, Result[Collection[Result[LaunchSubstitution]]]]] = field(
+    key_rewrites: Result[Mapping[str, Result[Sequence[Result[LaunchSubstitution]]]]] = field(
         default=None,
         converter=lambda d: Result.of_dict({}) if d is None else _values_to_sub_list(d),
     )
@@ -1087,7 +1083,7 @@ type LaunchNodeParameterDict = Result[
     Mapping[Result[LaunchSubstitution], Result[LaunchSubstitution]]
 ]
 type LaunchNodeParameterItem = Union[Result[LaunchSubstitution], LaunchNodeParameterDict]
-type LaunchNodeParameterList = Result[list[LaunchNodeParameterItem]]
+type LaunchNodeParameterList = Result[Sequence[LaunchNodeParameterItem]]
 
 
 def unknown_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
@@ -1098,9 +1094,9 @@ def empty_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodePara
     return Result.of_list([], source=source)
 
 
-LaunchNodeRemapName = Result[Union[str, LaunchSubstitution]]
-LaunchNodeRemapItem = Result[Tuple[LaunchNodeRemapName, LaunchNodeRemapName]]
-LaunchNodeRemapList = Result[list[LaunchNodeRemapItem]]
+type LaunchNodeRemapName = Result[Union[str, LaunchSubstitution]]
+type LaunchNodeRemapItem = Result[Tuple[LaunchNodeRemapName, LaunchNodeRemapName]]
+type LaunchNodeRemapList = Result[Sequence[LaunchNodeRemapItem]]
 
 
 def unknown_remap_list(source: Optional[TrackedCode] = None) -> LaunchNodeRemapList:
@@ -1243,8 +1239,8 @@ class ArgumentFeature(LaunchFeature):
     name: str
     default_value: Optional[Result[str]] = None
     description: Optional[Result[str]] = None
-    # known_possible_values: list[Result[str]] = field(factory=list)
-    known_possible_values: list[str] = field(factory=list)
+    # known_possible_values: Sequence[Result[str]] = field(factory=list)
+    known_possible_values: Sequence[str] = field(factory=list)
     inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
     # affects_cg: bool = False
     # decision_points: int = 0
@@ -1318,4 +1314,4 @@ class LaunchFileFeature(LaunchFeature):
 @frozen
 class LaunchModel:
     name: str
-    files: list[LaunchFileFeature] = field(factory=list)
+    files: Sequence[LaunchFileFeature] = field(factory=list)

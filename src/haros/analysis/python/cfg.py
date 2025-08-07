@@ -7,7 +7,7 @@
 
 from typing import Final, NewType, Union
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 from attrs import define, field, frozen
 
@@ -47,7 +47,7 @@ class ControlJump:
 @frozen
 class ControlNode:
     id: ControlNodeId
-    body: list[PythonStatement] = field(factory=list, eq=False, hash=False)
+    body: Sequence[PythonStatement] = field(factory=list, eq=False, hash=False)
     condition: LogicValue = field(default=TRUE, eq=False, hash=False)
     incoming: Mapping[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
     outgoing: Mapping[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
@@ -157,7 +157,7 @@ class LoopingContext:
 @define
 class BranchingContext:
     guard_node: ControlNode
-    branch_leaves: list[ControlNode] = field(init=False, factory=list)
+    branch_leaves: Sequence[ControlNode] = field(init=False, factory=list)
     condition: LogicValue = field(init=False, default=FALSE)
     previous: LogicValue = field(init=False, default=TRUE)
     terminal_branch: bool = False
@@ -204,8 +204,8 @@ class BasicControlFlowGraphBuilder:
     current_id: ControlNodeId = ROOT_ID
     nodes: Mapping[ControlNodeId, ControlNode] = field(factory=dict)
     _node_id_counter: int = 0
-    _loop_stack: list[LoopingContext] = field(factory=list, eq=False, hash=False)
-    _branch_stack: list[BranchingContext] = field(factory=list, eq=False, hash=False)
+    _loop_stack: Sequence[LoopingContext] = field(factory=list, eq=False, hash=False)
+    _branch_stack: Sequence[BranchingContext] = field(factory=list, eq=False, hash=False)
 
     @classmethod
     def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):

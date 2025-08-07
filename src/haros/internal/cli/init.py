@@ -10,7 +10,7 @@
 from typing import Any
 
 import argparse
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from haros.internal import home
@@ -21,7 +21,7 @@ from haros.internal.settings import Settings
 ###############################################################################
 
 
-def subprogram(argv: list[str], settings: Settings) -> int:
+def subprogram(argv: Sequence[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -43,7 +43,7 @@ def run(args: Mapping[str, Any], settings: Settings) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: list[str]) -> dict[str, Any]:
+def parse_arguments(argv: Sequence[str]) -> dict[str, Any]:
     msg = 'haros init'
     parser = argparse.ArgumentParser(prog='haros init', description=msg)
 

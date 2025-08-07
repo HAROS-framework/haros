@@ -7,7 +7,7 @@
 
 from typing import Any, Final, Union
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 import logging
 import os
 from pathlib import Path
@@ -168,7 +168,7 @@ def crawl_package(pkg: Path) -> list[Path]:
 
 @frozen
 class StorageManager:
-    workspaces: list[Path] = field(factory=list)
+    workspaces: Sequence[Path] = field(factory=list)
     packages: Mapping[str, Path] = field(factory=dict)
 
     def crawl(self):

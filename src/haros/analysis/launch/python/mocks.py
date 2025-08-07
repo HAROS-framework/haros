@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, Optional, Tuple, Union
+from typing import Any, Final, Optional, Tuple, Union
 
+from collections.abc import Iterable, Sequence
 import logging
 from pathlib import Path
 
@@ -65,7 +66,7 @@ TYPE_LAUNCH_SUBSTITUTION: Final[TypeToken[LaunchSubstitution]] = TypeToken.of(La
 
 @define
 class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
-    entities: Result[list[Result[LaunchEntity]]]
+    entities: Result[Sequence[Result[LaunchEntity]]]
 
     def add_action(self, action: Result[LaunchEntity]) -> None:
         if self.entities.is_resolved:
@@ -117,7 +118,7 @@ def python_launch_description_source_function(arg_list: Result) -> LaunchSubstit
 
 
 def launch_description_function(
-    arg_list: Optional[Result[list[Result[LaunchEntity]]]] = None,
+    arg_list: Optional[Result[Sequence[Result[LaunchEntity]]]] = None,
 ) -> LaunchDescriptionMock:
     if not arg_list:
         return LaunchDescriptionMock(Result.of_list([]))

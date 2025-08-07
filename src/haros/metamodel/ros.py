@@ -5,9 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, Optional
+from typing import Any, Final, Optional
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from enum import Enum, Flag, auto, unique
 
 from attrs import asdict, field, frozen
@@ -245,8 +245,8 @@ class RosClientSubscribeCall(RosSourceEntity):
 
 @frozen
 class RosClientLibraryCalls:
-    advertise: list[RosClientAdvertiseCall] = field(factory=list)
-    subscribe: list[RosClientSubscribeCall] = field(factory=list)
+    advertise: Sequence[RosClientAdvertiseCall] = field(factory=list)
+    subscribe: Sequence[RosClientSubscribeCall] = field(factory=list)
 
     def asdict(self) -> dict[str, Any]:
         return asdict(self)
@@ -293,8 +293,8 @@ class PackageModel(RosFileSystemEntity):
     # Parameters
     name: str = field(validator=matches_re(RE_NAME))
     # Defaults
-    files: list[str] = field(factory=list)
-    nodes: list[str] = field(factory=list)
+    files: Sequence[str] = field(factory=list)
+    nodes: Sequence[str] = field(factory=list)
     # storage: StorageMetadata = field(factory=StorageMetadata)
     metadata: DevelopmentMetadata = field(factory=DevelopmentMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
@@ -317,7 +317,7 @@ class NodeModel(RosFileSystemEntity):
     # Defaults
     is_library: bool = False
     rosname: Optional[RosName] = field(default=None, converter=maybe_str_to_rosname)
-    files: list[str] = field(factory=list)
+    files: Sequence[str] = field(factory=list)
     rcl_calls: RosClientLibraryCalls = field(factory=RosClientLibraryCalls)
     source: SourceCodeMetadata = field(factory=SourceCodeMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
@@ -363,7 +363,7 @@ class RosNodeModel(RosRuntimeEntity):
     rosname: Result[RosName]
     package: Result[str]
     executable: Result[str]
-    arguments: Result[list[str]] = field(factory=Result.of_list)
+    arguments: Result[Sequence[str]] = field(factory=Result.of_list)
     parameters: Result = field(factory=Result.of_dict)
     remappings: Result = field(factory=Result.of_dict)
     output: Result[str] = Result.of_string('log')
@@ -404,7 +404,7 @@ class RosParameterModel(RosRuntimeEntity):
 
 @frozen
 class ComputationGraphModel(RosRuntimeEntity):
-    nodes: list[RosNodeModel] = field(factory=list)
+    nodes: Sequence[RosNodeModel] = field(factory=list)
 
 
 ###############################################################################

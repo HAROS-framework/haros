@@ -10,7 +10,7 @@
 from typing import Any, Final
 
 import argparse
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping, Sequence
 import json
 import logging
 from pathlib import Path
@@ -41,7 +41,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def subprogram(argv: list[str], settings: Settings) -> int:
+def subprogram(argv: Sequence[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -102,7 +102,7 @@ def run(args: Mapping[str, Any], settings: Settings) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: list[str]) -> dict[str, Any]:
+def parse_arguments(argv: Sequence[str]) -> dict[str, Any]:
     msg = 'Run analyses over ROS workspaces and packages'
     parser = argparse.ArgumentParser(prog='haros analysis', description=msg)
 
@@ -137,7 +137,7 @@ def parse_arguments(argv: list[str]) -> dict[str, Any]:
 ###############################################################################
 
 
-def process_paths(paths: list[Path]) -> StorageManager:
+def process_paths(paths: Iterable[Path]) -> StorageManager:
     storage = StorageManager()
     adhoc = []
     for path in paths:
