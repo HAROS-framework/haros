@@ -7,7 +7,7 @@
 
 from typing import Any, Final
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, MutableSequence
 import logging
 from pathlib import Path
 import re
@@ -31,8 +31,8 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 class CMakeTarget:
     name: str
     is_executable: bool = True
-    sources: Sequence[str] = field(factory=list)
-    dependencies: Sequence[str] = field(factory=list)
+    sources: MutableSequence[str] = field(factory=list)
+    dependencies: MutableSequence[str] = field(factory=list)
 
     @property
     def is_library(self) -> bool:

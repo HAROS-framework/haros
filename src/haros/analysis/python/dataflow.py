@@ -7,7 +7,7 @@
 
 from typing import Any, Callable, Final, Optional, Type
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableSequence, Sequence
 import logging
 
 from attrs import define, evolve, field, frozen
@@ -40,7 +40,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 BUILTINS_MODULE: Final[str] = '__builtins__'
 
-BUILTIN_FUNCTIONS: Final[list[str]] = [
+BUILTIN_FUNCTIONS: Final[Sequence[str]] = [
     'abs',
     'all',
     'any',
@@ -94,7 +94,7 @@ BUILTIN_FUNCTIONS: Final[list[str]] = [
     # '__import__',
 ]
 
-BUILTIN_CLASSES: Final[list[str]] = [
+BUILTIN_CLASSES: Final[Sequence[str]] = [
     'bool',
     'bytearray',
     'bytes',
@@ -115,7 +115,7 @@ BUILTIN_CLASSES: Final[list[str]] = [
     'type',
 ]
 
-BUILTIN_EXCEPTIONS: Final[list[str]] = [
+BUILTIN_EXCEPTIONS: Final[Sequence[str]] = [
     'BaseException',
     'Exception',
     'ArithmeticError',
@@ -308,7 +308,7 @@ def _default_return_value() -> VariantData[Result[Any]]:
 class DataScope:
     variables: Mapping[str, VariantData[Definition]] = field(factory=dict)
     return_values: VariantData[Result[Any]] = field(factory=_default_return_value)
-    _condition_stack: Sequence[LogicValue] = field(init=False, factory=list)
+    _condition_stack: MutableSequence[LogicValue] = field(init=False, factory=list)
     _symbols: Mapping[str, Any] = field(factory=dict)
 
     @property

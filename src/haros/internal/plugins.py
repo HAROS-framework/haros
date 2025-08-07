@@ -107,7 +107,9 @@ def load(haroshome: Path, settings: Mapping[str, Mapping[str, Any]]) -> PluginMa
 ###############################################################################
 
 
-def _load_from_entrypoints(settings: Mapping[str, Mapping[str, Any]]) -> list[HarosPluginInterface]:
+def _load_from_entrypoints(
+    settings: Mapping[str, Mapping[str, Any]],
+) -> list[HarosPluginInterface]:
     logger.info(f'plugins: searching {ENTRY_POINT}')
     plugins = []
     try:

@@ -7,7 +7,7 @@
 
 from typing import Any, Final, Optional
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, MutableSequence, Sequence
 from enum import Enum, Flag, auto, unique
 
 from attrs import asdict, field, frozen
@@ -293,8 +293,8 @@ class PackageModel(RosFileSystemEntity):
     # Parameters
     name: str = field(validator=matches_re(RE_NAME))
     # Defaults
-    files: Sequence[str] = field(factory=list)
-    nodes: Sequence[str] = field(factory=list)
+    files: MutableSequence[str] = field(factory=list)
+    nodes: MutableSequence[str] = field(factory=list)
     # storage: StorageMetadata = field(factory=StorageMetadata)
     metadata: DevelopmentMetadata = field(factory=DevelopmentMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
@@ -317,7 +317,7 @@ class NodeModel(RosFileSystemEntity):
     # Defaults
     is_library: bool = False
     rosname: Optional[RosName] = field(default=None, converter=maybe_str_to_rosname)
-    files: Sequence[str] = field(factory=list)
+    files: MutableSequence[str] = field(factory=list)
     rcl_calls: RosClientLibraryCalls = field(factory=RosClientLibraryCalls)
     source: SourceCodeMetadata = field(factory=SourceCodeMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)

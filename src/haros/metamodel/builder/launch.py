@@ -7,7 +7,7 @@
 
 from typing import Any, Final, Optional
 
-from collections.abc import Iterable, Mapping, Sequence, Set
+from collections.abc import Iterable, Mapping, MutableSequence, Sequence, Set
 import logging
 from pathlib import Path
 
@@ -202,8 +202,8 @@ def _empty_args() -> Result[Mapping[str, Result[str]]]:
 class LaunchFeatureModelBuilder:
     file: str
     system: AnalysisSystemInterface = field(factory=AnalysisSystemInterface)
-    nodes: Sequence[NodeFeature] = field(factory=list)
-    scope_stack: Sequence[LaunchScope] = field(factory=list)
+    nodes: MutableSequence[NodeFeature] = field(factory=list)
+    scope_stack: MutableSequence[LaunchScope] = field(factory=list)
     included_files: Set[FeatureId] = field(factory=set)
     passed_args: Result[Mapping[str, Result[str]]] = field(factory=_empty_args)
 

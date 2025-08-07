@@ -15,7 +15,7 @@ from typing import (
     Union,
 )
 
-from collections.abc import Iterable, Mapping, Sequence, Set
+from collections.abc import Iterable, Mapping, MutableSequence, Sequence, Set
 from enum import Enum, unique
 import importlib
 import logging
@@ -871,7 +871,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
     def _update_yaml_path_vals(
         self,
         data: dict[Any, Any],
-        yaml_key_list: list[str],
+        yaml_key_list: MutableSequence[str],
         rewrite_val: Union[bool, int, float, str],
     ) -> dict[Any, Any]:
         for key in yaml_key_list:

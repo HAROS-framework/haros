@@ -7,7 +7,7 @@
 
 from typing import Any, Final, Optional, Union
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, MutableSequence, Sequence
 import logging
 from pathlib import Path
 
@@ -28,6 +28,7 @@ from haros.metamodel.launch import (
     LaunchGroupAction,
     LaunchInclusion,
     LaunchNode,
+    LaunchNodeRemapItem,
     LaunchNodeRemapList,
     LaunchSetEnvironment,
     LaunchSubstitution,
@@ -66,7 +67,7 @@ TYPE_LAUNCH_SUBSTITUTION: Final[TypeToken[LaunchSubstitution]] = TypeToken.of(La
 
 @define
 class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
-    entities: Result[Sequence[Result[LaunchEntity]]]
+    entities: Result[MutableSequence[Result[LaunchEntity]]]
 
     def add_action(self, action: Result[LaunchEntity]) -> None:
         if self.entities.is_resolved:
@@ -236,12 +237,13 @@ def node_function(
     else:
         params = unknown_parameter_list(source=parameters.source)
     if remappings is None:
-        remaps = Result.of_list([])
-    elif remappings.is_resolved:
         remaps: LaunchNodeRemapList = Result.of_list([])
+    elif remappings.is_resolved:
+        to_keep: MutableSequence[LaunchNodeRemapItem] = []
+        remaps = Result.of_list(to_keep, source=remappings.source)
         for item in remappings.value:
             if item.is_resolved:
-                remaps.value.append(item)
+                to_keep.append(item)
             else:
                 remaps = unknown_remap_list(source=remappings.source)
                 break

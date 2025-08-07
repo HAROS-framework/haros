@@ -8,7 +8,7 @@
 from typing import Any, Optional, TypeVar
 
 from collections import defaultdict
-from collections.abc import Mapping, Sequence, Set
+from collections.abc import Mapping, MutableSequence, Set
 
 from attrs import asdict, define, field, frozen
 
@@ -107,7 +107,7 @@ class VariantValue[T]:
 @define
 class VariantData[T]:
     _base_value: Optional[T] = None
-    _variants: Sequence[VariantValue[T]] = field(factory=list)
+    _variants: MutableSequence[VariantValue[T]] = field(factory=list)
 
     @property
     def has_base_value(self) -> bool:
