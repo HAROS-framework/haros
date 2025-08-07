@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional
 
 from collections import defaultdict
 from collections.abc import Mapping, MutableSequence, Set
@@ -92,9 +92,6 @@ class TrackedCode:
 ###############################################################################
 
 
-T = TypeVar('T')
-
-
 @frozen
 class VariantValue[T]:
     value: T
@@ -166,7 +163,7 @@ class VariantData[T]:
         return ' or '.join(values)
 
 
-def variant_dict(other: Mapping[Any, T] = None) -> Mapping[Any, VariantData[T]]:
+def variant_dict[T](other: Mapping[Any, T] = None) -> Mapping[Any, VariantData[T]]:
     d = defaultdict(VariantData)
     if other:
         for key, value in other.items():

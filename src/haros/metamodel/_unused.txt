@@ -220,11 +220,11 @@ class Resolved(Result[V]):
             raise ValueError('doubly wrapped Result')
         if isinstance(value, BaseException):
             return cls(TYPE_TOKEN_EXCEPTION, source, value)
-        if isinstance(value, CLASS_TYPE):
+        if isinstance(value, ClassType):
             return cls(TypeToken.of(value), source, value)
-        if isinstance(value, BUILTIN_FUNCTION_TYPE):
+        if isinstance(value, BuiltinFunctionType):
             return cls(TYPE_TOKEN_FUNCTION, source, value)
-        if isinstance(value, DEF_FUNCTION_TYPE):
+        if isinstance(value, DefFunctionType):
             return cls(TYPE_TOKEN_FUNCTION, source, value)
         if callable(value):
             return cls(TYPE_TOKEN_FUNCTION, source, value)

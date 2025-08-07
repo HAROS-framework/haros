@@ -5,9 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional, Type
+from typing import Any, Final, Optional
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 
 from haros.metamodel.common import (
     DevelopmentMetadata,
@@ -36,7 +36,7 @@ from haros.metamodel.ros import (
 # Constants
 ###############################################################################
 
-JSON_PRIMITIVE_TYPES: Final[tuple[Type]] = (bool, int, float, str)
+JSON_PRIMITIVE_TYPES: Final[Sequence[type]] = (bool, int, float, str)
 
 ###############################################################################
 # Project Interface

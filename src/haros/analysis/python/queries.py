@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Optional
 
 from collections.abc import Iterable, Set
 
@@ -18,12 +18,6 @@ from haros.parsing.python.ast import (
     PythonModule,
     PythonStatement,
 )
-
-###############################################################################
-# Constants
-###############################################################################
-
-T = TypeVar('T')
 
 ###############################################################################
 # Interface

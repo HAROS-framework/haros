@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, Optional, Type
+from typing import Any, Callable, Final, Optional
 
 from collections.abc import Mapping, MutableSequence, Sequence
 import logging
@@ -258,7 +258,7 @@ class Definition[V]:
         return self.import_base == BUILTINS_MODULE
 
     @classmethod
-    def of_builtin_function(cls, name: str) -> 'Definition[Type[min]]':
+    def of_builtin_function(cls, name: str) -> 'Definition[type[min]]':
         # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert callable(raw_value), f'expected function, got: {raw_value!r}'
@@ -267,12 +267,12 @@ class Definition[V]:
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def of_builtin_class(cls, name: str) -> 'Definition[Type]':
+    def of_builtin_class(cls, name: str) -> 'Definition[type]':
         # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
         wrapper = StrictFunctionCaller(raw_value, name=name, module=BUILTINS_MODULE)
-        value: Result[Type] = Result.of_class(value=wrapper)
+        value: Result[type] = Result.of_class(value=wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
