@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Collection, Iterable, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
+from collections.abc import Iterable, Sequence
 import re
 
 from attrs import frozen
@@ -1357,7 +1358,7 @@ class ToAst(Transformer):
 
     def kwargs(
         self,
-        children: Collection[Union[PythonExpression, PythonArgument]],
+        children: Sequence[Union[PythonExpression, PythonArgument]],
     ) -> Tuple[PythonArgument]:
         assert len(children) >= 1
         args: list[PythonArgument] = []
@@ -1384,7 +1385,7 @@ class ToAst(Transformer):
             )
         return tuple(args)
 
-    def argvalue(self, children: Collection[PythonExpression]) -> PythonArgument:
+    def argvalue(self, children: Sequence[PythonExpression]) -> PythonArgument:
         assert len(children) >= 1 and len(children) <= 2, f'argvalue: {children}'
         value: PythonExpression = children[-1]
         name: str = ''
