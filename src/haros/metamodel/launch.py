@@ -27,7 +27,7 @@ import yaml
 
 from haros.metamodel.common import TrackedCode
 from haros.metamodel.logic import TRUE, LogicValue
-from haros.metamodel.result import IterableType, Result, UnresolvedString
+from haros.metamodel.result import Result, UnresolvedString
 from haros.metamodel.ros import RosName, RosNodeModel
 
 ###############################################################################
@@ -180,7 +180,7 @@ def _to_sub_list(
         arg = Result.of(TextSubstitution(''), source=arg.source)
     elif isinstance(arg.value, str):
         arg = Result.of(TextSubstitution(arg.value), source=arg.source)
-    elif isinstance(arg.value, IterableType):
+    elif isinstance(arg.value, Iterable):
         values = [_to_sub(item) for item in arg.value]
         return Result.of_list(values, source=arg.source)
     if isinstance(arg.value, LaunchSubstitution):
