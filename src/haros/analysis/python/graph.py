@@ -9,12 +9,11 @@ from typing import (
     Any,
     Callable,
     Final,
-    Iterable,
     NewType,
     Optional,
 )
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 import logging
 from types import SimpleNamespace
 

@@ -5,9 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Callable, Iterable, Optional, TypeVar
+from typing import Callable, Optional, TypeVar
 
-from collections.abc import Set
+from collections.abc import Iterable, Set
 
 from attrs import define
 

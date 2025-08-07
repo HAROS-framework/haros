@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, Iterable, Mapping, Optional, Union
+from typing import Any, Callable, Final, Optional, Union
 
+from collections.abc import Iterable, Mapping
 from errno import EACCES
 import logging
 import os

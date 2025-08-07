@@ -5,9 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, Mapping
+from typing import Any, Final
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from attrs import field, frozen
 

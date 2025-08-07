@@ -7,10 +7,10 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable
+from typing import Any, Final
 
 import argparse
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 import json
 import logging
 from pathlib import Path

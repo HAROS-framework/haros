@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Final, Mapping
+from typing import Final
 
+from collections.abc import Mapping
 import logging
 from pathlib import Path
 
