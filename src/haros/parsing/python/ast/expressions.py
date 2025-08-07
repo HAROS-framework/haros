@@ -5,8 +5,6 @@
 # Imports
 ###############################################################################
 
-from typing import Optional
-
 from collections.abc import Sequence
 
 from attrs import frozen
@@ -222,7 +220,7 @@ class PythonSetLiteral(PythonLiteral):
 class PythonTupleComprehension(PythonLiteral):
     expression: PythonExpression
     iterators: Sequence[PythonIterator]
-    test: Optional[PythonExpression] = None
+    test: PythonExpression | None = None
 
     @property
     def is_tuple(self) -> bool:
@@ -237,7 +235,7 @@ class PythonTupleComprehension(PythonLiteral):
 class PythonListComprehension(PythonLiteral):
     expression: PythonExpression
     iterators: Sequence[PythonIterator]
-    test: Optional[PythonExpression] = None
+    test: PythonExpression | None = None
 
     @property
     def is_list(self) -> bool:
@@ -252,7 +250,7 @@ class PythonListComprehension(PythonLiteral):
 class PythonDictComprehension(PythonLiteral):
     entry: PythonKeyValuePair
     iterators: Sequence[PythonIterator]
-    test: Optional[PythonExpression] = None
+    test: PythonExpression | None = None
 
     @property
     def is_dict(self) -> bool:
@@ -267,7 +265,7 @@ class PythonDictComprehension(PythonLiteral):
 class PythonSetComprehension(PythonLiteral):
     expression: PythonExpression
     iterators: Sequence[PythonIterator]
-    test: Optional[PythonExpression] = None
+    test: PythonExpression | None = None
 
     @property
     def is_set(self) -> bool:
@@ -286,7 +284,7 @@ class PythonSetComprehension(PythonLiteral):
 @frozen
 class PythonReference(PythonExpression):
     name: str
-    object: Optional[PythonExpression] = None
+    object: PythonExpression | None = None
 
     @property
     def is_reference(self) -> bool:
@@ -460,7 +458,7 @@ class PythonConditionalExpression(PythonExpression):
 class PythonGenerator(PythonExpression):
     result: PythonAst
     iterators: Sequence[PythonIterator]
-    test: Optional[PythonExpression] = None
+    test: PythonExpression | None = None
 
     @property
     def is_generator(self) -> bool:

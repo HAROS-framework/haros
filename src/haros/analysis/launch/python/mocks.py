@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 from collections.abc import Iterable, MutableSequence, Sequence
 import logging
@@ -119,7 +119,7 @@ def python_launch_description_source_function(arg_list: Result) -> LaunchSubstit
 
 
 def launch_description_function(
-    arg_list: Optional[Result[Sequence[Result[LaunchEntity]]]] = None,
+    arg_list: Result[Sequence[Result[LaunchEntity]]] | None = None,
 ) -> LaunchDescriptionMock:
     if not arg_list:
         return LaunchDescriptionMock(Result.of_list([]))
@@ -128,8 +128,8 @@ def launch_description_function(
 
 def declare_launch_argument_function(
     name: Result,
-    default_value: Optional[Result] = None,
-    description: Optional[Result] = None,
+    default_value: Result | None = None,
+    description: Result | None = None,
 ) -> LaunchArgument:
     return LaunchArgument(
         _dataflow_to_string(name),
@@ -147,7 +147,7 @@ def set_environment_variable_function(name: Result, value: Result) -> LaunchSetE
 
 def launch_configuration_function(
     name: Result,
-    default: Optional[Result] = None,
+    default: Result | None = None,
 ) -> LaunchConfiguration:
     return LaunchConfiguration(
         _dataflow_to_string(name),
@@ -162,8 +162,8 @@ type LaunchArgumentKeyValue = SubstitutionPair | Result[SubstitutionPair]
 
 def include_launch_description_function(
     source: Result,
-    launch_arguments: Optional[Result[Iterable[LaunchArgumentKeyValue]]] = None,
-    condition: Optional[Result[LaunchCondition]] = None,
+    launch_arguments: Result[Iterable[LaunchArgumentKeyValue]] | None = None,
+    condition: Result[LaunchCondition] | None = None,
 ) -> LaunchInclusion:
     _source: Result[LaunchSubstitution] = unknown_substitution(source=source.source)
     if source.is_resolved:
@@ -186,27 +186,27 @@ def include_launch_description_function(
 
 def node_function(
     executable: Result,
-    package: Optional[Result] = None,
-    name: Optional[Result] = None,
-    parameters: Optional[Result[Iterable[Result[Any]]]] = None,
-    arguments: Optional[Result] = None,
-    output: Optional[Result] = None,
-    remappings: Optional[Result[Iterable[Result[Any]]]] = None,
-    condition: Optional[LaunchCondition] = None,
-    respawn: Optional[Any] = None,  # FIXME
-    respawn_delay: Optional[Any] = None,  # FIXME
+    package: Result | None = None,
+    name: Result | None = None,
+    parameters: Result[Iterable[Result[Any]]] | None = None,
+    arguments: Result | None = None,
+    output: Result | None = None,
+    remappings: Result[Iterable[Result[Any]]] | None = None,
+    condition: LaunchCondition | None = None,
+    respawn: Any | None = None,  # FIXME
+    respawn_delay: Any | None = None,  # FIXME
 ) -> LaunchNode:
     # docs: https://github.com/ros2/launch_ros/blob/rolling/launch_ros/launch_ros/actions/node.py
     # Node.__init__:
     #   executable: SomeSubstitutionsType
-    #   package: Optional[SomeSubstitutionsType]
-    #   name: Optional[SomeSubstitutionsType]
-    #   namespace: Optional[SomeSubstitutionsType]
-    #   exec_name: Optional[SomeSubstitutionsType]
-    #   parameters: Optional[SomeParameters]
-    #   remappings: Optional[SomeRemapRules]
-    #   ros_arguments: Optional[Iterable[SomeSubstitutionsType]]
-    #   arguments: Optional[Iterable[SomeSubstitutionsType]]
+    #   package: SomeSubstitutionsType | None
+    #   name: SomeSubstitutionsType | None
+    #   namespace: SomeSubstitutionsType | None
+    #   exec_name: SomeSubstitutionsType | None
+    #   parameters: SomeParameters | None
+    #   remappings: SomeRemapRules | None
+    #   ros_arguments: Iterable[SomeSubstitutionsType] | None
+    #   arguments: Iterable[SomeSubstitutionsType] | None
     #   **kwargs
     if parameters is None:
         params = Result.of_list([])
@@ -264,8 +264,8 @@ def node_function(
 
 
 def group_action_function(
-    actions: Optional[Result[Iterable[Result[LaunchEntity]]]] = None,
-    condition: Optional[LaunchCondition] = None,
+    actions: Result[Iterable[Result[LaunchEntity]]] | None = None,
+    condition: LaunchCondition | None = None,
 ) -> LaunchGroupAction:
     return LaunchGroupAction(actions or Result.of_list([]), condition=condition)
 
@@ -316,9 +316,9 @@ def _dataflow_to_string(value: Result) -> str:
 
 
 def _dataflow_to_launch_substitution(
-    result: Optional[Result],
-    default: Optional[str] = None,
-) -> Optional[Result[LaunchSubstitution]]:
+    result: Result | None,
+    default: str | None = None,
+) -> Result[LaunchSubstitution] | None:
     if result is None:
         return None if default is None else const_text(default)
     if result.is_resolved:
@@ -329,7 +329,7 @@ def _dataflow_to_launch_substitution(
     return unknown_substitution(source=result.source)
 
 
-def _dataflow_to_launch_list(arg_list: Optional[Result]) -> list[Result[LaunchSubstitution]]:
+def _dataflow_to_launch_list(arg_list: Result | None) -> list[Result[LaunchSubstitution]]:
     values = []
     if arg_list is not None:
         if arg_list.is_resolved:

@@ -5,8 +5,6 @@
 # Imports
 ###############################################################################
 
-from typing import Optional
-
 from haros.metamodel.logic import (
     FALSE,
     TRUE,
@@ -84,7 +82,7 @@ def to_condition(expr: PythonExpression) -> LogicValue:
     return LogicVariable(expr)
 
 
-def _compare(expr: PythonExpression) -> Optional[bool]:
+def _compare(expr: PythonExpression) -> bool | None:
     a = _solve_number(expr.operand1)
     b = _solve_number(expr.operand2)
     if a is None or b is None:
@@ -106,7 +104,7 @@ def _compare(expr: PythonExpression) -> Optional[bool]:
     return None
 
 
-def _solve_number(expr: PythonExpression) -> Optional[int]:
+def _solve_number(expr: PythonExpression) -> int | None:
     if expr.is_literal:
         if expr.is_number:
             return expr.value

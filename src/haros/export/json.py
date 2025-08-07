@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 from collections.abc import Iterable, Mapping, Sequence
 
@@ -178,11 +178,11 @@ def _result(result: Result[Any]) -> dict[str, Any]:
     return data
 
 
-def _tracked_code(code: Optional[TrackedCode]) -> Optional[dict[str, Any]]:
+def _tracked_code(code: TrackedCode | None) -> dict[str, Any] | None:
     return None if code is None else code.location.serialize()
 
 
-def _rosname(rosname: Optional[RosName]) -> Optional[str]:
+def _rosname(rosname: RosName | None) -> str | None:
     return None if rosname is None else str(rosname)
 
 

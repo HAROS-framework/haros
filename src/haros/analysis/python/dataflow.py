@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 from collections.abc import Callable, Mapping, MutableSequence, Sequence
 import logging
@@ -224,7 +224,7 @@ class StrictFunctionCaller(Callable):
         return Result.of(raw_value)
 
 
-def tracked(ast: PythonAst) -> Optional[TrackedCode]:
+def tracked(ast: PythonAst) -> TrackedCode | None:
     location = SourceCodeLocation(
         file=ast.meta.annotations.get('file'),
         package=ast.meta.annotations.get('package'),
@@ -238,7 +238,7 @@ def tracked(ast: PythonAst) -> Optional[TrackedCode]:
 @frozen
 class Definition[V]:
     value: Result[V]
-    ast: Optional[PythonAst] = None
+    ast: PythonAst | None = None
     import_base: str = ''
 
     @property
@@ -276,7 +276,7 @@ class Definition[V]:
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def from_value(cls, raw_value: V, ast: Optional[PythonAst] = None) -> 'Definition[V]':
+    def from_value(cls, raw_value: V, ast: PythonAst | None = None) -> 'Definition[V]':
         return cls(Result.of(raw_value), ast=ast)  # FIXME TrackedCode from ast
 
     def cast_to(self, type: TypeToken[T]) -> 'Definition[T]':
@@ -339,7 +339,7 @@ class DataScope:
         self,
         name: str,
         value: Result[Any],
-        ast: Optional[PythonAst] = None,
+        ast: PythonAst | None = None,
         import_base: str = '',
     ):
         definition = Definition(value, ast=ast, import_base=import_base)
@@ -389,7 +389,7 @@ class DataScope:
     def add_function_def(
         self,
         statement: PythonFunctionDefStatement,
-        fun: Optional[Callable] = None,
+        fun: Callable | None = None,
     ):
         assert statement.is_statement and statement.is_function_def
         if fun is None:
@@ -416,7 +416,7 @@ class DataScope:
         value = self.value_from_expression(statement.value)
         self.set(name, value, ast=statement)
 
-    def add_return_value(self, expression: Optional[PythonExpression] = None):
+    def add_return_value(self, expression: PythonExpression | None = None):
         if expression is None:
             value = Result.of_none()
         else:

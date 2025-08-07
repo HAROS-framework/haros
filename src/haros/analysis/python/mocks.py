@@ -6,7 +6,7 @@
 ###############################################################################
 
 from types import SimpleNamespace
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 from collections.abc import Callable
 import logging
@@ -43,7 +43,7 @@ class LazyFileHandle(MockObject):
     path: Result[PathType]
     system: AnalysisSystemInterface
 
-    def read(self, encoding: Optional[Result[str]] = None) -> Result[str]:
+    def read(self, encoding: Result[str] | None = None) -> Result[str]:
         try:
             if self.path.is_resolved:
                 encoding = encoding or Result.of_none()
@@ -64,7 +64,7 @@ class BuiltinOpen(MockObject, Callable[[Result[str], Result[str]], Result[LazyFi
     def __call__(
         self,
         path: Result[str],
-        mode: Optional[Result[str]] = None,
+        mode: Result[str] | None = None,
     ) -> Result[LazyFileHandle]:
         if not path.is_resolved:
             return Result.unknown_value()

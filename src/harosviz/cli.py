@@ -20,7 +20,7 @@ Some of the structure of this file came from this StackExchange question:
 # Imports
 ###############################################################################
 
-from typing import Any, Optional
+from typing import Any
 
 import argparse
 from collections.abc import Mapping, Sequence
@@ -40,7 +40,7 @@ from harosviz import __version__ as current_version
 ###############################################################################
 
 
-def parse_arguments(argv: Optional[Sequence[str]]) -> dict[str, Any]:
+def parse_arguments(argv: Sequence[str] | None) -> dict[str, Any]:
     msg = 'HAROSViz: Visualizer for ROS applications.'
     parser = argparse.ArgumentParser(description=msg)
 
@@ -298,7 +298,7 @@ def _load_project_nodes(root):
 ###############################################################################
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = parse_arguments(argv)
     try:
         config = load_configs(args)

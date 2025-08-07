@@ -5,8 +5,6 @@
 # Imports
 ###############################################################################
 
-from typing import Optional
-
 from collections.abc import Sequence
 
 from attrs import field, frozen
@@ -61,7 +59,7 @@ class PythonDeleteStatement(PythonStatement):
 
 @frozen
 class PythonReturnStatement(PythonStatement):
-    value: Optional[PythonExpression]
+    value: PythonExpression | None = None
 
     @property
     def is_return(self) -> bool:
@@ -70,8 +68,8 @@ class PythonReturnStatement(PythonStatement):
 
 @frozen
 class PythonRaiseStatement(PythonStatement):
-    exception: Optional[PythonExpression]
-    cause: Optional[PythonExpression]
+    exception: PythonExpression | None = None
+    cause: PythonExpression | None = None
 
     @property
     def is_raise(self) -> bool:
@@ -109,7 +107,7 @@ class PythonAssignmentStatement(PythonStatement):
     variable: PythonExpression
     value: PythonExpression
     operator: str = '='
-    type_hint: Optional[PythonExpression] = None
+    type_hint: PythonExpression | None = None
 
     @property
     def is_assignment(self) -> bool:
@@ -153,7 +151,7 @@ class PythonScopeStatement(PythonStatement):
 @frozen
 class PythonAssertStatement(PythonStatement):
     condition: PythonExpression
-    message: Optional[PythonExpression]
+    message: PythonExpression | None = None
 
     @property
     def is_assert(self) -> bool:
@@ -170,7 +168,7 @@ class PythonFunctionDefStatement(PythonStatement):
     name: str
     parameters: Sequence[PythonFunctionParameter]
     body: Sequence[PythonStatement]
-    type_hint: Optional[PythonExpression] = None
+    type_hint: PythonExpression | None = None
     asynchronous: bool = False
     decorators: Sequence[PythonDecorator] = field(factory=tuple)
 

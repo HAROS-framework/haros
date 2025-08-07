@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 from collections.abc import Iterable, Mapping, MutableSequence, Sequence, Set
 import logging
@@ -67,8 +67,8 @@ class ArgumentFeatureBuilder:
     # value of this argument - given via command line or computed from default
     value: Result[str] = field(factory=Result.of_string)
     # default value, defined on declaration
-    default_value: Optional[Result[str]] = None
-    description: Optional[Result[str]] = None
+    default_value: Result[str] | None = None
+    description: Result[str] | None = None
     # type computed from the current value
     inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING
     # affects_cg: bool = False
@@ -120,14 +120,14 @@ class LaunchScope(LaunchScopeContext):
     configs: Mapping[str, Result] = field(factory=dict)
     anonymous: Mapping[str, str] = field(factory=dict, eq=False)
 
-    def get(self, name: str) -> Optional[Result]:
+    def get(self, name: str) -> Result | None:
         value = self.configs.get(name)
         if value is None:
             arg = self.args.get(name)
             value = None if arg is None else arg.value
         return value
 
-    def get_arg(self, name: str) -> Optional[Result]:
+    def get_arg(self, name: str) -> Result | None:
         arg = self.args.get(name)
         return None if arg is None else arg.value
 
@@ -135,7 +135,7 @@ class LaunchScope(LaunchScopeContext):
         # if name not in self.configs:
         self.configs[name] = value
 
-    def resolve_condition(self, condition: Optional[Result[LaunchCondition]]) -> Result[bool]:
+    def resolve_condition(self, condition: Result[LaunchCondition] | None) -> Result[bool]:
         if condition is None:
             return Result.of_bool(True)
         if condition.is_resolved:
@@ -212,7 +212,7 @@ class LaunchFeatureModelBuilder:
         cls,
         file_path: Path,
         system: AnalysisSystemInterface,
-        args: Optional[Result[Mapping[str, Result[str]]]] = None,
+        args: Result[Mapping[str, Result[str]]] | None = None,
         condition: LogicValue = TRUE,
     ) -> 'LaunchFeatureModelBuilder':
         passed_args = args if args is not None else Result.of_dict({})
@@ -231,7 +231,7 @@ class LaunchFeatureModelBuilder:
     def root(self) -> LaunchScope:
         return self.scope_stack[0]
 
-    def build(self, uid: Optional[FeatureId] = None) -> LaunchFileFeature:
+    def build(self, uid: FeatureId | None = None) -> LaunchFileFeature:
         return LaunchFileFeature(
             uid if uid is not None else FeatureId(f'file:{self.file}'),
             self.file,
@@ -241,7 +241,7 @@ class LaunchFeatureModelBuilder:
         )
         # conflicts: dict[FeatureId, LogicValue] = field(factory=dict)
 
-    def enter_group(self, condition: Optional[Result[LaunchCondition]]):
+    def enter_group(self, condition: Result[LaunchCondition] | None):
         boolean: Result[bool] = self.scope.resolve_condition(condition)
         phi: LogicValue = _logic_value_from_result(boolean)
         self.scope_stack.append(self.scope.duplicate(join_condition=phi))
@@ -336,7 +336,7 @@ class LaunchFeatureModelBuilder:
         executable: Result = substitute(node.executable, self.scope)
         # node_id = uid_node(str(package), str(executable))
         name: str = self._get_node_name(node.name, package, executable)
-        # namespace: Optional[LaunchSubstitution]
+        # namespace: LaunchSubstitution | None
         # remaps: dict[LaunchSubstitution, LaunchSubstitution]
         output: Result = substitute(node.output, self.scope)
         args: Result = Result.of_list([substitute(arg, self.scope) for arg in node.arguments])
@@ -366,7 +366,7 @@ class LaunchFeatureModelBuilder:
         self.nodes.append(feature)
 
     def parameters_from_list(
-        self, parameters: LaunchNodeParameterList, node: Optional[str] = None
+        self, parameters: LaunchNodeParameterList, node: str | None = None
     ) -> Result:
         if not parameters.is_resolved:
             return Result.of_dict(source=parameters.source)
@@ -387,7 +387,7 @@ class LaunchFeatureModelBuilder:
                 param_dict = {}
         return result
 
-    def process_parameter_item(self, item: Result, node: Optional[str] = None) -> Result:
+    def process_parameter_item(self, item: Result, node: str | None = None) -> Result:
         if not item.is_resolved:
             logger.warning('unable to resolve parameter list item')
             return Result.of_dict(source=item.source)
@@ -445,7 +445,7 @@ class LaunchFeatureModelBuilder:
 
         raise TypeError(f'unexpected parameter: {item!r}')
 
-    def _parameters_from_yaml(self, path: str, node: Optional[str] = None) -> Result:
+    def _parameters_from_yaml(self, path: str, node: str | None = None) -> Result:
         try:
             data = self.system.read_yaml_file(path)
         except OSError as e:
@@ -457,7 +457,7 @@ class LaunchFeatureModelBuilder:
         # return Result.of_dict({'TODO': Result.of_string(str(path))})
         return self._parameters_from_dict(data, node=node)
 
-    def _parameters_from_dict(self, data: dict[str, Any], node: Optional[str] = None) -> Result:
+    def _parameters_from_dict(self, data: dict[str, Any], node: str | None = None) -> Result:
         params: dict[str, Result[Any]] = data
         if node:
             params = {}
@@ -521,7 +521,7 @@ class LaunchFeatureModelBuilder:
 
     def _get_node_name(
         self,
-        name: Optional[Result[LaunchSubstitution]],
+        name: Result[LaunchSubstitution] | None,
         package: Result,
         executable: Result,
     ) -> str:
@@ -543,7 +543,7 @@ def model_from_description(
     path: Path,
     description: LaunchDescription,
     system: AnalysisSystemInterface,
-    cmd_args: Optional[Mapping[str, Optional[str]]] = None,
+    cmd_args: Mapping[str, str | None] | None = None,
 ) -> LaunchFileFeature:
     logger.debug(f'model_from_description({path}, {description}, {system}, cmd_args={cmd_args})')
     args: dict[str, Result[str]] = {}
@@ -560,7 +560,7 @@ def _model_from_description(
     path: Path,
     description: LaunchDescription,
     system: AnalysisSystemInterface,
-    args: Optional[Result[Mapping[str, Result[str]]]] = None,
+    args: Result[Mapping[str, Result[str]]] | None = None,
     condition: LogicValue = TRUE,
 ) -> LaunchFileFeature:
     assert not condition.is_false

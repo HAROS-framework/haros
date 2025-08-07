@@ -5,8 +5,6 @@
 # Imports
 ###############################################################################
 
-from typing import Optional
-
 from collections.abc import Callable, Iterable, Set
 
 from attrs import define
@@ -59,7 +57,7 @@ class FunctionQuery(Query[PythonFunctionDefStatement]):
     def named(self, name: str) -> 'FunctionQuery':
         return self.q(f for f in self.matches if f.name == name)
 
-    def typed(self, hint: Optional[PythonExpression] = None) -> 'FunctionQuery':
+    def typed(self, hint: PythonExpression | None = None) -> 'FunctionQuery':
         if hint is not None:
             return self.q(f for f in self.matches if f.type_hint == hint)
         return self.q(f for f in self.matches if f.type_hint is not None)

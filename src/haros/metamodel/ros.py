@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 from collections.abc import Iterable, Mapping, MutableSequence, Sequence
 from enum import Enum, Flag, auto, unique
@@ -219,7 +219,7 @@ class RosName:
         return self.text
 
 
-def maybe_str_to_rosname(name: Optional[str]) -> Optional[RosName]:
+def maybe_str_to_rosname(name: str | None) -> RosName | None:
     return None if name is None else RosName(name)
 
 
@@ -316,7 +316,7 @@ class NodeModel(RosFileSystemEntity):
     name: str = field(validator=matches_re(RE_NAME))
     # Defaults
     is_library: bool = False
-    rosname: Optional[RosName] = field(default=None, converter=maybe_str_to_rosname)
+    rosname: RosName | None = field(default=None, converter=maybe_str_to_rosname)
     files: MutableSequence[str] = field(factory=list)
     rcl_calls: RosClientLibraryCalls = field(factory=RosClientLibraryCalls)
     source: SourceCodeMetadata = field(factory=SourceCodeMetadata)
@@ -332,14 +332,14 @@ class NodeModel(RosFileSystemEntity):
 ###############################################################################
 
 
-def const_string(value: str, source: Optional[TrackedCode] = None) -> Result[str]:
+def const_string(value: str, source: TrackedCode | None = None) -> Result[str]:
     # TODO validate values
     return Result.of_string(value=value, source=source)
 
 
 def const_list(
     value: Iterable[Result],
-    source: Optional[TrackedCode] = None,
+    source: TrackedCode | None = None,
 ) -> Result[Iterable[Result]]:
     # TODO validate values
     return Result.of_iterable(value=value, source=source)
@@ -347,7 +347,7 @@ def const_list(
 
 def const_mapping(
     value: Mapping[str, Result],
-    source: Optional[TrackedCode] = None,
+    source: TrackedCode | None = None,
 ) -> Result[Mapping[str, Result]]:
     # TODO validate values
     return Result.of_mapping(value=value, source=source)

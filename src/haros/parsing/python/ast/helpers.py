@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Optional
+from typing import Any
 
 from collections.abc import Sequence
 
@@ -75,9 +75,9 @@ class PythonKeyAccess(PythonSubscript):
 
 @frozen
 class PythonSlice(PythonSubscript):
-    start: Optional[PythonExpression] = None
-    end: Optional[PythonExpression] = None
-    step: Optional[PythonExpression] = None
+    start: PythonExpression | None = None
+    end: PythonExpression | None = None
+    step: PythonExpression | None = None
 
     @property
     def is_slice(self) -> bool:
@@ -200,7 +200,7 @@ class PythonImportBase(PythonHelperNode):
 class PythonImportedName(PythonHelperNode):
     base: PythonImportBase
     name: str = field()
-    alias: Optional[str] = None
+    alias: str | None = None
 
     @name.validator
     def _check_name(self, attribute, value):
@@ -246,8 +246,8 @@ class PythonDecorator(PythonHelperNode):
 @frozen
 class PythonFunctionParameter(PythonHelperNode):
     name: str
-    default_value: Optional[PythonExpression] = None
-    type_hint: Optional[str] = None
+    default_value: PythonExpression | None = None
+    type_hint: str | None = None
     modifier: str = ''
 
     @property
@@ -293,8 +293,8 @@ class PythonConditionalBlock(PythonHelperNode):
 @frozen
 class PythonExceptClause(PythonHelperNode):
     body: Sequence[PythonStatement]
-    exception: Optional[PythonExpression] = None
-    alias: Optional[str] = None
+    exception: PythonExpression | None = None
+    alias: str | None = None
 
     @property
     def is_except_clause(self) -> bool:
@@ -304,7 +304,7 @@ class PythonExceptClause(PythonHelperNode):
 @frozen
 class PythonContextManager(PythonHelperNode):
     manager: PythonExpression
-    alias: Optional[str] = None
+    alias: str | None = None
 
     @property
     def is_context_manager(self) -> bool:
@@ -371,7 +371,7 @@ class PythonNamedCasePattern(PythonHelperNode):
 @frozen
 class PythonWildcardCasePattern(PythonHelperNode):
     # captures `_`, `*_`, `*name`, `**name`
-    name: Optional[str] = None
+    name: str | None = None
     is_star_pattern: bool = False
 
     @property
@@ -382,7 +382,7 @@ class PythonWildcardCasePattern(PythonHelperNode):
 @frozen
 class PythonSimpleCasePattern(PythonHelperNode):
     expression: PythonExpression
-    alias: Optional[str] = None
+    alias: str | None = None
 
     # @property
     # def line(self) -> int:
@@ -423,7 +423,7 @@ class PythonKeyCasePattern(PythonHelperNode):
 class PythonClassCasePattern(PythonHelperNode):
     type_reference: PythonExpression
     arguments: Sequence[PythonCasePattern]
-    alias: Optional[str] = None
+    alias: str | None = None
 
     # @property
     # def line(self) -> int:
@@ -449,7 +449,7 @@ class PythonClassCasePattern(PythonHelperNode):
 @frozen
 class PythonOrCasePattern(PythonHelperNode):
     patterns: Sequence[PythonCasePattern]
-    alias: Optional[str] = None
+    alias: str | None = None
 
     # @property
     # def line(self) -> int:
@@ -493,7 +493,7 @@ class PythonMappingCasePattern(PythonHelperNode):
     def is_mapping_pattern(self) -> bool:
         return True
 
-    def get(self, key: str, default: Any = None) -> Optional[PythonKeyCasePattern]:
+    def get(self, key: str, default: Any = None) -> PythonKeyCasePattern | None:
         for pattern in self.patterns:
             if pattern.key == key:
                 return pattern
@@ -513,12 +513,12 @@ class PythonMappingCasePattern(PythonHelperNode):
 class PythonCaseStatement(PythonHelperNode):
     pattern: PythonCasePattern
     body: Sequence[PythonStatement]
-    condition: Optional[PythonExpression] = None
+    condition: PythonExpression | None = None
 
     @property
     def is_case_statement(self) -> bool:
         return True
 
     @property
-    def guard(self) -> Optional[PythonExpression]:
+    def guard(self) -> PythonExpression | None:
         return self.condition

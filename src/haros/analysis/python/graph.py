@@ -5,12 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import (
-    Any,
-    Final,
-    NewType,
-    Optional,
-)
+from typing import Any, Final, NewType
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
 import logging
@@ -385,7 +380,7 @@ class ProgramGraphBuilder:
 
     def _build_branch(
         self,
-        test: Optional[PythonExpression],
+        test: PythonExpression | None,
         body: Iterable[PythonStatement],
     ):
         if test is None:
@@ -503,7 +498,7 @@ class ProgramGraphBuilder:
 ###############################################################################
 
 
-def from_ast(ast: PythonAst, symbols: Optional[Mapping[str, Any]] = None) -> Any:
+def from_ast(ast: PythonAst, symbols: Mapping[str, Any] | None = None) -> Any:
     if ast.is_module:
         return from_module(ast, symbols=symbols)
     if not ast.is_statement:
@@ -511,7 +506,7 @@ def from_ast(ast: PythonAst, symbols: Optional[Mapping[str, Any]] = None) -> Any
     raise TypeError(f'unexpected tree node: {ast!r}')
 
 
-def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = None) -> Any:
+def from_module(module: PythonModule, symbols: Mapping[str, Any] | None = None) -> Any:
     builder = ProgramGraphBuilder.from_scratch(name=module.name)
     if symbols:
         for key, value in symbols.items():

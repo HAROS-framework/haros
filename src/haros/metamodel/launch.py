@@ -6,12 +6,7 @@
 ###############################################################################
 
 from types import ModuleType
-from typing import (
-    Any,
-    Final,
-    NewType,
-    Optional,
-)
+from typing import Any, Final, NewType
 
 from collections.abc import Iterable, Iterator, Mapping, MutableSequence, Sequence, Set
 from enum import Enum, unique
@@ -41,11 +36,11 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 @frozen
 class LaunchScopeContext:
-    def get(self, name: str) -> Optional[Result]:
+    def get(self, name: str) -> Result | None:
         logger.debug(f'{self.__class__.__name__}.get({name!r})')
         raise NotImplementedError()
 
-    def get_arg(self, name: str) -> Optional[Result]:
+    def get_arg(self, name: str) -> Result | None:
         logger.debug(f'{self.__class__.__name__}.get_arg({name!r})')
         raise NotImplementedError()
 
@@ -53,13 +48,13 @@ class LaunchScopeContext:
         logger.debug(f'{self.__class__.__name__}.set({name!r}, {value!r})')
         raise NotImplementedError()
 
-    def set_unknown(self, name: str, source: Optional[TrackedCode] = None):
+    def set_unknown(self, name: str, source: TrackedCode | None = None):
         return self.set(name, Result.unknown_value(source=source))
 
-    def set_text(self, name: str, text: str, source: Optional[TrackedCode] = None):
+    def set_text(self, name: str, text: str, source: TrackedCode | None = None):
         return self.set(name, Result.of_string(text, source=source))
 
-    def resolve_condition(self, condition: Optional[Result['LaunchCondition']]) -> Result[bool]:
+    def resolve_condition(self, condition: Result['LaunchCondition'] | None) -> Result[bool]:
         logger.debug(f'{self.__class__.__name__}.resolve_condition({condition!r})')
         raise NotImplementedError()
 
@@ -101,7 +96,7 @@ class LaunchSubstitution:
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         logger.debug(f'{self.__class__.__name__}.resolve({ctx!r}, {source!r})')
         raise NotImplementedError()
@@ -110,21 +105,21 @@ class LaunchSubstitution:
         return '$(?)'
 
 
-def unknown_substitution(source: Optional[TrackedCode] = None) -> Result[LaunchSubstitution]:
+def unknown_substitution(source: TrackedCode | None = None) -> Result[LaunchSubstitution]:
     return Result.of_instance(LaunchSubstitution, source=source)
 
 
 def const_substitution(
     sub: LaunchSubstitution,
-    source: Optional[TrackedCode] = None,
+    source: TrackedCode | None = None,
 ) -> Result[LaunchSubstitution]:
     return Result.of(sub, source=source)
 
 
 def substitute(
-    substitution: Optional[Result[LaunchSubstitution | Sequence[Result[LaunchSubstitution]]]],
+    substitution: Result[LaunchSubstitution | Sequence[Result[LaunchSubstitution]]] | None,
     context: LaunchScopeContext,
-    source: Optional[TrackedCode] = None,
+    source: TrackedCode | None = None,
 ) -> Result[str]:
     if substitution is None:
         return Result.of_string(source=source)
@@ -144,9 +139,9 @@ def substitute(
 
 
 def substitute_optional(
-    substitution: Optional[Result[LaunchSubstitution]],
+    substitution: Result[LaunchSubstitution] | None,
     context: LaunchScopeContext,
-    source: Optional[TrackedCode] = None,
+    source: TrackedCode | None = None,
 ) -> Result[str]:
     if substitution is None:
         return None
@@ -187,10 +182,11 @@ def _to_sub_list(
 
 
 def _to_sub_list_or_none(
-    arg: Optional[
+    arg: (
         Result[None | str | LaunchSubstitution | Iterable[Result[None | str | LaunchSubstitution]]]
-    ],
-) -> Optional[Result[list[Result[LaunchSubstitution]]]]:
+        | None
+    ),
+) -> Result[list[Result[LaunchSubstitution]]] | None:
     if arg is None:
         return None
     return _to_sub_list(arg)
@@ -203,7 +199,7 @@ class TextSubstitution(LaunchSubstitution):
     def resolve(
         self,
         _ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         return Result.of_string(self.value, source=source)
 
@@ -211,19 +207,19 @@ class TextSubstitution(LaunchSubstitution):
         return self.value
 
 
-def const_text(text: str, source: Optional[TrackedCode] = None) -> Result[LaunchSubstitution]:
+def const_text(text: str, source: TrackedCode | None = None) -> Result[LaunchSubstitution]:
     return const_substitution(TextSubstitution(text), source=source)
 
 
 @frozen
 class LaunchConfiguration(LaunchSubstitution):
     name: str
-    default_value: Optional[Result[LaunchSubstitution]] = None
+    default_value: Result[LaunchSubstitution] | None = None
 
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         value = ctx.get(self.name)
         if value is not None:
@@ -245,7 +241,7 @@ class PackageShareDirectorySubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         return super().resolve(ctx, source)
 
@@ -262,7 +258,7 @@ class LaunchArgumentSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        _source: Optional[TrackedCode] = None,
+        _source: TrackedCode | None = None,
     ) -> Result[str]:
         return ctx.get_arg(self.name)
 
@@ -295,7 +291,7 @@ class PythonExpressionSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         if not self.expression.is_resolved or not self.modules.is_resolved:
             return Result.of_string(source=source)
@@ -340,7 +336,7 @@ class EnvironmentSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         return super().resolve(ctx, source)
 
@@ -357,7 +353,7 @@ class FindExecutableSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         return super().resolve(ctx, source)
 
@@ -378,7 +374,7 @@ class LocalSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         return super().resolve(ctx, source)
 
@@ -415,7 +411,7 @@ class CommandSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         return super().resolve(ctx, source)
 
@@ -437,7 +433,7 @@ class AnonymousNameSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         value = substitute(self.name, ctx, source=source)
         if value.is_resolved:
@@ -456,7 +452,7 @@ class ThisLaunchFileSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         return Result.of_string(ctx.get_this_launch_file(), source=source)
 
@@ -471,7 +467,7 @@ class ThisDirectorySubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         return Result.of_string(ctx.get_this_launch_file_dir(), source=source)
 
@@ -486,7 +482,7 @@ class ConcatenationSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         known_parts: list[str] = []
         all_parts: list[Result[str]] = []
@@ -510,7 +506,7 @@ class PathJoinSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         path = Path()
         is_unknown: bool = False
@@ -547,7 +543,7 @@ class EqualsSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         a = substitute(self.argument1, ctx, source=source)
         b = substitute(self.argument2, ctx, source=source)
@@ -580,7 +576,7 @@ class NotEqualsSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         a = substitute(self.argument1, ctx, source=source)
         b = substitute(self.argument2, ctx, source=source)
@@ -661,12 +657,12 @@ class ReplaceStringSubstitution(LaunchSubstitution):
     replacements: Result[Mapping[str, Result[Sequence[Result[LaunchSubstitution]]]]] = field(
         converter=_values_to_sub_list
     )
-    condition: Optional[Result[LaunchCondition]] = None
+    condition: Result[LaunchCondition] | None = None
 
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         if not self.replacements.is_resolved:
             return Result.of_string(source=source)
@@ -700,7 +696,7 @@ class ReplaceStringSubstitution(LaunchSubstitution):
     def _resolve_replacements(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode],
+        source: TrackedCode | None,
     ) -> Result[dict[str, str]]:
         assert self.replacements.is_resolved
         resolved_replacements: dict[str, Result[str]] = {}
@@ -738,7 +734,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
     param_rewrites: Result[Mapping[str, Result[Sequence[Result[LaunchSubstitution]]]]] = field(
         converter=_values_to_sub_list,
     )
-    root_key: Optional[Result[Sequence[Result[LaunchSubstitution]]]] = field(
+    root_key: Result[Sequence[Result[LaunchSubstitution]]] | None = field(
         default=None,
         converter=_to_sub_list_or_none,
     )
@@ -751,7 +747,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
     def resolve(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[str]:
         if not self.param_rewrites.is_resolved:
             return Result.of_string(source=source)
@@ -933,13 +929,13 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
 class ParameterFileDescription:
     filepath: Result[LaunchSubstitution]
     allow_subs: Result[bool | LaunchSubstitution]
-    __cached_result: Optional[Result[Mapping[Result[str], Result[Any]]]] = None
+    __cached_result: Result[Mapping[Result[str], Result[Any]]] | None = None
 
     @classmethod
     def factory(
         cls,
         filepath: Result[str | LaunchSubstitution],
-        allow_substs: Optional[Result[bool | LaunchSubstitution]] = None,
+        allow_substs: Result[bool | LaunchSubstitution] | None = None,
     ) -> 'ParameterFileDescription':
         if filepath.is_resolved:
             if not isinstance(filepath.value, LaunchSubstitution):
@@ -951,7 +947,7 @@ class ParameterFileDescription:
     def evaluate(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[dict[Result[str], Result[Any]]]:
         if self.__cached_result is None:
             self.__cached_result = self._evaluate(ctx, source=source)
@@ -960,7 +956,7 @@ class ParameterFileDescription:
     def _evaluate(
         self,
         ctx: LaunchScopeContext,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> Result[dict[Result[str], Result[Any]]]:
         if not self.filepath.is_resolved:
             return Result.of_dict(source=source)
@@ -1037,9 +1033,9 @@ class LaunchEntity:
 @frozen
 class LaunchArgument(LaunchEntity):
     name: str
-    default_value: Optional[Result[LaunchSubstitution]] = None
-    description: Optional[Result[LaunchSubstitution]] = None
-    condition: Optional[Result[LaunchCondition]] = None
+    default_value: Result[LaunchSubstitution] | None = None
+    description: Result[LaunchSubstitution] | None = None
+    condition: Result[LaunchCondition] | None = None
 
     @property
     def is_argument(self) -> bool:
@@ -1062,9 +1058,9 @@ type LaunchArgumentKeyValuePair = Result[
 @frozen
 class LaunchInclusion(LaunchEntity):
     file: Result[LaunchSubstitution]
-    namespace: Optional[Result[LaunchSubstitution]] = None
+    namespace: Result[LaunchSubstitution] | None = None
     arguments: Iterable[LaunchArgumentKeyValuePair] = field(factory=list)
-    condition: Optional[Result[LaunchCondition]] = None
+    condition: Result[LaunchCondition] | None = None
 
     @property
     def is_inclusion(self) -> bool:
@@ -1078,11 +1074,11 @@ type LaunchNodeParameterItem = Result[LaunchSubstitution] | LaunchNodeParameterD
 type LaunchNodeParameterList = Result[Sequence[LaunchNodeParameterItem]]
 
 
-def unknown_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
+def unknown_parameter_list(source: TrackedCode | None = None) -> LaunchNodeParameterList:
     return Result.of_list(source=source)
 
 
-def empty_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodeParameterList:
+def empty_parameter_list(source: TrackedCode | None = None) -> LaunchNodeParameterList:
     return Result.of_list([], source=source)
 
 
@@ -1091,11 +1087,11 @@ type LaunchNodeRemapItem = Result[tuple[LaunchNodeRemapName, LaunchNodeRemapName
 type LaunchNodeRemapList = Result[Sequence[LaunchNodeRemapItem]]
 
 
-def unknown_remap_list(source: Optional[TrackedCode] = None) -> LaunchNodeRemapList:
+def unknown_remap_list(source: TrackedCode | None = None) -> LaunchNodeRemapList:
     return Result.of_list(source=source)
 
 
-def empty_remap_list(source: Optional[TrackedCode] = None) -> LaunchNodeRemapList:
+def empty_remap_list(source: TrackedCode | None = None) -> LaunchNodeRemapList:
     return Result.of_list([], source=source)
 
 
@@ -1144,13 +1140,13 @@ class LaunchNode(LaunchEntity):
 
     package: Result[LaunchSubstitution]
     executable: Result[LaunchSubstitution]
-    name: Optional[Result[LaunchSubstitution]] = None
-    namespace: Optional[Result[LaunchSubstitution]] = None
+    name: Result[LaunchSubstitution] | None = None
+    namespace: Result[LaunchSubstitution] | None = None
     parameters: LaunchNodeParameterList = field(factory=empty_parameter_list)
     remaps: LaunchNodeRemapList = field(factory=empty_remap_list)
     output: Result[LaunchSubstitution] = const_text('log')
     arguments: Iterable[Result[LaunchSubstitution]] = field(factory=list)
-    condition: Optional[Result[LaunchCondition]] = None
+    condition: Result[LaunchCondition] | None = None
 
     @property
     def is_node(self) -> bool:
@@ -1160,7 +1156,7 @@ class LaunchNode(LaunchEntity):
 @frozen
 class LaunchGroupAction(LaunchEntity):
     entities: Result[Iterable[Result[LaunchEntity]]]
-    condition: Optional[Result[LaunchCondition]] = None
+    condition: Result[LaunchCondition] | None = None
 
     @property
     def is_group(self) -> bool:
@@ -1229,8 +1225,8 @@ class LaunchArgumentValueType(Enum):
 @frozen
 class ArgumentFeature(LaunchFeature):
     name: str
-    default_value: Optional[Result[str]] = None
-    description: Optional[Result[str]] = None
+    default_value: Result[str] | None = None
+    description: Result[str] | None = None
     # known_possible_values: Sequence[Result[str]] = field(factory=list)
     known_possible_values: Sequence[str] = field(factory=list)
     inferred_type: LaunchArgumentValueType = LaunchArgumentValueType.STRING

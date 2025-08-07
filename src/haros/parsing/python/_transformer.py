@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Optional
+from typing import Any
 
 from collections.abc import Iterable, Sequence
 import re
@@ -96,13 +96,13 @@ from haros.parsing.python.ast.common import PythonHelperNode
 
 type PythonDefinition = PythonFunctionDefStatement | PythonClassDefStatement
 
-type MaybeParams = Optional[PythonFunctionParameter | Sequence[PythonFunctionParameter]]
+type MaybeParams = PythonFunctionParameter | Sequence[PythonFunctionParameter] | None
 
 type SomeExpressions = PythonExpression | Sequence[PythonExpression]
-type MaybeExpressions = Optional[Sequence[PythonExpression]]
+type MaybeExpressions = Sequence[PythonExpression] | None
 
 type SomeStatements = PythonStatement | Sequence[PythonStatement]
-type MaybeStatements = Optional[Sequence[PythonStatement]]
+type MaybeStatements = Sequence[PythonStatement] | None
 
 type OperatorSequence = Iterable[str | PythonExpression]
 
@@ -111,7 +111,7 @@ type OperatorSequence = Iterable[str | PythonExpression]
 class PythonAliasName:
     meta: PythonAstNodeMetadata
     name: str
-    alias: Optional[str]
+    alias: str | None
 
 
 class ToAst(Transformer):
@@ -178,7 +178,7 @@ class ToAst(Transformer):
         self,
         result: PythonAst,
         iterators: Sequence[PythonIterator],
-        test: Optional[PythonExpression],
+        test: PythonExpression | None,
     ) -> PythonGenerator:
         return self._new_node(PythonGenerator, result, iterators, test=test)
 
@@ -188,7 +188,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def comp_for(
         self,
-        maybe_async: Optional[Token],
+        maybe_async: Token | None,
         variables: Sequence[PythonExpression],
         iterable: PythonExpression,
     ) -> PythonIterator:
@@ -278,8 +278,8 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def raise_stmt(
         self,
-        exception: Optional[PythonExpression],
-        cause: Optional[PythonExpression],
+        exception: PythonExpression | None,
+        cause: PythonExpression | None,
     ) -> PythonRaiseStatement:
         line = 0
         column = 0
@@ -302,7 +302,7 @@ class ToAst(Transformer):
     def assert_stmt(
         self,
         test: PythonExpression,
-        msg: Optional[PythonExpression],
+        msg: PythonExpression | None,
     ) -> PythonAssertStatement:
         return self._new_node(PythonAssertStatement, test, msg, line=test.line, column=test.column)
 
@@ -320,7 +320,7 @@ class ToAst(Transformer):
         self,
         variable: PythonExpression,
         type_hint: PythonExpression,
-        value: Optional[PythonExpression],
+        value: PythonExpression | None,
     ) -> Sequence[PythonAssignmentStatement]:
         if value is None:
             return ()
@@ -381,7 +381,7 @@ class ToAst(Transformer):
     def dotted_as_name(
         self,
         dotted_name: Sequence[Token],
-        alias: Optional[Token] = None,
+        alias: Token | None = None,
     ) -> PythonImportedName:
         name = dotted_name[-1]
         assert isinstance(name, str), repr(name)
@@ -407,7 +407,7 @@ class ToAst(Transformer):
         )
 
     @v_args(inline=True)
-    def import_as_name(self, name: Token, alias: Optional[Token] = None) -> PythonAliasName:
+    def import_as_name(self, name: Token, alias: Token | None = None) -> PythonAliasName:
         return self._new_node(PythonAliasName, name, alias, line=name.line, column=name.column)
 
     def import_as_names(self, names: Iterable[PythonAliasName]) -> Sequence[PythonAliasName]:
@@ -466,8 +466,8 @@ class ToAst(Transformer):
     def funcdef(
         self,
         name: Token,
-        parameters: Optional[Sequence[PythonFunctionParameter]],
-        type_hint: Optional[PythonExpression],
+        parameters: Sequence[PythonFunctionParameter] | None,
+        type_hint: PythonExpression | None,
         body: Sequence[PythonStatement],
     ) -> PythonFunctionDefStatement:
         parameters = parameters or ()
@@ -575,7 +575,7 @@ class ToAst(Transformer):
     def paramvalue(
         self,
         param: PythonFunctionParameter | Token,
-        default_value: Optional[PythonExpression] = None,
+        default_value: PythonExpression | None = None,
     ) -> PythonFunctionParameter:
         if isinstance(param, PythonFunctionParameter):
             object.__setattr__(param, 'default_value', default_value)
@@ -593,7 +593,7 @@ class ToAst(Transformer):
     def typedparam(
         self,
         name: Token,
-        type_hint: Optional[PythonExpression] = None,
+        type_hint: PythonExpression | None = None,
     ) -> PythonFunctionParameter:
         return self._new_node(
             PythonFunctionParameter,
@@ -609,7 +609,7 @@ class ToAst(Transformer):
     def classdef(
         self,
         name: Token,
-        arguments: Optional[Sequence[PythonArgument]],
+        arguments: Sequence[PythonArgument] | None,
         body: Sequence[PythonStatement],
     ) -> PythonClassDefStatement:
         arguments = arguments or ()
@@ -721,8 +721,8 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def except_clause(
         self,
-        exception: Optional[PythonExpression],
-        alias: Optional[Token],
+        exception: PythonExpression | None,
+        alias: Token | None,
         body: Sequence[PythonStatement],
     ) -> PythonExceptClause:
         assert len(body) > 0, f'except_clause: {exception}, {alias}, {body}'
@@ -745,7 +745,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def lambdef(
         self,
-        parameters: Optional[Sequence[PythonFunctionParameter]],
+        parameters: Sequence[PythonFunctionParameter] | None,
         expression: PythonExpression,
     ) -> PythonLambdaExpression:
         return self._lambdef_common(parameters, expression)
@@ -753,14 +753,14 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def lambdef_nocond(
         self,
-        parameters: Optional[Sequence[PythonFunctionParameter]],
+        parameters: Sequence[PythonFunctionParameter] | None,
         expression: PythonExpression,
     ) -> PythonLambdaExpression:
         return self._lambdef_common(parameters, expression)
 
     def _lambdef_common(
         self,
-        parameters: Optional[Sequence[PythonFunctionParameter]],
+        parameters: Sequence[PythonFunctionParameter] | None,
         expression: PythonExpression,
     ) -> PythonLambdaExpression:
         parameters = parameters or ()  # handle None
@@ -784,7 +784,7 @@ class ToAst(Transformer):
     def lambda_paramvalue(
         self,
         name: Token,
-        default_value: Optional[PythonExpression] = None,
+        default_value: PythonExpression | None = None,
     ) -> PythonFunctionParameter:
         return self._new_node(
             PythonFunctionParameter,
@@ -797,7 +797,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def lambda_starparams(
         self,
-        name: Optional[Token],
+        name: Token | None,
         params: Sequence[PythonFunctionParameter],
     ) -> Sequence[PythonFunctionParameter]:
         if name is not None:
@@ -815,7 +815,7 @@ class ToAst(Transformer):
 
     def lambda_poststarparams(
         self,
-        params: Iterable[Optional[PythonFunctionParameter]],
+        params: Iterable[PythonFunctionParameter | None],
     ) -> Sequence[PythonFunctionParameter]:
         return self.poststarparams(params)
 
@@ -847,7 +847,7 @@ class ToAst(Transformer):
     def case_stmt(
         self,
         pattern: PythonCasePattern,
-        guard: Optional[PythonExpression],
+        guard: PythonExpression | None,
         body: Sequence[PythonStatement],
     ) -> PythonCaseStatement:
         line = pattern.line  # FIXME
@@ -946,7 +946,7 @@ class ToAst(Transformer):
     def class_pattern(
         self,
         pattern: PythonSimpleCasePattern,
-        arguments: Optional[Sequence[PythonCasePattern]],
+        arguments: Sequence[PythonCasePattern] | None,
     ) -> PythonClassCasePattern:
         arguments = arguments or ()
         assert pattern.expression.is_reference, f'class_pattern: {pattern}'
@@ -964,7 +964,7 @@ class ToAst(Transformer):
     def arguments_pattern(
         self,
         positional: Sequence[PythonCasePattern],
-        keyword: Optional[Sequence[PythonNamedCasePattern]],
+        keyword: Sequence[PythonNamedCasePattern] | None,
     ) -> Sequence[PythonCasePattern]:
         keyword = keyword or ()
         return positional + keyword
@@ -1016,7 +1016,7 @@ class ToAst(Transformer):
         return tuple(managers)
 
     @v_args(inline=True)
-    def with_item(self, manager: PythonExpression, alias: Optional[Token]) -> PythonContextManager:
+    def with_item(self, manager: PythonExpression, alias: Token | None) -> PythonContextManager:
         return self._new_node(PythonContextManager, manager, alias=alias)
 
     # Other Expressions ####################################
@@ -1182,7 +1182,7 @@ class ToAst(Transformer):
         )
 
     @v_args(inline=True)
-    def comp_op(self, operator: Token, other_token: Optional[Token] = None) -> Token:
+    def comp_op(self, operator: Token, other_token: Token | None = None) -> Token:
         if other_token is not None:
             return operator.update(f'{operator.value} {other_token.value}')
         return operator
@@ -1243,7 +1243,7 @@ class ToAst(Transformer):
     def _token_to_ref(
         self,
         name: Token,
-        base: Optional[PythonExpression] = None,
+        base: PythonExpression | None = None,
     ) -> PythonReference:
         line = name.line
         column = name.column
@@ -1279,10 +1279,10 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def slice(
         self,
-        start: Optional[PythonExpression],
+        start: PythonExpression | None,
         colon: Token,
-        end: Optional[PythonExpression],
-        step: Optional[PythonExpression],
+        end: PythonExpression | None,
+        step: PythonExpression | None,
     ) -> PythonSlice:
         line = colon.line if start is None else start.line
         column = colon.column if start is None else start.column

@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Optional
+from typing import Any
 
 from collections import defaultdict
 from collections.abc import Mapping, MutableSequence, Set
@@ -21,8 +21,8 @@ from haros.metamodel.logic import TRUE, LogicValue
 
 @define
 class StorageMetadata:
-    path: Optional[str] = None  # real path (e.g. '/home/user/file')
-    size: Optional[int] = None  # in bytes
+    path: str | None = None  # real path (e.g. '/home/user/file')
+    size: int | None = None  # in bytes
     timestamp: int = 0
 
 
@@ -45,9 +45,9 @@ class DevelopmentMetadata:
     maintainers: Set[str] = field(factory=set)
     version: str = 'unknown'
     license: str = 'unknown'
-    url_home: Optional[str] = None
-    url_source: Optional[str] = None
-    url_tracker: Optional[str] = None
+    url_home: str | None = None
+    url_source: str | None = None
+    url_tracker: str | None = None
 
     def asdict(self) -> dict[str, Any]:
         return asdict(self)
@@ -67,11 +67,11 @@ class SourceCodeDependencies:
 
 @frozen
 class SourceCodeLocation:
-    file: Optional[str] = None
-    package: Optional[str] = None
+    file: str | None = None
+    package: str | None = None
     line: int = 0
     column: int = 0
-    language: Optional[str] = None
+    language: str | None = None
 
     def serialize(self) -> Mapping[str, Any]:
         return asdict(self)
@@ -103,7 +103,7 @@ class VariantValue[T]:
 
 @define
 class VariantData[T]:
-    _base_value: Optional[T] = None
+    _base_value: T | None = None
     _variants: MutableSequence[VariantValue[T]] = field(factory=list)
 
     @property
