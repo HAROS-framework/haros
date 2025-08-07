@@ -155,9 +155,9 @@ def launch_configuration_function(
     )
 
 
-StringOrSubstitution = Result[Union[str, LaunchSubstitution]]
-SubstitutionPair = tuple[StringOrSubstitution, StringOrSubstitution]
-LaunchArgumentKeyValue = Union[SubstitutionPair, Result[SubstitutionPair]]
+type StringOrSubstitution = Result[Union[str, LaunchSubstitution]]
+type SubstitutionPair = tuple[StringOrSubstitution, StringOrSubstitution]
+type LaunchArgumentKeyValue = Union[SubstitutionPair, Result[SubstitutionPair]]
 
 
 def include_launch_description_function(
