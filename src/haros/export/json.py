@@ -7,7 +7,7 @@
 
 from typing import Any, Final, Optional, Tuple, Type
 
-from collections.abc import Iterable as IterableType, Mapping as MappingType
+from collections.abc import Iterable, Mapping
 
 from haros.metamodel.common import (
     DevelopmentMetadata,
@@ -162,9 +162,9 @@ def serialize(value: Any) -> Any:
         return _result(value)
     if isinstance(value, RosName):
         return _rosname(value)
-    if isinstance(value, MappingType):
+    if isinstance(value, Mapping):
         return {str(serialize(k)): serialize(v) for k, v in value.items()}
-    if isinstance(value, IterableType):
+    if isinstance(value, Iterable):
         return list(map(serialize, value))
     if hasattr(value, 'serialize'):
         return serialize(value.serialize())
