@@ -5,7 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Optional, Tuple
+from typing import Optional
+
+from collections.abc import Sequence
 
 from attrs import field, frozen
 
@@ -50,7 +52,7 @@ class PythonContinueStatement(PythonStatement):
 
 @frozen
 class PythonDeleteStatement(PythonStatement):
-    expressions: Tuple[PythonExpression]
+    expressions: Sequence[PythonExpression]
 
     @property
     def is_delete(self) -> bool:
@@ -95,7 +97,7 @@ class PythonExpressionStatement(PythonStatement):
 
 @frozen
 class PythonImportStatement(PythonStatement):
-    names: Tuple[PythonImportedName]
+    names: Sequence[PythonImportedName]
 
     @property
     def is_import(self) -> bool:
@@ -136,7 +138,7 @@ class PythonAssignmentStatement(PythonStatement):
 
 @frozen
 class PythonScopeStatement(PythonStatement):
-    names: Tuple[str]
+    names: Sequence[str]
     global_scope: bool = True
 
     @property
@@ -166,26 +168,26 @@ class PythonAssertStatement(PythonStatement):
 @frozen
 class PythonFunctionDefStatement(PythonStatement):
     name: str
-    parameters: Tuple[PythonFunctionParameter]
-    body: Tuple[PythonStatement]
+    parameters: Sequence[PythonFunctionParameter]
+    body: Sequence[PythonStatement]
     type_hint: Optional[PythonExpression] = None
     asynchronous: bool = False
-    decorators: Tuple[PythonDecorator] = field(factory=tuple)
+    decorators: Sequence[PythonDecorator] = field(factory=tuple)
 
     @property
     def is_function_def(self) -> bool:
         return True
 
     @property
-    def positional_parameters(self) -> Tuple[PythonFunctionParameter]:
+    def positional_parameters(self) -> Sequence[PythonFunctionParameter]:
         return tuple(p for p in self.parameters if p.is_positional)
 
     @property
-    def standard_parameters(self) -> Tuple[PythonFunctionParameter]:
+    def standard_parameters(self) -> Sequence[PythonFunctionParameter]:
         return tuple(p for p in self.parameters if p.is_standard)
 
     @property
-    def keyword_parameters(self) -> Tuple[PythonFunctionParameter]:
+    def keyword_parameters(self) -> Sequence[PythonFunctionParameter]:
         return tuple(p for p in self.parameters if p.is_keyword)
 
     @property
@@ -203,9 +205,9 @@ class PythonFunctionDefStatement(PythonStatement):
 @frozen
 class PythonClassDefStatement(PythonStatement):
     name: str
-    body: Tuple[PythonStatement]
-    arguments: Tuple[PythonArgument] = field(factory=tuple)
-    decorators: Tuple[PythonDecorator] = field(factory=tuple)
+    body: Sequence[PythonStatement]
+    arguments: Sequence[PythonArgument] = field(factory=tuple)
+    decorators: Sequence[PythonDecorator] = field(factory=tuple)
 
     @property
     def is_class_def(self) -> bool:
@@ -231,8 +233,8 @@ class PythonClassDefStatement(PythonStatement):
 @frozen
 class PythonIfStatement(PythonStatement):
     then_branch: PythonConditionalBlock
-    elif_branches: Tuple[PythonConditionalBlock]
-    else_branch: Tuple[PythonStatement]
+    elif_branches: Sequence[PythonConditionalBlock]
+    else_branch: Sequence[PythonStatement]
 
     @property
     def is_if(self) -> bool:
@@ -243,7 +245,7 @@ class PythonIfStatement(PythonStatement):
         return self.then_branch.condition
 
     @property
-    def body(self) -> Tuple[PythonStatement]:
+    def body(self) -> Sequence[PythonStatement]:
         return self.then_branch.body
 
     # @property
@@ -269,7 +271,7 @@ class PythonIfStatement(PythonStatement):
 @frozen
 class PythonWhileStatement(PythonStatement):
     loop: PythonConditionalBlock
-    else_branch: Tuple[PythonStatement]
+    else_branch: Sequence[PythonStatement]
 
     @property
     def is_while(self) -> bool:
@@ -280,7 +282,7 @@ class PythonWhileStatement(PythonStatement):
         return self.loop.condition
 
     @property
-    def body(self) -> Tuple[PythonStatement]:
+    def body(self) -> Sequence[PythonStatement]:
         return self.loop.body
 
     # @property
@@ -304,15 +306,15 @@ class PythonWhileStatement(PythonStatement):
 @frozen
 class PythonForStatement(PythonStatement):
     iterator: PythonIterator
-    body: Tuple[PythonStatement]
-    else_branch: Tuple[PythonStatement]
+    body: Sequence[PythonStatement]
+    else_branch: Sequence[PythonStatement]
 
     @property
     def is_for(self) -> bool:
         return True
 
     @property
-    def variables(self) -> Tuple[PythonExpression]:
+    def variables(self) -> Sequence[PythonExpression]:
         return self.iterator.variables
 
     @property
@@ -343,10 +345,10 @@ class PythonForStatement(PythonStatement):
 
 @frozen
 class PythonTryStatement(PythonStatement):
-    body: Tuple[PythonStatement]
-    except_clauses: Tuple[PythonExceptClause] = field(factory=tuple)
-    else_branch: Tuple[PythonStatement] = field(factory=tuple)
-    finally_block: Tuple[PythonStatement] = field(factory=tuple)
+    body: Sequence[PythonStatement]
+    except_clauses: Sequence[PythonExceptClause] = field(factory=tuple)
+    else_branch: Sequence[PythonStatement] = field(factory=tuple)
+    finally_block: Sequence[PythonStatement] = field(factory=tuple)
 
     @property
     def is_try(self) -> bool:
@@ -379,8 +381,8 @@ class PythonTryStatement(PythonStatement):
 
 @frozen
 class PythonWithStatement(PythonStatement):
-    managers: Tuple[PythonContextManager]
-    body: Tuple[PythonStatement]
+    managers: Sequence[PythonContextManager]
+    body: Sequence[PythonStatement]
     asynchronous: bool = False
 
     @property
@@ -394,7 +396,7 @@ class PythonWithStatement(PythonStatement):
 @frozen
 class PythonMatchStatement(PythonStatement):
     value: PythonExpression
-    cases: Tuple[PythonCaseStatement]
+    cases: Sequence[PythonCaseStatement]
 
     @property
     def is_match(self) -> bool:

@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Final, Tuple
+from typing import Any, Callable, Final
 
 from collections.abc import Mapping, Sequence
 from importlib import metadata
@@ -21,7 +21,7 @@ from attrs import field, frozen
 
 ENTRY_POINT: Final[str] = 'haros.plugins'
 
-HOOKS: Final[Tuple] = (
+HOOKS: Final[Sequence[str]] = (
     # 'setup',
     'on_analysis_begin',
     'on_analysis_end',

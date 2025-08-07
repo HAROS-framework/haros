@@ -12,7 +12,6 @@ from typing import (
     Iterable,
     NewType,
     Optional,
-    Tuple,
 )
 
 from collections.abc import Mapping
@@ -133,7 +132,7 @@ class ExpressionNode:
 @frozen
 class FunctionCallNode(ExpressionNode):
     function: VariantData[str] = field(factory=VariantData)
-    arguments: Tuple[ExpressionNodeId] = field(factory=tuple)
+    arguments: tuple[ExpressionNodeId] = field(factory=tuple)
 
 
 def eval_expression(expr: PythonExpression, data: DataScope) -> VariantData[AnalysisExpression]:
@@ -535,7 +534,7 @@ def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = Non
     return builder
 
 
-def _split_names(full_name: str) -> Tuple[str, str]:
+def _split_names(full_name: str) -> tuple[str, str]:
     initial = full_name
     prefix = ''
     if full_name.startswith('..'):

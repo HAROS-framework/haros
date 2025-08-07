@@ -5,7 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, Mapping, Tuple
+from typing import Any, Final, Iterable, Mapping
+
+from collections.abc import Sequence
 
 from attrs import field, frozen
 
@@ -314,7 +316,7 @@ class LogicNot(LogicValue):
 
 @frozen
 class LogicAnd(LogicValue):
-    operands: Tuple[LogicValue] = field(converter=tuple)
+    operands: Sequence[LogicValue] = field(converter=tuple)
 
     @property
     def is_and(self) -> bool:
@@ -425,7 +427,7 @@ class LogicAnd(LogicValue):
 
 @frozen
 class LogicOr(LogicValue):
-    operands: Tuple[LogicValue] = field(converter=tuple)
+    operands: Sequence[LogicValue] = field(converter=tuple)
 
     @property
     def is_or(self) -> bool:

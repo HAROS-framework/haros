@@ -8,7 +8,6 @@
 from typing import (
     Any,
     Final,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -102,11 +101,11 @@ class TypeToken[V]:
         return cls(list)
 
     @classmethod
-    def of_tuple(cls) -> 'TypeToken[Tuple[T]]':
+    def of_tuple(cls) -> 'TypeToken[tuple[T]]':
         return cls(tuple)
 
     @classmethod
-    def of_set(cls) -> 'TypeToken[Set[T]]':
+    def of_set(cls) -> 'TypeToken[set[T]]':
         return cls(set)
 
     @classmethod
@@ -386,7 +385,7 @@ class Result[V]:
         cls,
         value: tuple[T] | UnknownValue = UNKNOWN_VALUE,
         source: TrackedCode | None = None,
-    ) -> 'Result[Tuple[T]]':
+    ) -> 'Result[tuple[T]]':
         assert isinstance(value, (tuple, UnknownValue))
         return cls(value, TYPE_TOKEN_TUPLE, source)
 

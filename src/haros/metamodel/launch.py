@@ -12,7 +12,6 @@ from typing import (
     Iterator,
     NewType,
     Optional,
-    Tuple,
     Union,
 )
 
@@ -800,7 +799,7 @@ class RewrittenYamlSubstitution(LaunchSubstitution):
 
     def _resolve_rewrites(
         self, context: LaunchScopeContext
-    ) -> Tuple[dict[str, Result[str]], dict[str, Result[str]]]:
+    ) -> tuple[dict[str, Result[str]], dict[str, Result[str]]]:
         resolved_params: dict[str, Result[str]] = {}
         for key, value in self.param_rewrites.value.items():
             resolved_params[key] = substitute(value, context)
@@ -1064,7 +1063,7 @@ class LaunchArgument(LaunchEntity):
         return f'<arg {" ".join(parts)} />'
 
 
-LaunchArgumentKeyValuePair = Result[Tuple[Result[LaunchSubstitution], Result[LaunchSubstitution]]]
+LaunchArgumentKeyValuePair = Result[tuple[Result[LaunchSubstitution], Result[LaunchSubstitution]]]
 
 
 @frozen
@@ -1095,7 +1094,7 @@ def empty_parameter_list(source: Optional[TrackedCode] = None) -> LaunchNodePara
 
 
 type LaunchNodeRemapName = Result[Union[str, LaunchSubstitution]]
-type LaunchNodeRemapItem = Result[Tuple[LaunchNodeRemapName, LaunchNodeRemapName]]
+type LaunchNodeRemapItem = Result[tuple[LaunchNodeRemapName, LaunchNodeRemapName]]
 type LaunchNodeRemapList = Result[Sequence[LaunchNodeRemapItem]]
 
 
@@ -1187,7 +1186,7 @@ class LaunchSetEnvironment(LaunchEntity):
 
 @frozen
 class LaunchDescription:
-    entities: Result[Tuple[Result[LaunchEntity]]]
+    entities: Result[Sequence[Result[LaunchEntity]]]
 
     def serialize(self) -> dict[str, Any]:
         return asdict(self)

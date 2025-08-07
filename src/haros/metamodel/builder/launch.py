@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional, Tuple
+from typing import Any, Final, Optional
 
 from collections.abc import Iterable, Mapping, Sequence, Set
 import logging
@@ -49,11 +49,11 @@ from haros.metamodel.ros import RosNodeModel
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
-BOOL_VALUES: Final[Tuple[str]] = ('true', 'false')
+BOOL_VALUES: Final[Sequence[str]] = ('true', 'false')
 
-TRUE_VALUES: Final[Tuple[str]] = ('true', '1')
+TRUE_VALUES: Final[Sequence[str]] = ('true', '1')
 
-FALSE_VALUES: Final[Tuple[str]] = ('false', '0')
+FALSE_VALUES: Final[Sequence[str]] = ('false', '0')
 
 ###############################################################################
 # Interface

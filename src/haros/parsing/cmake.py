@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final, Tuple
+from typing import Final
 
 from collections.abc import Sequence
 from pathlib import Path
@@ -125,7 +125,7 @@ class _ToAst(Transformer):
             comments=comments,
         )
 
-    def arguments(self, children) -> Tuple[list[CMakeArgument], list[CMakeComment]]:
+    def arguments(self, children) -> tuple[list[CMakeArgument], list[CMakeComment]]:
         arguments = [c for c in children if isinstance(c, CMakeArgument)]
         comments = [c for c in children if isinstance(c, CMakeComment)]
         return arguments, comments

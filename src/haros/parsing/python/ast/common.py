@@ -5,9 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, NewType, Tuple
+from typing import Any, NewType
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from enum import Enum, auto
 
 from attrs import field, frozen
@@ -439,7 +439,7 @@ class PythonHelperNode(PythonAst):
 
 @frozen
 class PythonModule(PythonAst):
-    statements: Tuple[PythonStatement]
+    statements: Sequence[PythonStatement]
     name: str = '__main__'
 
     # @property

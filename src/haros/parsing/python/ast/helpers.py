@@ -5,7 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Union
+
+from collections.abc import Sequence
 
 from attrs import field, frozen
 
@@ -93,7 +95,7 @@ class PythonSlice(PythonSubscript):
 
 @frozen
 class PythonIterator(PythonHelperNode):
-    variables: Tuple[PythonExpression]
+    variables: Sequence[PythonExpression]
     iterable: PythonExpression
     asynchronous: bool = False
 
@@ -152,7 +154,7 @@ class PythonArgument(PythonHelperNode):
 
 @frozen
 class PythonImportBase(PythonHelperNode):
-    names: Tuple[str]
+    names: Sequence[str]
     dots: int = 0
 
     @property
@@ -229,8 +231,8 @@ class PythonImportedName(PythonHelperNode):
 
 @frozen
 class PythonDecorator(PythonHelperNode):
-    names: Tuple[str]
-    arguments: Tuple[PythonArgument]
+    names: Sequence[str]
+    arguments: Sequence[PythonArgument]
 
     @property
     def is_decorator(self) -> bool:
@@ -281,7 +283,7 @@ class PythonFunctionParameter(PythonHelperNode):
 @frozen
 class PythonConditionalBlock(PythonHelperNode):
     condition: PythonExpression
-    body: Tuple[PythonStatement]
+    body: Sequence[PythonStatement]
 
     @property
     def is_conditional_block(self) -> bool:
@@ -290,7 +292,7 @@ class PythonConditionalBlock(PythonHelperNode):
 
 @frozen
 class PythonExceptClause(PythonHelperNode):
-    body: Tuple[PythonStatement]
+    body: Sequence[PythonStatement]
     exception: Optional[PythonExpression] = None
     alias: Optional[str] = None
 
@@ -420,7 +422,7 @@ class PythonKeyCasePattern(PythonHelperNode):
 @frozen
 class PythonClassCasePattern(PythonHelperNode):
     type_reference: PythonExpression
-    arguments: Tuple[PythonCasePattern]
+    arguments: Sequence[PythonCasePattern]
     alias: Optional[str] = None
 
     # @property
@@ -436,17 +438,17 @@ class PythonClassCasePattern(PythonHelperNode):
         return True
 
     @property
-    def positional_arguments(self) -> Tuple[PythonSimpleCasePattern]:
+    def positional_arguments(self) -> Sequence[PythonSimpleCasePattern]:
         return tuple(p for p in self.arguments if not p.is_named_pattern)
 
     @property
-    def keyword_arguments(self) -> Tuple[PythonKeyCasePattern]:
+    def keyword_arguments(self) -> Sequence[PythonKeyCasePattern]:
         return tuple(p for p in self.arguments if p.is_named_pattern)
 
 
 @frozen
 class PythonOrCasePattern(PythonHelperNode):
-    patterns: Tuple[PythonCasePattern]
+    patterns: Sequence[PythonCasePattern]
     alias: Optional[str] = None
 
     # @property
@@ -470,7 +472,7 @@ class PythonOrCasePattern(PythonHelperNode):
 
 @frozen
 class PythonSequenceCasePattern(PythonHelperNode):
-    patterns: Tuple[PythonCasePattern]
+    patterns: Sequence[PythonCasePattern]
 
     @property
     def is_sequence_pattern(self) -> bool:
@@ -485,7 +487,7 @@ class PythonSequenceCasePattern(PythonHelperNode):
 
 @frozen
 class PythonMappingCasePattern(PythonHelperNode):
-    patterns: Tuple[PythonKeyCasePattern]
+    patterns: Sequence[PythonKeyCasePattern]
 
     @property
     def is_mapping_pattern(self) -> bool:
@@ -510,7 +512,7 @@ class PythonMappingCasePattern(PythonHelperNode):
 @frozen
 class PythonCaseStatement(PythonHelperNode):
     pattern: PythonCasePattern
-    body: Tuple[PythonStatement]
+    body: Sequence[PythonStatement]
     condition: Optional[PythonExpression] = None
 
     @property

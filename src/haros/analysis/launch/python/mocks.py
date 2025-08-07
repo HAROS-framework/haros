@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Optional, Tuple, Union
+from typing import Any, Final, Optional, Union
 
 from collections.abc import Iterable, Sequence
 import logging
@@ -155,7 +155,7 @@ def launch_configuration_function(
 
 
 StringOrSubstitution = Result[Union[str, LaunchSubstitution]]
-SubstitutionPair = Tuple[StringOrSubstitution, StringOrSubstitution]
+SubstitutionPair = tuple[StringOrSubstitution, StringOrSubstitution]
 LaunchArgumentKeyValue = Union[SubstitutionPair, Result[SubstitutionPair]]
 
 
