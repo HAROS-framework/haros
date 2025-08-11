@@ -31,7 +31,7 @@ def noop(*args, **kwargs):
 
 type BuiltinFunctionType = type[min]
 type DefFunctionType = type[noop]
-type ClassType = type
+type ClassType[T] = type[T]
 
 
 @frozen
@@ -294,11 +294,11 @@ class Result[V]:
             return cls.of_dict(value=value, source=source)
         if isinstance(value, BaseException):
             return cls.of_exception(value=value, source=source)
-        if isinstance(value, ClassType):
+        if isinstance(value, type):
             return cls.of_class(value=value, source=source)
-        if isinstance(value, BuiltinFunctionType):
+        if isinstance(value, type(min)):
             return cls.of_builtin_function(value=value, source=source)
-        if isinstance(value, DefFunctionType):
+        if isinstance(value, type(noop)):
             return cls.of_def_function(value=value, source=source)
         d = {}
         g = (type(d.items()), type(d.keys()), type(d.values()))
@@ -457,7 +457,7 @@ class Result[V]:
         constructor: ClassType[T],
         source: TrackedCode | None = None,
     ) -> 'Result[T]':
-        assert isinstance(constructor, ClassType)
+        assert isinstance(constructor, type)
         return cls(UNKNOWN_VALUE, TypeToken(constructor), source)
 
     @classmethod

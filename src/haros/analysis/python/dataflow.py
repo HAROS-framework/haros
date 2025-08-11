@@ -15,7 +15,7 @@ from attrs import define, evolve, field, frozen
 from haros.errors import DataFlowError
 from haros.metamodel.common import SourceCodeLocation, TrackedCode, VariantData
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
-from haros.metamodel.result import Result, T, TypeToken
+from haros.metamodel.result import Result, TypeToken
 from haros.parsing.python.ast import (
     PythonAssignmentStatement,
     PythonAst,
@@ -279,7 +279,7 @@ class Definition[V]:
     def from_value(cls, raw_value: V, ast: PythonAst | None = None) -> 'Definition[V]':
         return cls(Result.of(raw_value), ast=ast)  # FIXME TrackedCode from ast
 
-    def cast_to(self, type: TypeToken[T]) -> 'Definition[T]':
+    def cast_to[T](self, type: TypeToken[T]) -> 'Definition[T]':
         if self.value.type == type:
             return self
         # new_type_mask = self.value.type.mask & type.mask
