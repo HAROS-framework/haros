@@ -65,8 +65,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     except KeyboardInterrupt:
         print('Aborted manually.', file=sys.stderr)
         return 1
-    except Exception as err:
-        print('Unhandled exception during setup.', err, file=sys.stderr)
+    except Exception:
+        import traceback
+
+        print('Unhandled exception during setup:', file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         return 1
 
     logger.info('Setup phase finished.')
