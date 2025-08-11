@@ -7,7 +7,7 @@
 
 from typing import Any, Final
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, MutableMapping
 from errno import EACCES
 import logging
 import os
@@ -54,12 +54,12 @@ def fail_to_parse_launch_file(path: PathType, system: Any) -> LaunchDescription:
 @frozen
 class AnalysisSystemInterface:
     strict: bool = False
-    environment: Mapping[str, str] = field(factory=dict)
+    environment: MutableMapping[str, str] = field(factory=dict)
     workspace: str | None = None
-    packages: Mapping[str, str] = field(factory=dict)
-    executables: Mapping[str, Iterable[str]] = field(factory=dict)
+    packages: MutableMapping[str, str] = field(factory=dict)
+    executables: MutableMapping[str, Iterable[str]] = field(factory=dict)
     model: ProjectModel | None = None
-    launch_cache: Mapping[str, LaunchDescription] = field(factory=dict)
+    launch_cache: MutableMapping[str, LaunchDescription] = field(factory=dict)
     parse_launch_description: Callable = fail_to_parse_launch_file
 
     def get_environment_var(self, name: str) -> str | None:
