@@ -1029,6 +1029,9 @@ class LaunchEntity:
     def is_set_environment(self) -> bool:
         return False
 
+    def serialize(self) -> dict[str, Any]:
+        return asdict(self)
+
 
 @frozen
 class LaunchArgument(LaunchEntity):
@@ -1049,6 +1052,15 @@ class LaunchArgument(LaunchEntity):
             parts.append(f'description="{self.description}"')
         return f'<arg {" ".join(parts)} />'
 
+    def serialize(self) -> dict[str, Any]:
+        return {
+            'type': 'argument',
+            'name': self.name,
+            'default_value': asdict(self.default_value) if self.default_value else None,
+            'description': asdict(self.description) if self.description else None,
+            'condition': asdict(self.condition) if self.condition else None,
+        }
+
 
 type LaunchArgumentKeyValuePair = Result[
     tuple[Result[LaunchSubstitution], Result[LaunchSubstitution]]
@@ -1065,6 +1077,19 @@ class LaunchInclusion(LaunchEntity):
     @property
     def is_inclusion(self) -> bool:
         return True
+
+    def serialize(self) -> dict[str, Any]:
+        return {
+            'type': 'inclusion',
+            'file': asdict(self.file),
+            'namespace': asdict(self.namespace) if self.namespace else None,
+            'arguments': [
+                (asdict(arg.value[0]), asdict(arg.value[1]))
+                for arg in self.arguments
+                if arg.is_resolved
+            ],
+            'condition': asdict(self.condition) if self.condition else None,
+        }
 
 
 type LaunchNodeParameterDict = Result[
@@ -1152,6 +1177,35 @@ class LaunchNode(LaunchEntity):
     def is_node(self) -> bool:
         return True
 
+    def serialize(self) -> dict[str, Any]:
+        if self.parameters.is_resolved:
+            parameters = []
+            for param in self.parameters.value:
+                if param.is_resolved:
+                    if isinstance(param.value, LaunchSubstitution):
+                        parameters.append(asdict(param.value))
+                    elif isinstance(param.value, Mapping):
+                        # If it is a dict, serialize it as a list of key-value pairs
+                        parameters.append([(asdict(k), asdict(v)) for k, v in param.value.items()])
+                    else:
+                        logger.warning(f'Unknown parameter type: {type(param.value)} for {param}')
+                else:
+                    parameters.append(asdict(param))
+        else:
+            parameters = asdict(self.parameters)
+        return {
+            'type': 'node',
+            'package': asdict(self.package),
+            'executable': asdict(self.executable),
+            'name': asdict(self.name) if self.name else None,
+            'namespace': asdict(self.namespace) if self.namespace else None,
+            'parameters': parameters,
+            'remaps': [(asdict(remap[0]), asdict(remap[1])) for remap in self.remaps.value],
+            'output': asdict(self.output),
+            'arguments': [asdict(arg) for arg in self.arguments],
+            'condition': asdict(self.condition) if self.condition else None,
+        }
+
 
 @frozen
 class LaunchGroupAction(LaunchEntity):
@@ -1161,6 +1215,17 @@ class LaunchGroupAction(LaunchEntity):
     @property
     def is_group(self) -> bool:
         return True
+
+    def serialize(self) -> dict[str, Any]:
+        if not self.entities.is_resolved:
+            return {'entities': asdict(self.entities)}
+        return {
+            'type': 'group',
+            'entities': [
+                entity.value.serialize() if entity.is_resolved else asdict(entity)
+                for entity in self.entities.value
+            ],
+        }
 
 
 @frozen
@@ -1172,13 +1237,23 @@ class LaunchSetEnvironment(LaunchEntity):
     def is_set_environment(self) -> bool:
         return True
 
+    def serialize(self) -> dict[str, Any]:
+        return {'type': 'set_environment', 'key': asdict(self.key), 'value': asdict(self.value)}
+
 
 @frozen
 class LaunchDescription:
     entities: Result[Sequence[Result[LaunchEntity]]]
 
     def serialize(self) -> dict[str, Any]:
-        return asdict(self)
+        if not self.entities.is_resolved:
+            return {'entities': asdict(self.entities)}
+        return {
+            'entities': [
+                entity.value.serialize() if entity.is_resolved else asdict(entity)
+                for entity in self.entities.value
+            ]
+        }
 
 
 ###############################################################################
