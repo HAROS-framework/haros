@@ -149,7 +149,6 @@ class PythonAstNodeType(Enum):
 @frozen
 class PythonAstNodeMetadata:
     id: PythonAstNodeId
-    # type: PythonAstNodeType
     line: int = 0
     column: int = 0
     annotations: Mapping[str, Any] = field(factory=dict, eq=False, hash=False)
