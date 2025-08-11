@@ -5,11 +5,11 @@
 # Imports
 ###############################################################################
 
+from types import SimpleNamespace
 from typing import Any, Final, NewType
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
 import logging
-from types import SimpleNamespace
 
 from attrs import define, field, frozen
 
