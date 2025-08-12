@@ -5,12 +5,12 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Collection, Iterable, List, Optional, Tuple, Union
+from typing import Any
 
+from collections.abc import Iterable, Sequence
 import re
 
 from attrs import frozen
-from haros.parsing.python.ast.common import PythonHelperNode
 from lark import Token, Transformer, v_args
 
 from haros.parsing.python.ast import (
@@ -48,8 +48,8 @@ from haros.parsing.python.ast import (
     PythonGenerator,
     PythonIfStatement,
     PythonImportBase,
-    PythonImportStatement,
     PythonImportedName,
+    PythonImportStatement,
     PythonItemAccess,
     PythonIterator,
     PythonKeyAccess,
@@ -88,29 +88,30 @@ from haros.parsing.python.ast import (
     PythonWithStatement,
     PythonYieldExpression,
 )
+from haros.parsing.python.ast.common import PythonHelperNode
 
 ###############################################################################
 # Transformer
 ###############################################################################
 
-PythonDefinition = Union[PythonFunctionDefStatement, PythonClassDefStatement]
+type PythonDefinition = PythonFunctionDefStatement | PythonClassDefStatement
 
-MaybeParams = Optional[Union[PythonFunctionParameter, Tuple[PythonFunctionParameter]]]
+type MaybeParams = PythonFunctionParameter | Sequence[PythonFunctionParameter] | None
 
-SomeExpressions = Union[PythonExpression, Tuple[PythonExpression]]
-MaybeExpressions = Optional[Tuple[PythonExpression]]
+type SomeExpressions = PythonExpression | Sequence[PythonExpression]
+type MaybeExpressions = Sequence[PythonExpression] | None
 
-SomeStatements = Union[PythonStatement, Tuple[PythonStatement]]
-MaybeStatements = Optional[Tuple[PythonStatement]]
+type SomeStatements = PythonStatement | Sequence[PythonStatement]
+type MaybeStatements = Sequence[PythonStatement] | None
 
-OperatorSequence = Iterable[Union[str, PythonExpression]]
+type OperatorSequence = Iterable[str | PythonExpression]
 
 
 @frozen
 class PythonAliasName:
     meta: PythonAstNodeMetadata
     name: str
-    alias: Optional[str]
+    alias: str | None
 
 
 class ToAst(Transformer):
@@ -138,10 +139,10 @@ class ToAst(Transformer):
         statements = self._flatten_statements(children)
         return self._new_node(PythonModule, statements)
 
-    def suite(self, children: Iterable[SomeStatements]) -> Tuple[PythonStatement]:
+    def suite(self, children: Iterable[SomeStatements]) -> Sequence[PythonStatement]:
         return self._flatten_statements(children)
 
-    def _flatten_statements(self, items: Iterable[SomeStatements]) -> Tuple[PythonStatement]:
+    def _flatten_statements(self, items: Iterable[SomeStatements]) -> Sequence[PythonStatement]:
         assert len(items) >= 1, f'_flatten_statements: {items}'
         statements = []
         for statement in items:
@@ -176,19 +177,19 @@ class ToAst(Transformer):
     def comprehension(
         self,
         result: PythonAst,
-        iterators: Tuple[PythonIterator],
-        test: Optional[PythonExpression],
+        iterators: Sequence[PythonIterator],
+        test: PythonExpression | None,
     ) -> PythonGenerator:
         return self._new_node(PythonGenerator, result, iterators, test=test)
 
-    def comp_fors(self, children: Iterable[PythonIterator]) -> Tuple[PythonIterator]:
+    def comp_fors(self, children: Iterable[PythonIterator]) -> Sequence[PythonIterator]:
         return tuple(children)
 
     @v_args(inline=True)
     def comp_for(
         self,
-        maybe_async: Optional[Token],
-        variables: Tuple[PythonExpression],
+        maybe_async: Token | None,
+        variables: Sequence[PythonExpression],
         iterable: PythonExpression,
     ) -> PythonIterator:
         asynchronous = maybe_async is not None
@@ -197,13 +198,13 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def decorated(
         self,
-        decorators: Tuple[PythonDecorator],
+        decorators: Sequence[PythonDecorator],
         definition: PythonDefinition,
     ) -> PythonDefinition:
         object.__setattr__(definition, 'decorators', decorators)
         return definition
 
-    def decorators(self, children: Iterable[PythonDecorator]) -> Tuple[PythonDecorator]:
+    def decorators(self, children: Iterable[PythonDecorator]) -> Sequence[PythonDecorator]:
         return tuple(children)
 
     def decorator(self, children: Iterable[Any]) -> PythonDecorator:
@@ -230,8 +231,8 @@ class ToAst(Transformer):
 
     def simple_stmt(
         self,
-        children: Iterable[Union[PythonStatement, Tuple[PythonStatement]]],
-    ) -> Tuple[PythonStatement]:
+        children: Iterable[PythonStatement | Sequence[PythonStatement]],
+    ) -> Sequence[PythonStatement]:
         return self._flatten_statements(children)
 
     @v_args(inline=True)
@@ -256,8 +257,8 @@ class ToAst(Transformer):
         return self._new_node(PythonContinueStatement, line=token.line, column=token.column)
 
     @v_args(inline=True)
-    def del_stmt(self, expressions: Tuple[PythonExpression]) -> PythonDeleteStatement:
-        assert len(expressions) > 0, str(children)
+    def del_stmt(self, expressions: Sequence[PythonExpression]) -> PythonDeleteStatement:
+        assert len(expressions) > 0, str(expressions)
         line = getattr(expressions[0], 'line', 0)
         column = getattr(expressions[0], 'column', 0)
         return self._new_node(PythonDeleteStatement, expressions, line=line, column=column)
@@ -277,8 +278,8 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def raise_stmt(
         self,
-        exception: Optional[PythonExpression],
-        cause: Optional[PythonExpression],
+        exception: PythonExpression | None,
+        cause: PythonExpression | None,
     ) -> PythonRaiseStatement:
         line = 0
         column = 0
@@ -301,7 +302,7 @@ class ToAst(Transformer):
     def assert_stmt(
         self,
         test: PythonExpression,
-        msg: Optional[PythonExpression],
+        msg: PythonExpression | None,
     ) -> PythonAssertStatement:
         return self._new_node(PythonAssertStatement, test, msg, line=test.line, column=test.column)
 
@@ -310,8 +311,8 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def assign_stmt(
         self,
-        assignments: Tuple[PythonAssignmentStatement],
-    ) -> Tuple[PythonAssignmentStatement]:
+        assignments: Sequence[PythonAssignmentStatement],
+    ) -> Sequence[PythonAssignmentStatement]:
         return assignments
 
     @v_args(inline=True)
@@ -319,8 +320,8 @@ class ToAst(Transformer):
         self,
         variable: PythonExpression,
         type_hint: PythonExpression,
-        value: Optional[PythonExpression],
-    ) -> Tuple[PythonAssignmentStatement]:
+        value: PythonExpression | None,
+    ) -> Sequence[PythonAssignmentStatement]:
         if value is None:
             return ()
         return (
@@ -334,7 +335,7 @@ class ToAst(Transformer):
             ),
         )
 
-    def assign(self, children: Iterable[PythonExpression]) -> Tuple[PythonAssignmentStatement]:
+    def assign(self, children: Iterable[PythonExpression]) -> Sequence[PythonAssignmentStatement]:
         assert len(children) >= 2, f'assign: {children}'
         statements = []
         for i in range(len(children) - 2, -1, -1):
@@ -358,7 +359,7 @@ class ToAst(Transformer):
         variable: PythonExpression,
         operator: Token,
         value: SomeExpressions,
-    ) -> Tuple[PythonAssignmentStatement]:
+    ) -> Sequence[PythonAssignmentStatement]:
         value = self._tuple_to_expr(value)
         return (
             self._new_node(
@@ -373,14 +374,14 @@ class ToAst(Transformer):
 
     # Import Statements ####################################
 
-    def dotted_name(self, names: Iterable[Token]) -> Tuple[Token]:
+    def dotted_name(self, names: Iterable[Token]) -> Sequence[Token]:
         return tuple(names)
 
     @v_args(inline=True)
     def dotted_as_name(
         self,
-        dotted_name: Tuple[Token],
-        alias: Optional[Token] = None,
+        dotted_name: Sequence[Token],
+        alias: Token | None = None,
     ) -> PythonImportedName:
         name = dotted_name[-1]
         assert isinstance(name, str), repr(name)
@@ -392,11 +393,11 @@ class ToAst(Transformer):
         )
         return self._new_node(PythonImportedName, base, name, alias=alias)
 
-    def dotted_as_names(self, names: Iterable[PythonImportedName]) -> Tuple[PythonImportedName]:
+    def dotted_as_names(self, names: Iterable[PythonImportedName]) -> Sequence[PythonImportedName]:
         return tuple(names)
 
     @v_args(inline=True)
-    def import_name(self, dotted_as_names: Tuple[PythonImportedName]) -> PythonImportStatement:
+    def import_name(self, dotted_as_names: Sequence[PythonImportedName]) -> PythonImportStatement:
         assert len(dotted_as_names) > 0, f'import_name: {dotted_as_names}'
         return self._new_node(
             PythonImportStatement,
@@ -406,10 +407,10 @@ class ToAst(Transformer):
         )
 
     @v_args(inline=True)
-    def import_as_name(self, name: Token, alias: Optional[Token] = None) -> PythonAliasName:
+    def import_as_name(self, name: Token, alias: Token | None = None) -> PythonAliasName:
         return self._new_node(PythonAliasName, name, alias, line=name.line, column=name.column)
 
-    def import_as_names(self, names: Iterable[PythonAliasName]) -> Tuple[PythonAliasName]:
+    def import_as_names(self, names: Iterable[PythonAliasName]) -> Sequence[PythonAliasName]:
         return tuple(names)
 
     def import_from(self, children: Iterable) -> PythonImportStatement:
@@ -465,9 +466,9 @@ class ToAst(Transformer):
     def funcdef(
         self,
         name: Token,
-        parameters: Optional[Tuple[PythonFunctionParameter]],
-        type_hint: Optional[PythonExpression],
-        body: Tuple[PythonStatement],
+        parameters: Sequence[PythonFunctionParameter] | None,
+        type_hint: PythonExpression | None,
+        body: Sequence[PythonStatement],
     ) -> PythonFunctionDefStatement:
         parameters = parameters or ()
         # type_hint = None if type_hint is None else str(type_hint)
@@ -487,7 +488,7 @@ class ToAst(Transformer):
         object.__setattr__(funcdef, 'asynchronous', True)
         return funcdef
 
-    def parameters(self, children: Iterable[Any]) -> Tuple[PythonFunctionParameter]:
+    def parameters(self, children: Iterable[Any]) -> Sequence[PythonFunctionParameter]:
         params = []
         assert len(children) > 1, f'parameters: {children}'
         for i in range(len(children)):
@@ -510,9 +511,9 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def starparams(
         self,
-        starparam: Union[PythonFunctionParameter, Token],
+        starparam: PythonFunctionParameter | Token,
         poststarparams: Iterable[PythonFunctionParameter],
-    ) -> Tuple[PythonFunctionParameter]:
+    ) -> Sequence[PythonFunctionParameter]:
         if starparam == '*':
             return tuple(poststarparams)
         return (starparam,) + tuple(poststarparams)
@@ -520,7 +521,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def starparam(
         self,
-        param: Union[PythonFunctionParameter, Token],
+        param: PythonFunctionParameter | Token,
     ) -> PythonFunctionParameter:
         if not isinstance(param, PythonFunctionParameter):
             param = self._new_node(
@@ -532,8 +533,8 @@ class ToAst(Transformer):
 
     def poststarparams(
         self,
-        children: Iterable[Union[PythonFunctionParameter, Token]],
-    ) -> Tuple[PythonFunctionParameter]:
+        children: Iterable[PythonFunctionParameter | Token],
+    ) -> Sequence[PythonFunctionParameter]:
         params = []
         for param in children:
             if param is None:
@@ -557,7 +558,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def kwparams(
         self,
-        param: Union[PythonFunctionParameter, Token],
+        param: PythonFunctionParameter | Token,
     ) -> PythonFunctionParameter:
         if not isinstance(param, PythonFunctionParameter):
             param = self._new_node(
@@ -573,8 +574,8 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def paramvalue(
         self,
-        param: Union[PythonFunctionParameter, Token],
-        default_value: Optional[PythonExpression] = None,
+        param: PythonFunctionParameter | Token,
+        default_value: PythonExpression | None = None,
     ) -> PythonFunctionParameter:
         if isinstance(param, PythonFunctionParameter):
             object.__setattr__(param, 'default_value', default_value)
@@ -592,7 +593,7 @@ class ToAst(Transformer):
     def typedparam(
         self,
         name: Token,
-        type_hint: Optional[PythonExpression] = None,
+        type_hint: PythonExpression | None = None,
     ) -> PythonFunctionParameter:
         return self._new_node(
             PythonFunctionParameter,
@@ -608,8 +609,8 @@ class ToAst(Transformer):
     def classdef(
         self,
         name: Token,
-        arguments: Optional[Tuple[PythonArgument]],
-        body: Tuple[PythonStatement],
+        arguments: Sequence[PythonArgument] | None,
+        body: Sequence[PythonStatement],
     ) -> PythonClassDefStatement:
         arguments = arguments or ()
         return self._new_node(
@@ -627,8 +628,8 @@ class ToAst(Transformer):
     def if_stmt(
         self,
         test: PythonExpression,
-        body: Tuple[PythonStatement],
-        elif_branches: Tuple[PythonConditionalBlock],
+        body: Sequence[PythonStatement],
+        elif_branches: Sequence[PythonConditionalBlock],
         else_branch: MaybeStatements,
     ) -> PythonIfStatement:
         then_branch = self._new_node(
@@ -641,12 +642,12 @@ class ToAst(Transformer):
         else_branch = else_branch or ()  # avoid None
         return self._new_node(PythonIfStatement, then_branch, elif_branches, else_branch)
 
-    def elifs(self, children: Iterable[PythonConditionalBlock]) -> Tuple[PythonConditionalBlock]:
+    def elifs(self, children: Iterable[PythonConditionalBlock]) -> Sequence[PythonConditionalBlock]:
         return tuple(children)
 
     @v_args(inline=True)
     def elif_(
-        self, condition: PythonExpression, body: Tuple[PythonStatement]
+        self, condition: PythonExpression, body: Sequence[PythonStatement]
     ) -> PythonConditionalBlock:
         return self._new_node(PythonConditionalBlock, condition, body)
 
@@ -656,7 +657,7 @@ class ToAst(Transformer):
     def while_stmt(
         self,
         test: PythonExpression,
-        body: Tuple[PythonStatement],
+        body: Sequence[PythonStatement],
         else_branch: MaybeStatements,
     ) -> PythonWhileStatement:
         loop = self._new_node(
@@ -671,9 +672,9 @@ class ToAst(Transformer):
 
     def for_stmt(
         self,
-        variables: Tuple[PythonExpression],
-        iterables: Tuple[PythonExpression],
-        body: Tuple[PythonStatement],
+        variables: Sequence[PythonExpression],
+        iterables: Sequence[PythonExpression],
+        body: Sequence[PythonStatement],
         else_branch: MaybeStatements,
     ) -> PythonForStatement:
         iterable = self._tuple_to_expr(iterables)
@@ -686,8 +687,8 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def try_stmt(
         self,
-        body: Tuple[PythonStatement],
-        except_clauses: Tuple[PythonExceptClause],
+        body: Sequence[PythonStatement],
+        except_clauses: Sequence[PythonExceptClause],
         else_branch: MaybeStatements,
         finally_block: MaybeStatements,
     ) -> PythonTryStatement:
@@ -704,25 +705,25 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def try_finally(
         self,
-        body: Tuple[PythonStatement],
-        finally_block: Tuple[PythonStatement],
+        body: Sequence[PythonStatement],
+        finally_block: Sequence[PythonStatement],
     ) -> PythonTryStatement:
         return self._new_node(PythonTryStatement, body, finally_block=finally_block)
 
     @v_args(inline=True)
-    def finally_block(self, body: Tuple[PythonStatement]) -> Tuple[PythonStatement]:
+    def finally_block(self, body: Sequence[PythonStatement]) -> Sequence[PythonStatement]:
         return body
 
-    def except_clauses(self, clauses: Iterable[PythonExceptClause]) -> Tuple[PythonExceptClause]:
+    def except_clauses(self, clauses: Iterable[PythonExceptClause]) -> Sequence[PythonExceptClause]:
         assert len(clauses) >= 1, f'except_clauses: {clauses}'
         return tuple(clauses)
 
     @v_args(inline=True)
     def except_clause(
         self,
-        exception: Optional[PythonExpression],
-        alias: Optional[Token],
-        body: Tuple[PythonStatement],
+        exception: PythonExpression | None,
+        alias: Token | None,
+        body: Sequence[PythonStatement],
     ) -> PythonExceptClause:
         assert len(body) > 0, f'except_clause: {exception}, {alias}, {body}'
         line = body[0].line
@@ -744,7 +745,7 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def lambdef(
         self,
-        parameters: Optional[Tuple[PythonFunctionParameter]],
+        parameters: Sequence[PythonFunctionParameter] | None,
         expression: PythonExpression,
     ) -> PythonLambdaExpression:
         return self._lambdef_common(parameters, expression)
@@ -752,14 +753,14 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def lambdef_nocond(
         self,
-        parameters: Optional[Tuple[PythonFunctionParameter]],
+        parameters: Sequence[PythonFunctionParameter] | None,
         expression: PythonExpression,
     ) -> PythonLambdaExpression:
         return self._lambdef_common(parameters, expression)
 
     def _lambdef_common(
         self,
-        parameters: Optional[Tuple[PythonFunctionParameter]],
+        parameters: Sequence[PythonFunctionParameter] | None,
         expression: PythonExpression,
     ) -> PythonLambdaExpression:
         parameters = parameters or ()  # handle None
@@ -776,14 +777,14 @@ class ToAst(Transformer):
             column=column,
         )
 
-    def lambda_params(self, children: Iterable[MaybeParams]) -> Tuple[PythonFunctionParameter]:
+    def lambda_params(self, children: Iterable[MaybeParams]) -> Sequence[PythonFunctionParameter]:
         return self.parameters(children)
 
     @v_args(inline=True)
     def lambda_paramvalue(
         self,
         name: Token,
-        default_value: Optional[PythonExpression] = None,
+        default_value: PythonExpression | None = None,
     ) -> PythonFunctionParameter:
         return self._new_node(
             PythonFunctionParameter,
@@ -796,12 +797,12 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def lambda_starparams(
         self,
-        name: Optional[Token],
-        params: Tuple[PythonFunctionParameter],
-    ) -> Tuple[PythonFunctionParameter]:
+        name: Token | None,
+        params: Sequence[PythonFunctionParameter],
+    ) -> Sequence[PythonFunctionParameter]:
         if name is not None:
             # square brackets places a None if no matches occurred
-            assert isinstance(name, Token), f'lambda_starparams: {children}'
+            assert isinstance(name, Token), f'lambda_starparams: {(name, params)!r}'
             param = self._new_node(
                 PythonFunctionParameter,
                 name,
@@ -814,8 +815,8 @@ class ToAst(Transformer):
 
     def lambda_poststarparams(
         self,
-        params: Iterable[Optional[PythonFunctionParameter]],
-    ) -> Tuple[PythonFunctionParameter]:
+        params: Iterable[PythonFunctionParameter | None],
+    ) -> Sequence[PythonFunctionParameter]:
         return self.poststarparams(params)
 
     @v_args(inline=True)
@@ -832,7 +833,7 @@ class ToAst(Transformer):
 
     def match_stmt(
         self,
-        children: Iterable[Union[PythonExpression, PythonCaseStatement]],
+        children: Iterable[PythonExpression | PythonCaseStatement],
     ) -> PythonMatchStatement:
         assert len(children) >= 2, f'match_stmt: {children!r}'
         value = children[0]
@@ -846,8 +847,8 @@ class ToAst(Transformer):
     def case_stmt(
         self,
         pattern: PythonCasePattern,
-        guard: Optional[PythonExpression],
-        body: Tuple[PythonStatement],
+        guard: PythonExpression | None,
+        body: Sequence[PythonStatement],
     ) -> PythonCaseStatement:
         line = pattern.line  # FIXME
         column = pattern.column  # FIXME
@@ -897,7 +898,7 @@ class ToAst(Transformer):
 
     def mapping_star_pattern(
         self,
-        children: Iterable[Union[PythonKeyCasePattern, Token]],
+        children: Iterable[PythonKeyCasePattern | Token],
     ) -> PythonMappingCasePattern:
         assert len(children) >= 2, f'mapping_star_pattern: {children!r}'
         patterns = list(children)
@@ -945,7 +946,7 @@ class ToAst(Transformer):
     def class_pattern(
         self,
         pattern: PythonSimpleCasePattern,
-        arguments: Optional[Tuple[PythonCasePattern]],
+        arguments: Sequence[PythonCasePattern] | None,
     ) -> PythonClassCasePattern:
         arguments = arguments or ()
         assert pattern.expression.is_reference, f'class_pattern: {pattern}'
@@ -962,26 +963,26 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def arguments_pattern(
         self,
-        positional: Tuple[PythonCasePattern],
-        keyword: Optional[Tuple[PythonNamedCasePattern]],
-    ) -> Tuple[PythonCasePattern]:
+        positional: Sequence[PythonCasePattern],
+        keyword: Sequence[PythonNamedCasePattern] | None,
+    ) -> Sequence[PythonCasePattern]:
         keyword = keyword or ()
         return positional + keyword
 
     @v_args(inline=True)
     def no_pos_arguments(
         self,
-        kwargs: Tuple[PythonNamedCasePattern],
-    ) -> Tuple[PythonNamedCasePattern]:
+        kwargs: Sequence[PythonNamedCasePattern],
+    ) -> Sequence[PythonNamedCasePattern]:
         return kwargs
 
-    def pos_arg_pattern(self, ps: Iterable[PythonCasePattern]) -> Tuple[PythonCasePattern]:
+    def pos_arg_pattern(self, ps: Iterable[PythonCasePattern]) -> Sequence[PythonCasePattern]:
         return tuple(ps)
 
     def keyws_arg_pattern(
         self,
         patterns: Iterable[PythonNamedCasePattern],
-    ) -> Tuple[PythonNamedCasePattern]:
+    ) -> Sequence[PythonNamedCasePattern]:
         return tuple(patterns)
 
     @v_args(inline=True)
@@ -999,8 +1000,8 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def with_stmt(
         self,
-        managers: Tuple[PythonContextManager],
-        body: Tuple[PythonStatement],
+        managers: Sequence[PythonContextManager],
+        body: Sequence[PythonStatement],
     ) -> PythonWithStatement:
         assert len(managers) >= 1, f'with_stmt: {managers}'
         assert len(body) >= 1, f'with_stmt: {body}'
@@ -1008,12 +1009,14 @@ class ToAst(Transformer):
         column = managers[0].column
         return self._new_node(PythonWithStatement, managers, body, line=line, column=column)
 
-    def with_items(self, managers: Iterable[PythonContextManager]) -> Tuple[PythonContextManager]:
+    def with_items(
+        self, managers: Iterable[PythonContextManager]
+    ) -> Sequence[PythonContextManager]:
         assert len(managers) >= 1, f'with_items: {managers}'
         return tuple(managers)
 
     @v_args(inline=True)
-    def with_item(self, manager: PythonExpression, alias: Optional[Token]) -> PythonContextManager:
+    def with_item(self, manager: PythonExpression, alias: Token | None) -> PythonContextManager:
         return self._new_node(PythonContextManager, manager, alias=alias)
 
     # Other Expressions ####################################
@@ -1070,12 +1073,12 @@ class ToAst(Transformer):
         )
 
     @v_args(inline=True)
-    def testlist(self, test_or_tuple: SomeExpressions) -> Tuple[PythonExpression]:
+    def testlist(self, test_or_tuple: SomeExpressions) -> Sequence[PythonExpression]:
         if isinstance(test_or_tuple, tuple):
             return test_or_tuple
         return (test_or_tuple,)
 
-    def testlist_tuple(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
+    def testlist_tuple(self, children: Iterable[PythonExpression]) -> Sequence[PythonExpression]:
         return tuple(children)
 
     @v_args(inline=True)
@@ -1179,7 +1182,7 @@ class ToAst(Transformer):
         )
 
     @v_args(inline=True)
-    def comp_op(self, operator: Token, other_token: Optional[Token] = None) -> Token:
+    def comp_op(self, operator: Token, other_token: Token | None = None) -> Token:
         if other_token is not None:
             return operator.update(f'{operator.value} {other_token.value}')
         return operator
@@ -1240,7 +1243,7 @@ class ToAst(Transformer):
     def _token_to_ref(
         self,
         name: Token,
-        base: Optional[PythonExpression] = None,
+        base: PythonExpression | None = None,
     ) -> PythonReference:
         line = name.line
         column = name.column
@@ -1267,7 +1270,7 @@ class ToAst(Transformer):
         )
 
     @v_args(inline=True)
-    def subscript(self, subscript: Union[PythonExpression, PythonSlice]) -> PythonSubscript:
+    def subscript(self, subscript: PythonExpression | PythonSlice) -> PythonSubscript:
         if isinstance(subscript, PythonSubscript):
             return subscript
         assert isinstance(subscript, PythonExpression), f'subscript: {subscript!r}'
@@ -1276,10 +1279,10 @@ class ToAst(Transformer):
     @v_args(inline=True)
     def slice(
         self,
-        start: Optional[PythonExpression],
+        start: PythonExpression | None,
         colon: Token,
-        end: Optional[PythonExpression],
-        step: Optional[PythonExpression],
+        end: PythonExpression | None,
+        step: PythonExpression | None,
     ) -> PythonSlice:
         line = colon.line if start is None else start.line
         column = colon.column if start is None else start.column
@@ -1305,8 +1308,8 @@ class ToAst(Transformer):
 
     def arguments(
         self,
-        children: Iterable[Union[None, PythonAst, Tuple[PythonAst]]],
-    ) -> Tuple[PythonArgument]:
+        children: Iterable[None | PythonAst | Sequence[PythonAst]],
+    ) -> Sequence[PythonArgument]:
         args = []
         for arg in children:
             if arg is None:
@@ -1320,15 +1323,15 @@ class ToAst(Transformer):
                 if arg.is_argument:
                     args.append(arg)
                 else:
-                    assert False, f'unexpected argument: {arg}'
+                    raise AssertionError(f'unexpected argument: {arg}')
             else:
-                assert False, f'unexpected argument: {arg}'
+                raise AssertionError(f'unexpected argument: {arg}')
         return tuple(args)
 
     def starargs(
         self,
-        children: Iterable[Union[PythonAst, Tuple[PythonAst]]],
-    ) -> Tuple[PythonArgument]:
+        children: Iterable[PythonAst | Sequence[PythonAst]],
+    ) -> Sequence[PythonArgument]:
         args = []
         for arg in children:
             if isinstance(arg, tuple):
@@ -1340,9 +1343,9 @@ class ToAst(Transformer):
                 if arg.is_argument:
                     args.append(arg)
                 else:
-                    assert False, f'unexpected argument: {arg}'
+                    raise AssertionError(f'unexpected argument: {arg}')
             else:
-                assert False, f'unexpected argument: {arg}'
+                raise AssertionError(f'unexpected argument: {arg}')
         return tuple(args)
 
     @v_args(inline=True)
@@ -1357,10 +1360,10 @@ class ToAst(Transformer):
 
     def kwargs(
         self,
-        children: Collection[Union[PythonExpression, PythonArgument]],
-    ) -> Tuple[PythonArgument]:
+        children: Sequence[PythonExpression | PythonArgument],
+    ) -> Sequence[PythonArgument]:
         assert len(children) >= 1
-        args: List[PythonArgument] = []
+        args: list[PythonArgument] = []
         arg = children[0]
         if isinstance(children[0], PythonArgument):
             args.append(children[0])
@@ -1384,7 +1387,7 @@ class ToAst(Transformer):
             )
         return tuple(args)
 
-    def argvalue(self, children: Collection[PythonExpression]) -> PythonArgument:
+    def argvalue(self, children: Sequence[PythonExpression]) -> PythonArgument:
         assert len(children) >= 1 and len(children) <= 2, f'argvalue: {children}'
         value: PythonExpression = children[-1]
         name: str = ''
@@ -1403,7 +1406,7 @@ class ToAst(Transformer):
             column=value.column,
         )
 
-    def exprlist(self, children: Iterable[PythonExpression]) -> Tuple[PythonExpression]:
+    def exprlist(self, children: Iterable[PythonExpression]) -> Sequence[PythonExpression]:
         return tuple(children)
 
     # Atomic Literals ######################################
@@ -1435,7 +1438,7 @@ class ToAst(Transformer):
         assert match is not None, f'expected a match: {s}'
         prefix = match.group(1)
         is_raw = 'r' in prefix
-        is_unicode = not 'b' in prefix
+        is_unicode = 'b' not in prefix
         is_format = 'f' in prefix
         value = s[match.end() : -1]
         return self._new_node(
@@ -1454,7 +1457,7 @@ class ToAst(Transformer):
         assert match is not None, f'expected a match: {s}'
         prefix = match.group(1)
         is_raw = 'r' in prefix
-        is_unicode = not 'b' in prefix
+        is_unicode = 'b' not in prefix
         is_format = 'f' in prefix
         value = s[match.end() + 2 : -3]
         return self._new_node(

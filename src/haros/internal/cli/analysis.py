@@ -1,24 +1,23 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
-"""
-Module that contains the command line sub-program.
-"""
+"""Module that contains the command line sub-program."""
 
 ###############################################################################
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List
+from typing import Any, Final
 
 import argparse
+from collections.abc import Iterable, Mapping, Sequence
 import json
 import logging
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_description
-from haros.export.json import launch_feature, export_project
-from haros.internal.fsutil import is_ros_package, is_workspace, StorageManager
+from haros.export.json import export_project, launch_feature
+from haros.internal.fsutil import StorageManager, is_ros_package, is_workspace
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.plugins import load as load_plugins
 from haros.internal.settings import Settings
@@ -42,7 +41,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def subprogram(argv: List[str], settings: Settings) -> int:
+def subprogram(argv: Sequence[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -52,7 +51,7 @@ def subprogram(argv: List[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Settings) -> int:
+def run(args: Mapping[str, Any], settings: Settings) -> int:
     plugins = load_plugins(settings.home, settings.plugins)
     paths = args['paths']
     if args['packages']:
@@ -65,11 +64,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     logger.info(f'analysis: packages: {storage.packages}')
     plugins.on_analysis_begin()
     # print(f'analysis: packages: {list(storage.packages.keys())}')
-    output = {
-        'launch': {
-            'models': []
-        }
-    }
+    output = {'launch': {'models': []}}
     model = build_from_package_paths(args['name'], storage.packages)
     system = _setup_interface(storage, model)
     print('project:', model.name)
@@ -107,7 +102,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: List[str]) -> Dict[str, Any]:
+def parse_arguments(argv: Sequence[str]) -> dict[str, Any]:
     msg = 'Run analyses over ROS workspaces and packages'
     parser = argparse.ArgumentParser(prog='haros analysis', description=msg)
 
@@ -123,7 +118,7 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
         '-p',
         '--packages',
         action='store_true',
-        help=f'process args as package names',
+        help='process args as package names',
     )
 
     parser.add_argument(
@@ -142,7 +137,7 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
 ###############################################################################
 
 
-def process_paths(paths: List[Path]) -> StorageManager:
+def process_paths(paths: Iterable[Path]) -> StorageManager:
     storage = StorageManager()
     adhoc = []
     for path in paths:
@@ -165,7 +160,7 @@ def process_paths(paths: List[Path]) -> StorageManager:
 
 def _setup_interface(storage: StorageManager, model: ProjectModel) -> AnalysisSystemInterface:
     workspace = Path.cwd() / 'tests' / 'ws1'  # FIXME
-    repo = workspace / 'src' / 'repo'
+    # repo = workspace / 'src' / 'repo'
     return AnalysisSystemInterface(
         workspace=str(workspace),
         packages={name: path.as_posix() for name, path in storage.packages.items()},

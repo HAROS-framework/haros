@@ -5,11 +5,11 @@
 # Imports
 ###############################################################################
 
-from typing import Final, List, Tuple
+from typing import Final
 
+from collections.abc import Sequence
 from pathlib import Path
 import re
-import sys
 
 from attrs import field, frozen
 from lark import Lark, Transformer, v_args
@@ -37,10 +37,9 @@ class CMakeComment:
 
     def pretty(self, indent: int = 0) -> str:
         ws = _INDENT_SPACE * indent
-        return '\n'.join((
-            f'{ws}comment: [{self.line},{self.column}]',
-            f'{ws}{_INDENT_SPACE}text:\t{self.text}'
-        ))
+        return '\n'.join(
+            (f'{ws}comment: [{self.line},{self.column}]', f'{ws}{_INDENT_SPACE}text:\t{self.text}')
+        )
 
 
 @frozen
@@ -51,19 +50,21 @@ class CMakeArgument:
 
     def pretty(self, indent: int = 0) -> str:
         ws = _INDENT_SPACE * indent
-        return '\n'.join((
-            f'{ws}argument: [{self.line},{self.column}]',
-            f'{ws}{_INDENT_SPACE}value:\t{self.value}'
-        ))
+        return '\n'.join(
+            (
+                f'{ws}argument: [{self.line},{self.column}]',
+                f'{ws}{_INDENT_SPACE}value:\t{self.value}',
+            )
+        )
 
 
 @frozen
 class CMakeCommand:
     name: str
-    arguments: List[CMakeArgument]
+    arguments: Sequence[CMakeArgument]
     line: int = 1
     column: int = 1
-    comments: List[CMakeComment] = field(factory=list)
+    comments: Sequence[CMakeComment] = field(factory=list)
 
     def pretty(self, indent: int = 0) -> str:
         ws = _INDENT_SPACE * indent
@@ -74,17 +75,17 @@ class CMakeCommand:
         ]
         if self.arguments:
             parts.append(f'{ws2}arguments:')
-            parts.extend(a.pretty(indent=indent+2) for a in self.arguments)
+            parts.extend(a.pretty(indent=indent + 2) for a in self.arguments)
         if self.comments:
             parts.append(f'{ws2}comments:')
-            parts.extend(c.pretty(indent=indent+2) for c in self.comments)
+            parts.extend(c.pretty(indent=indent + 2) for c in self.comments)
         return '\n'.join(parts)
 
 
 @frozen
 class CMakeFile:
-    commands: List[CMakeCommand] = field(factory=list)
-    comments: List[CMakeComment] = field(factory=list)
+    commands: Sequence[CMakeCommand] = field(factory=list)
+    comments: Sequence[CMakeComment] = field(factory=list)
 
     def pretty(self) -> str:
         parts = ['file:']
@@ -124,7 +125,7 @@ class _ToAst(Transformer):
             comments=comments,
         )
 
-    def arguments(self, children) -> Tuple[List[CMakeArgument], List[CMakeComment]]:
+    def arguments(self, children) -> tuple[list[CMakeArgument], list[CMakeComment]]:
         arguments = [c for c in children if isinstance(c, CMakeArgument)]
         comments = [c for c in children if isinstance(c, CMakeComment)]
         return arguments, comments
@@ -165,7 +166,7 @@ class _ToAst(Transformer):
         assert match.start() == 0, f'expected bracket match at start of string: {token}'
         n = match.end()
         assert n >= 3, f'expected at least two brakcet characters: {token}'
-        text = token[n:-(n-1)]  # remove brackets from both ends
+        text = token[n : -(n - 1)]  # remove brackets from both ends
         # remove also optional starting newline
         if text.startswith('\n'):
             text = text[1:]
@@ -191,7 +192,7 @@ class _CMakeParser:
         tree = self._parser.parse(text)
         return self._transformer.transform(tree)
 
-    def parse_arguments(self, text: str) -> List[CMakeArgument]:
+    def parse_arguments(self, text: str) -> list[CMakeArgument]:
         tree = self._arg_parser.parse(text)
         arguments, comments = self._transformer.transform(tree)
         return arguments

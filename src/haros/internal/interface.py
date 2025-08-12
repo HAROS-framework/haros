@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Iterable, Mapping, Optional, Union
+from typing import Any, Final
 
+from collections.abc import Callable, Iterable, MutableMapping
 from errno import EACCES
 import logging
 import os
@@ -25,7 +26,7 @@ from haros.metamodel.ros import NodeModel, ProjectModel, uid_node
 
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
-PathType = Union[str, Path]
+type PathType = str | Path
 
 PACKAGE_SHARE_DIR = '/usr/share/ros/'
 
@@ -53,23 +54,23 @@ def fail_to_parse_launch_file(path: PathType, system: Any) -> LaunchDescription:
 @frozen
 class AnalysisSystemInterface:
     strict: bool = False
-    environment: Mapping[str, str] = field(factory=dict)
-    workspace: Optional[str] = None
-    packages: Mapping[str, str] = field(factory=dict)
-    executables: Mapping[str, Iterable[str]] = field(factory=dict)
-    model: Optional[ProjectModel] = None
-    launch_cache: Mapping[str, LaunchDescription] = field(factory=dict)
+    environment: MutableMapping[str, str] = field(factory=dict)
+    workspace: str | None = None
+    packages: MutableMapping[str, str] = field(factory=dict)
+    executables: MutableMapping[str, Iterable[str]] = field(factory=dict)
+    model: ProjectModel | None = None
+    launch_cache: MutableMapping[str, LaunchDescription] = field(factory=dict)
     parse_launch_description: Callable = fail_to_parse_launch_file
 
-    def get_environment_var(self, name: str) -> Optional[str]:
-        value: Optional[str] = self.environment.get(name)
+    def get_environment_var(self, name: str) -> str | None:
+        value: str | None = self.environment.get(name)
         return value if value is not None else os.environ.get(name)
 
-    def get_package_path(self, name: str) -> Optional[str]:
-        strpath: Optional[str] = self.packages.get(name)
+    def get_package_path(self, name: str) -> str | None:
+        strpath: str | None = self.packages.get(name)
         if strpath:
             return strpath
-        d: Optional[Path] = None
+        d: Path | None = None
         strpath = self.workspace
         if strpath:
             d = Path(strpath) / 'src' / name
@@ -84,7 +85,7 @@ class AnalysisSystemInterface:
                 return str(d)
         return None
 
-    def get_node_model(self, package: str, executable: str) -> Optional[NodeModel]:
+    def get_node_model(self, package: str, executable: str) -> NodeModel | None:
         # executables = self.executables.get(package)
         # if executables is None or executable not in executables:
         #     return None
@@ -118,7 +119,7 @@ class AnalysisSystemInterface:
             self.launch_cache[filepath] = description
         return description
 
-    def read_text_file(self, filepath: PathType, encoding: Optional[str] = None) -> str:
+    def read_text_file(self, filepath: PathType, encoding: str | None = None) -> str:
         filepath = self._redirect_to_local_packages(filepath)
         if self.strict:
             safe_dir = self._safe_root()
@@ -126,7 +127,7 @@ class AnalysisSystemInterface:
                 raise ValueError(filepath)
         return Path(filepath).read_text(encoding=encoding)
 
-    def read_yaml_file(self, filepath: PathType, encoding: Optional[str] = None) -> Dict[Any, Any]:
+    def read_yaml_file(self, filepath: PathType, encoding: str | None = None) -> dict[Any, Any]:
         return safe_load(self.read_text_file(filepath, encoding=encoding))
 
     def execute_command(self, cmd: str) -> str:
@@ -135,19 +136,19 @@ class AnalysisSystemInterface:
     def _redirect_to_local_packages(self, path: PathType) -> str:
         path = uniform_path_string(path)
         if path.startswith(PACKAGE_SHARE_DIR):
-            relative = path[len(PACKAGE_SHARE_DIR):]
+            relative = path[len(PACKAGE_SHARE_DIR) :]
             parts = relative.split('/', maxsplit=1)
             package = parts[0]
-            suffix = relative[len(package):]
+            suffix = relative[len(package) :]
             new_path = self.packages.get(package, f'{PACKAGE_SHARE_DIR}{package}')
             if new_path is not None:
                 return f'{new_path}{suffix}'
         return path
 
-    def _safe_root(self) -> Optional[str]:
+    def _safe_root(self) -> str | None:
         if self.workspace is not None:
             return self.workspace
-        path: Optional[str] = self.get_environment_var('ROS_ROOT')
+        path: str | None = self.get_environment_var('ROS_ROOT')
         if path is not None:
             return str(Path(path).parent)
         return None

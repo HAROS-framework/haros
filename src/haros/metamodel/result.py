@@ -5,30 +5,14 @@
 # Imports
 ###############################################################################
 
-from typing import (
-    Any,
-    Dict,
-    Final,
-    Generic,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Final, Self
 
-from collections.abc import Iterable as IterableType, Mapping as MappingType
+from collections.abc import Iterable, Iterator, Mapping, Set
 import logging
 
 from attrs import evolve, field, frozen
 
 from haros.metamodel.common import TrackedCode
-
 
 ###############################################################################
 # Constants
@@ -45,18 +29,14 @@ def noop(*args, **kwargs):
     pass
 
 
-T = TypeVar('T')
-V = TypeVar('V')
-K = TypeVar('K')
-
-BUILTIN_FUNCTION_TYPE: Final[Type[min]] = type(min)
-DEF_FUNCTION_TYPE: Final[Type[noop]] = type(noop)
-CLASS_TYPE = type
+type BuiltinFunctionType = type[min]
+type DefFunctionType = type[noop]
+type ClassType[T] = type[T]
 
 
 @frozen
-class TypeToken(Generic[V]):
-    token: Type[V]
+class TypeToken[V]:
+    token: type[V]
 
     @classmethod
     def of(cls, value: V) -> 'TypeToken[V]':
@@ -87,43 +67,43 @@ class TypeToken(Generic[V]):
         return cls(str)
 
     @classmethod
-    def of_builtin_function(cls) -> 'TypeToken[Type[min]]':
-        return cls(BUILTIN_FUNCTION_TYPE)
+    def of_builtin_function(cls) -> 'TypeToken[BuiltinFunctionType]':
+        return cls(BuiltinFunctionType)
 
     @classmethod
-    def of_def_function(cls) -> 'TypeToken[Type[noop]]':
-        return cls(DEF_FUNCTION_TYPE)
+    def of_def_function(cls) -> 'TypeToken[DefFunctionType]':
+        return cls(DefFunctionType)
 
     @classmethod
-    def of_class(cls) -> 'TypeToken[type]':
-        return cls(CLASS_TYPE)
+    def of_class(cls) -> 'TypeToken[ClassType]':
+        return cls(ClassType)
 
     @classmethod
     def of_exception(cls) -> 'TypeToken[BaseException]':
         return cls(Exception)
 
     @classmethod
-    def of_iterable(cls) -> 'TypeToken[IterableType]':
-        return cls(IterableType)
+    def of_iterable(cls) -> 'TypeToken[Iterable]':
+        return cls(Iterable)
 
     @classmethod
-    def of_list(cls) -> 'TypeToken[List[T]]':
+    def of_list(cls) -> 'TypeToken[list]':
         return cls(list)
 
     @classmethod
-    def of_tuple(cls) -> 'TypeToken[Tuple[T]]':
+    def of_tuple(cls) -> 'TypeToken[tuple]':
         return cls(tuple)
 
     @classmethod
-    def of_set(cls) -> 'TypeToken[Set[T]]':
+    def of_set(cls) -> 'TypeToken[set]':
         return cls(set)
 
     @classmethod
-    def of_mapping(cls) -> 'TypeToken[MappingType]':
-        return cls(MappingType)
+    def of_mapping(cls) -> 'TypeToken[Mapping]':
+        return cls(Mapping)
 
     @classmethod
-    def of_dict(cls) -> 'TypeToken[Dict[K, T]]':
+    def of_dict(cls) -> 'TypeToken[dict]':
         return cls(dict)
 
     @property
@@ -156,19 +136,19 @@ class TypeToken(Generic[V]):
 
     @property
     def is_builtin_function(self) -> bool:
-        return issubclass(self.token, BUILTIN_FUNCTION_TYPE)
+        return issubclass(self.token, BuiltinFunctionType)
 
     @property
     def is_def_function(self) -> bool:
-        return issubclass(self.token, DEF_FUNCTION_TYPE)
+        return issubclass(self.token, DefFunctionType)
 
     @property
     def is_function(self) -> bool:
-        return issubclass(self.token, (BUILTIN_FUNCTION_TYPE, DEF_FUNCTION_TYPE))
+        return issubclass(self.token, (BuiltinFunctionType, DefFunctionType))
 
     @property
     def is_class(self) -> bool:
-        return issubclass(self.token, CLASS_TYPE)
+        return issubclass(self.token, ClassType)
 
     @property
     def is_exception(self) -> bool:
@@ -180,11 +160,11 @@ class TypeToken(Generic[V]):
 
     @property
     def is_iterable(self) -> bool:
-        return not self.is_string and issubclass(self.token, IterableType)
+        return not self.is_string and issubclass(self.token, Iterable)
 
     @property
     def is_mapping(self) -> bool:
-        return issubclass(self.token, MappingType)
+        return issubclass(self.token, Mapping)
 
     @property
     def has_attributes(self) -> bool:
@@ -205,15 +185,15 @@ TYPE_TOKEN_INT: Final[TypeToken[int]] = TypeToken(int)
 TYPE_TOKEN_FLOAT: Final[TypeToken[float]] = TypeToken(float)
 TYPE_TOKEN_COMPLEX: Final[TypeToken[complex]] = TypeToken(complex)
 TYPE_TOKEN_STRING: Final[TypeToken[str]] = TypeToken(str)
-TYPE_TOKEN_ITERABLE: Final[TypeToken[Iterable]] = TypeToken(IterableType)
+TYPE_TOKEN_ITERABLE: Final[TypeToken[Iterable]] = TypeToken(Iterable)
 TYPE_TOKEN_LIST: Final[TypeToken[list]] = TypeToken(list)
 TYPE_TOKEN_TUPLE: Final[TypeToken[tuple]] = TypeToken(tuple)
 TYPE_TOKEN_SET: Final[TypeToken[set]] = TypeToken(set)
-TYPE_TOKEN_MAPPING: Final[TypeToken[Mapping]] = TypeToken(MappingType)
+TYPE_TOKEN_MAPPING: Final[TypeToken[Mapping]] = TypeToken(Mapping)
 TYPE_TOKEN_DICT: Final[TypeToken[dict]] = TypeToken(dict)
-TYPE_TOKEN_BUILTIN: Final[TypeToken[Type[min]]] = TypeToken.of(min)
-TYPE_TOKEN_FUNCTION: Final[TypeToken[Type[noop]]] = TypeToken.of(noop)
-TYPE_TOKEN_CLASS: Final[TypeToken[type]] = TypeToken(type)
+TYPE_TOKEN_BUILTIN: Final[TypeToken[BuiltinFunctionType]] = TypeToken.of(min)
+TYPE_TOKEN_FUNCTION: Final[TypeToken[DefFunctionType]] = TypeToken.of(noop)
+TYPE_TOKEN_CLASS: Final[TypeToken[ClassType]] = TypeToken(type)
 TYPE_TOKEN_EXCEPTION: Final[TypeToken[Exception]] = TypeToken(Exception)
 
 
@@ -233,14 +213,14 @@ UNKNOWN_VALUE: Final[UnknownValue] = UnknownValue()
 
 @frozen
 class BlackHole(UnknownValue):
-    def __getattr__(self, _name: str) -> 'BlackHole':
+    def __getattr__(self, _name: str) -> Self:
         # could be __getattribute__ instead, if needed
         return self
 
-    def __getitem__(self, _key: Any) -> 'BlackHole':
+    def __getitem__(self, _key: Any) -> Self:
         return self
 
-    def __call__(self, *args: Any, **kwds: Any) -> 'BlackHole':
+    def __call__(self, *args: Any, **kwds: Any) -> Self:
         return self
 
 
@@ -256,10 +236,10 @@ def flatten_result(value: Any) -> Any:
 
 
 @frozen
-class Result(Generic[V]):
-    _value: Union[V, UnknownValue] = field(converter=flatten_result)
+class Result[V]:
+    _value: V | UnknownValue = field(converter=flatten_result)
     type: TypeToken[V]
-    source: Optional[TrackedCode] = field(default=None, eq=False, repr=False)
+    source: TrackedCode | None = field(default=None, eq=False, repr=False)
 
     @property
     def is_resolved(self) -> bool:
@@ -283,13 +263,13 @@ class Result(Generic[V]):
     def unknown_value(
         cls,
         of_type: TypeToken[V] = TYPE_TOKEN_ANYTHING,
-        source: Optional[TrackedCode] = None,
+        source: TrackedCode | None = None,
     ) -> 'Result[V]':
         assert isinstance(of_type, TypeToken)
         return cls(UNKNOWN_VALUE, of_type, source)
 
     @classmethod
-    def of(cls, value: V, source: Optional[TrackedCode] = None) -> 'Result[V]':
+    def of(cls, value: V, source: TrackedCode | None = None) -> 'Result[V]':
         if isinstance(value, Result):
             return value.trace_to(source)
         if value is None:
@@ -308,17 +288,17 @@ class Result(Generic[V]):
             return cls.of_tuple(value=value, source=source)
         if isinstance(value, list):
             return cls.of_list(value=value, source=source)
-        if isinstance(value, set):
+        if isinstance(value, Set):
             return cls.of_set(value=value, source=source)
         if isinstance(value, dict):
             return cls.of_dict(value=value, source=source)
         if isinstance(value, BaseException):
             return cls.of_exception(value=value, source=source)
-        if isinstance(value, CLASS_TYPE):
+        if isinstance(value, type):
             return cls.of_class(value=value, source=source)
-        if isinstance(value, BUILTIN_FUNCTION_TYPE):
+        if isinstance(value, type(min)):
             return cls.of_builtin_function(value=value, source=source)
-        if isinstance(value, DEF_FUNCTION_TYPE):
+        if isinstance(value, type(noop)):
             return cls.of_def_function(value=value, source=source)
         d = {}
         g = (type(d.items()), type(d.keys()), type(d.values()))
@@ -327,14 +307,14 @@ class Result(Generic[V]):
         return cls(value, TypeToken.of(value), source)
 
     @classmethod
-    def of_none(cls, source: Optional[TrackedCode] = None) -> 'Result[None]':
+    def of_none(cls, source: TrackedCode | None = None) -> 'Result[None]':
         return cls(None, TYPE_TOKEN_NONE, source)
 
     @classmethod
     def of_bool(
         cls,
-        value: Union[bool, UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
+        value: bool | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
     ) -> 'Result[bool]':
         assert isinstance(value, (bool, UnknownValue))
         return cls(value, TYPE_TOKEN_BOOL, source)
@@ -342,8 +322,8 @@ class Result(Generic[V]):
     @classmethod
     def of_int(
         cls,
-        value: Union[int, UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
+        value: int | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
     ) -> 'Result[int]':
         assert isinstance(value, (int, UnknownValue))
         return cls(value, TYPE_TOKEN_INT, source)
@@ -351,8 +331,8 @@ class Result(Generic[V]):
     @classmethod
     def of_float(
         cls,
-        value: Union[float, UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
+        value: float | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
     ) -> 'Result[float]':
         assert isinstance(value, (float, UnknownValue))
         return cls(value, TYPE_TOKEN_FLOAT, source)
@@ -360,8 +340,8 @@ class Result(Generic[V]):
     @classmethod
     def of_complex(
         cls,
-        value: Union[complex, UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
+        value: complex | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
     ) -> 'Result[complex]':
         assert isinstance(value, (complex, UnknownValue))
         return cls(value, TYPE_TOKEN_COMPLEX, source)
@@ -369,9 +349,9 @@ class Result(Generic[V]):
     @classmethod
     def of_number(
         cls,
-        value: Union[int, float, complex, UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
-    ) -> 'Result[Union[int, float, complex]]':
+        value: int | float | complex | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
+    ) -> 'Result[int | float | complex]':
         if isinstance(value, int):
             return cls.of_int(value=value, source=source)
         if isinstance(value, float):
@@ -384,118 +364,118 @@ class Result(Generic[V]):
     @classmethod
     def of_string(
         cls,
-        value: Union[str, UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
+        value: str | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
     ) -> 'Result[str]':
         assert isinstance(value, (str, UnknownValue))
         return cls(value, TYPE_TOKEN_STRING, source)
 
     @classmethod
-    def of_tuple(
+    def of_tuple[T](
         cls,
-        value: Union[Tuple[T], UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
-    ) -> 'Result[Tuple[T]]':
+        value: tuple[T] | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
+    ) -> 'Result[tuple[T]]':
         assert isinstance(value, (tuple, UnknownValue))
         return cls(value, TYPE_TOKEN_TUPLE, source)
 
     @classmethod
-    def of_list(
+    def of_list[T](
         cls,
-        value: Union[List[T], UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
-    ) -> 'Result[List[T]]':
+        value: list[T] | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
+    ) -> 'Result[list[T]]':
         assert isinstance(value, (list, UnknownValue))
         return cls(value, TYPE_TOKEN_LIST, source)
 
     @classmethod
-    def of_set(
+    def of_set[T](
         cls,
-        value: Union[Set[T], UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
+        value: Set[T] | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
     ) -> 'Result[Set[T]]':
-        assert isinstance(value, (set, UnknownValue))
+        assert isinstance(value, (Set, UnknownValue))
         return cls(value, TYPE_TOKEN_SET, source)
 
     @classmethod
-    def of_dict(
+    def of_dict[K, T](
         cls,
-        value: Union[Dict[K, T], UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
-    ) -> 'Result[Dict[K, T]]':
+        value: dict[K, T] | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
+    ) -> 'Result[dict[K, T]]':
         assert isinstance(value, (dict, UnknownValue))
         return cls(value, TYPE_TOKEN_DICT, source)
 
     @classmethod
-    def of_iterable(
+    def of_iterable[T](
         cls,
-        value: Union[IterableType[T], UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
-    ) -> 'Result[IterableType[T]]':
-        assert isinstance(value, (IterableType, UnknownValue))
+        value: Iterable[T] | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
+    ) -> 'Result[Iterable[T]]':
+        assert isinstance(value, (Iterable, UnknownValue))
         return cls(value, TYPE_TOKEN_ITERABLE, source)
 
     @classmethod
-    def of_mapping(
+    def of_mapping[K, T](
         cls,
-        value: Union[MappingType[K, T], UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
-    ) -> 'Result[MappingType[K, T]]':
-        assert isinstance(value, (MappingType, UnknownValue))
+        value: Mapping[K, T] | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
+    ) -> 'Result[Mapping[K, T]]':
+        assert isinstance(value, (Mapping, UnknownValue))
         return cls(value, TYPE_TOKEN_MAPPING, source)
 
     @classmethod
     def of_builtin_function(
         cls,
-        value: Union[Type[min], UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
-    ) -> 'Result[Type[min]]':
+        value: BuiltinFunctionType | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
+    ) -> 'Result[BuiltinFunctionType]':
         assert callable(value) or isinstance(value, UnknownValue), repr(value)
         return cls(value, TYPE_TOKEN_BUILTIN, source)
 
     @classmethod
     def of_def_function(
         cls,
-        value: Union[Type[noop], UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
-    ) -> 'Result[Type[noop]]':
+        value: DefFunctionType | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
+    ) -> 'Result[DefFunctionType]':
         assert callable(value) or isinstance(value, UnknownValue)
         return cls(value, TYPE_TOKEN_FUNCTION, source)
 
     @classmethod
-    def of_class(
+    def of_class[T](
         cls,
-        value: Union[Type[T], UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
-    ) -> 'Result[Type[T]]':
+        value: ClassType[T] | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
+    ) -> 'Result[ClassType[T]]':
         assert callable(value) or isinstance(value, UnknownValue), repr(value)
         return cls(value, TYPE_TOKEN_CLASS, source)
 
     @classmethod
-    def of_instance(
+    def of_instance[T](
         cls,
-        constructor: Type[T],
-        source: Optional[TrackedCode] = None,
+        constructor: ClassType[T],
+        source: TrackedCode | None = None,
     ) -> 'Result[T]':
-        assert isinstance(constructor, CLASS_TYPE)
+        assert isinstance(constructor, type)
         return cls(UNKNOWN_VALUE, TypeToken(constructor), source)
 
     @classmethod
     def of_exception(
         cls,
-        value: Union[BaseException, UnknownValue] = UNKNOWN_VALUE,
-        source: Optional[TrackedCode] = None,
+        value: BaseException | UnknownValue = UNKNOWN_VALUE,
+        source: TrackedCode | None = None,
     ) -> 'Result[BaseException]':
         assert isinstance(value, (BaseException, UnknownValue))
         return cls(value, TYPE_TOKEN_EXCEPTION, source)
 
-    def cast_to(self, new_type: TypeToken[T]) -> 'Result[T]':
+    def cast_to[T](self, new_type: TypeToken[T]) -> 'Result[T]':
         return evolve(self, type=new_type)
 
-    def trace_to(self, source: Optional[TrackedCode]) -> 'Result[V]':
+    def trace_to(self, source: TrackedCode | None) -> 'Result[V]':
         return evolve(self, source=source)
 
-    def get_attr(self, name: str, source: Optional[TrackedCode] = None) -> 'Result[Any]':
+    def get_attr(self, name: str, source: TrackedCode | None = None) -> 'Result[Any]':
         if not self.is_resolved:
             return Result.unknown_value(source=source)
         try:
@@ -504,7 +484,7 @@ class Result(Generic[V]):
             logger.warning(f'failed get_attr {self}.{name}')
             return Result.unknown_value(source=source)
 
-    def get_item(self, key: Any, source: Optional[TrackedCode] = None) -> 'Result[Any]':
+    def get_item(self, key: Any, source: TrackedCode | None = None) -> 'Result[Any]':
         if not self.is_resolved:
             return Result.unknown_value(source=source)
         try:
@@ -538,7 +518,7 @@ class Result(Generic[V]):
 
 
 @frozen
-class IterableWrapper(Iterable[Result[V]]):
+class IterableWrapper[V](Iterable[Result[V]]):
     value: Iterable[V]
 
     def __getattr__(self, name: str) -> Any:
@@ -556,7 +536,7 @@ class IterableWrapper(Iterable[Result[V]]):
 
 
 @frozen
-class MappingWrapper(Mapping[K, V]):
+class MappingWrapper[K, V](Mapping[K, V]):
     value: Mapping[K, V]
 
     def __getattr__(self, name: str) -> Any:

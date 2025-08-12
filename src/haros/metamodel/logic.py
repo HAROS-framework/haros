@@ -5,7 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, Mapping, Tuple
+from typing import Any, Final
+
+from collections.abc import Iterable, Mapping, Sequence
 
 from attrs import field, frozen
 
@@ -314,7 +316,7 @@ class LogicNot(LogicValue):
 
 @frozen
 class LogicAnd(LogicValue):
-    operands: Tuple[LogicValue] = field(converter=tuple)
+    operands: Sequence[LogicValue] = field(converter=tuple)
 
     @property
     def is_and(self) -> bool:
@@ -382,9 +384,7 @@ class LogicAnd(LogicValue):
             # go for the first thing
             return self.operands[0].make_false(full=False)
         return {
-            name: value
-            for op in self.operands
-            for name, value in op.make_false(full=True).items()
+            name: value for op in self.operands for name, value in op.make_false(full=True).items()
         }
 
     def serialize(self) -> Any:
@@ -427,7 +427,7 @@ class LogicAnd(LogicValue):
 
 @frozen
 class LogicOr(LogicValue):
-    operands: Tuple[LogicValue] = field(converter=tuple)
+    operands: Sequence[LogicValue] = field(converter=tuple)
 
     @property
     def is_or(self) -> bool:
@@ -485,9 +485,7 @@ class LogicOr(LogicValue):
             # go for the first thing
             return self.operands[0].make_true(full=False)
         return {
-            name: value
-            for op in self.operands
-            for name, value in op.make_true(full=True).items()
+            name: value for op in self.operands for name, value in op.make_true(full=True).items()
         }
 
     def make_false(self, full: bool = False) -> Mapping[str, bool]:

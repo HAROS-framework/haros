@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Union
+from typing import Any, Final
 
 import os
 from pathlib import Path
@@ -19,7 +19,7 @@ from haros.internal.settings import SETTINGS_FILE, YAML_DEFAULT_SETTINGS
 
 DIR_NAME: Final[str] = '.haros'
 
-DIR_STRUCTURE: Final[Dict[str, Any]] = {
+DIR_STRUCTURE: Final[dict[str, Any]] = {
     'logs': {},
     'extras': {},
     'plugins': {},
@@ -37,7 +37,7 @@ DEFAULT_PATH: Final[Path] = Path.home() / DIR_NAME
 ###############################################################################
 
 
-def make_at(dirpath: Union[str, Path], overwrite: bool = False):
+def make_at(dirpath: str | Path, overwrite: bool = False):
     # ensures a '.haros' directory
     # uses the given path directly, if it ends with '.haros', or uses it
     # as a parent for a new '.haros' directory

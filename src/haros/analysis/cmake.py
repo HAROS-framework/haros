@@ -5,16 +5,16 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List
+from typing import Any, Final
 
+from collections.abc import Iterable, Mapping, MutableSequence
 import logging
 from pathlib import Path
 import re
 
 from attrs import field, frozen
 
-from haros.parsing.cmake import CMakeArgument
-from haros.parsing.cmake import parser as cmake_parser
+from haros.parsing.cmake import CMakeArgument, parser as cmake_parser
 
 ###############################################################################
 # Constants
@@ -31,8 +31,8 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 class CMakeTarget:
     name: str
     is_executable: bool = True
-    sources: List[str] = field(factory=list)
-    dependencies: List[str] = field(factory=list)
+    sources: MutableSequence[str] = field(factory=list)
+    dependencies: MutableSequence[str] = field(factory=list)
 
     @property
     def is_library(self) -> bool:
@@ -43,16 +43,16 @@ class CMakeTarget:
 class CMakeContext:
     parser: Any
     parent: Any = None
-    variables: Dict[str, str] = field(factory=dict)
-    environment: Dict[str, str] = field(factory=dict)
-    cache: Dict[str, str] = field(factory=dict)
-    targets: Dict[str, CMakeTarget] = field(factory=dict)
+    variables: Mapping[str, str] = field(factory=dict)
+    environment: Mapping[str, str] = field(factory=dict)
+    cache: Mapping[str, str] = field(factory=dict)
+    targets: Mapping[str, CMakeTarget] = field(factory=dict)
 
-    def process_arguments(self, arguments: List[CMakeArgument]) -> List[str]:
+    def process_arguments(self, arguments: Iterable[CMakeArgument]) -> list[str]:
         if not arguments:
             return []
         # first pass: variable substitution
-        args: List[str] = self.interpret_all(arg.value for arg in arguments)
+        args: list[str] = self.interpret_all(arg.value for arg in arguments)
         # second pass: join text and break it down again in separate arguments
         text: str = ' '.join(args)
         arguments = self.parser.parse_arguments(text)
@@ -70,7 +70,7 @@ class CMakeContext:
         i = 0
         parts = []
         while match:
-            parts.append(value[i:match.start()])
+            parts.append(value[i : match.start()])
             key = match.group(1)
             replacement = self.variables.get(key, self.cache.get(key, ''))
             parts.append(replacement)
@@ -82,7 +82,7 @@ class CMakeContext:
         # must take nested variables into account
         return self.interpret(''.join(parts))
 
-    def interpret_all(self, values: Iterable[str]) -> List[str]:
+    def interpret_all(self, values: Iterable[str]) -> list[str]:
         return [self.interpret(v) for v in values]
 
     _RE_ENV_VAR = re.compile(r'ENV{(.+)}')
@@ -116,10 +116,10 @@ class CMakeContext:
                 values.append(args[i])
             value = ' '.join(values)
             if args[i] == 'CACHE':
-                var_type = args[i+1]
-                docstring = args[i+2]
-                force = i+3 < len(args) and args[i+3] == 'FORCE'
-                if force or name not in cache:
+                var_type = args[i + 1]
+                docstring = args[i + 2]
+                force = i + 3 < len(args) and args[i + 3] == 'FORCE'
+                if force or name not in self.cache:
                     self.cache[name] = (value, var_type, docstring)
             else:
                 if on_parent:
@@ -174,8 +174,8 @@ class CMakeContext:
             # New in version 3.11: The source files can be omitted
             # if they are added later using target_sources().
             raise ValueError(f'no sources: add_executable({", ".join(args)})')
-        for i in range(i, len(args)):
-            target.sources.append(args[i])
+        for j in range(i, len(args)):
+            target.sources.append(args[j])
 
     def cmake_add_library(self, args: Iterable[str]):
         if len(args) < 1:
@@ -211,8 +211,8 @@ class CMakeContext:
             # New in version 3.11: The source files can be omitted
             # if they are added later using target_sources().
             raise ValueError(f'no sources: add_library({", ".join(args)})')
-        for i in range(i, len(args)):
-            target.sources.append(args[i])
+        for j in range(i, len(args)):
+            target.sources.append(args[j])
 
     def cmake_ament_target_dependencies(self, args: Iterable[str]):
         msg = '{}: ament_target_dependencies({})'
@@ -231,7 +231,7 @@ class CMakeContext:
 ###############################################################################
 
 
-def get_targets_from_cmake(path: Path) -> List[CMakeTarget]:
+def get_targets_from_cmake(path: Path) -> list[CMakeTarget]:
     logger.debug(f'get_targets_from_cmake("{path}")')
     parser = cmake_parser()
     text = path.read_text()

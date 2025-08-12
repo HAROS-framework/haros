@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, List, Tuple
+from typing import Any, Final
 
+from collections.abc import Callable, Mapping, Sequence
 from importlib import metadata
 import importlib.util
 import logging
@@ -14,15 +15,13 @@ from pathlib import Path
 
 from attrs import field, frozen
 
-from haros.internal.settings import Settings
-
 ###############################################################################
 # Constants
 ###############################################################################
 
 ENTRY_POINT: Final[str] = 'haros.plugins'
 
-HOOKS: Final[Tuple] = (
+HOOKS: Final[Sequence[str]] = (
     # 'setup',
     'on_analysis_begin',
     'on_analysis_end',
@@ -45,8 +44,8 @@ class HarosPluginInterface:
     # Attributes
     name: str
     module: Any
-    settings: Dict[str, Any] = field(factory=dict)
-    hooks: Dict[str, Callable] = field(factory=dict)
+    settings: Mapping[str, Any] = field(factory=dict)
+    hooks: Mapping[str, Callable] = field(factory=dict)
 
     def __attrs_post_init__(self):
         for name in HOOKS:
@@ -67,10 +66,10 @@ class HarosPluginInterface:
 
 @frozen(slots=False)
 class PluginManager:
-    plugins: List[HarosPluginInterface] = field(factory=list)
+    plugins: Sequence[HarosPluginInterface] = field(factory=list)
     # plugin name -> error
     # this serves to disable a plugin after it crashes
-    errors: Dict[str, Exception] = field(factory=dict)
+    errors: Mapping[str, Exception] = field(factory=dict)
 
     def __attrs_post_init__(self):
         for name in HOOKS:
@@ -91,10 +90,11 @@ class PluginManager:
                         plugin.teardown()
                     except Exception:
                         pass
+
         return hook
 
 
-def load(haroshome: Path, settings: Dict[str, Dict[str, Any]]) -> PluginManager:
+def load(haroshome: Path, settings: Mapping[str, Mapping[str, Any]]) -> PluginManager:
     plugins = _load_from_entrypoints(settings)
     plugins.extend(_load_from_haroshome(haroshome, settings))
     if not plugins:
@@ -107,7 +107,9 @@ def load(haroshome: Path, settings: Dict[str, Dict[str, Any]]) -> PluginManager:
 ###############################################################################
 
 
-def _load_from_entrypoints(settings: Dict[str, Dict[str, Any]]) -> List[HarosPluginInterface]:
+def _load_from_entrypoints(
+    settings: Mapping[str, Mapping[str, Any]],
+) -> list[HarosPluginInterface]:
     logger.info(f'plugins: searching {ENTRY_POINT}')
     plugins = []
     try:
@@ -134,8 +136,8 @@ def _load_from_entrypoints(settings: Dict[str, Dict[str, Any]]) -> List[HarosPlu
 
 def _load_from_haroshome(
     haroshome: Path,
-    settings: Dict[str, Dict[str, Any]],
-) -> List[HarosPluginInterface]:
+    settings: Mapping[str, Mapping[str, Any]],
+) -> list[HarosPluginInterface]:
     try:
         directory = (haroshome / 'plugins').resolve(strict=True)
     except FileNotFoundError:

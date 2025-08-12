@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Type, Union
+from typing import Any, Final
 
+from collections.abc import Mapping, MutableSequence
 import logging
 import os
 from pathlib import Path
@@ -21,16 +22,15 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 EXCLUDED_DIRS: Final = ('doc', 'cmake', '__pycache__')
 
-AnyPath: Final[Type] = Union[str, Path]
+type AnyPath = str | Path
 
 ###############################################################################
 # Interface
 ###############################################################################
 
 
-def generate_dir(path: Path, structure: Dict[str, Any], overwrite: bool = True):
+def generate_dir(path: Path, structure: Mapping[str, Any], overwrite: bool = True):
     """Recursively create a given directory structure."""
-
     # log.debug(f'generate_dir({path}, {structure})')
     for name, contents in structure.items():
         new_path = (path / name).resolve()
@@ -51,9 +51,8 @@ def generate_dir(path: Path, structure: Dict[str, Any], overwrite: bool = True):
             generate_dir(new_path, contents, overwrite=overwrite)
 
 
-def ensure_structure(path: Path, structure: Dict[str, Any]):
+def ensure_structure(path: Path, structure: Mapping[str, Any]):
     """Ensure that the given path contains the given structure."""
-
     for name, contents in structure.items():
         new_path = (path / name).resolve()
         if isinstance(contents, str):
@@ -66,7 +65,6 @@ def ensure_structure(path: Path, structure: Dict[str, Any]):
 
 def is_workspace(path: Path) -> bool:
     """Check whether the given path is likely to be a ROS workspace."""
-
     try:
         ws = path.resolve(strict=True)
     except FileNotFoundError:
@@ -84,7 +82,6 @@ def is_workspace(path: Path) -> bool:
 
 def is_ros_package(path: Path) -> bool:
     """Check whether the given path is likely to be a ROS package."""
-
     try:
         pkg = path.resolve(strict=True)
     except FileNotFoundError:
@@ -118,7 +115,7 @@ def is_ignored_dir(path: Path) -> bool:
     return False
 
 
-def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
+def crawl_workspace(ws: Path, *, relative: bool = False) -> dict[str, Path]:
     packages = {}
     stack = [ws]
     while stack:
@@ -143,8 +140,8 @@ def crawl_workspace(ws: Path, *, relative: bool = False) -> Dict[str, Path]:
     return packages
 
 
-def crawl_package(pkg: Path) -> List[Path]:
-    """Returns a list of file paths found within the given package."""
+def crawl_package(pkg: Path) -> list[Path]:
+    """Return a list of file paths found within the given package."""
     if is_ignored_dir(pkg):
         return []
     files = []
@@ -171,15 +168,15 @@ def crawl_package(pkg: Path) -> List[Path]:
 
 @frozen
 class StorageManager:
-    workspaces: List[Path] = field(factory=list)
-    packages: Dict[str, Path] = field(factory=dict)
+    workspaces: MutableSequence[Path] = field(factory=list)
+    packages: Mapping[str, Path] = field(factory=dict)
 
     def crawl(self):
         for ws in self.workspaces:
             packages = crawl_workspace(ws, relative=False)
             self.packages.update(packages)
 
-    def get_file_path(self, pkg: str, relative_path: Union[str, Path]) -> Path:
+    def get_file_path(self, pkg: str, relative_path: str | Path) -> Path:
         # raise KeyError
         path = self.packages[pkg] / Path(relative_path)
         # raise FileNotFoundError
@@ -197,10 +194,10 @@ RESOURCE_INDEX_SUBFOLDER: Final[str] = 'share/ament_index/resource_index'
 def _get_installed_package_path(name: str) -> Path:
     """
     Find the file system path for a given ROS package's 'share' directory.
+
     This essentially duplicates the behaviour of ament.
     See https://github.com/ros2/ros2cli/tree/master/ros2pkg for the original.
     """
-
     # from ament_index_python import get_package_prefix
     # from ament_index_python import get_packages_with_prefixes
 
@@ -208,7 +205,7 @@ def _get_installed_package_path(name: str) -> Path:
     return prefix / 'share' / name
 
 
-def _get_ament_search_paths() -> List[Path]:
+def _get_ament_search_paths() -> list[Path]:
     ament_prefix_path = os.environ.get(AMENT_PREFIX_PATH_ENV_VAR)
     if not ament_prefix_path:
         # raise EnvironmentError(AMENT_PREFIX_PATH_ENV_VAR)

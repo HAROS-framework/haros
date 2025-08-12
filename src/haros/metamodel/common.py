@@ -5,9 +5,10 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Generic, List, Mapping, Optional, Set, TypeVar
+from typing import Any
 
 from collections import defaultdict
+from collections.abc import Mapping, MutableSequence, Set
 
 from attrs import asdict, define, field, frozen
 
@@ -20,8 +21,8 @@ from haros.metamodel.logic import TRUE, LogicValue
 
 @define
 class StorageMetadata:
-    path: Optional[str] = None  # real path (e.g. '/home/user/file')
-    size: Optional[int] = None  # in bytes
+    path: str | None = None  # real path (e.g. '/home/user/file')
+    size: int | None = None  # in bytes
     timestamp: int = 0
 
 
@@ -44,11 +45,11 @@ class DevelopmentMetadata:
     maintainers: Set[str] = field(factory=set)
     version: str = 'unknown'
     license: str = 'unknown'
-    url_home: Optional[str] = None
-    url_source: Optional[str] = None
-    url_tracker: Optional[str] = None
+    url_home: str | None = None
+    url_source: str | None = None
+    url_tracker: str | None = None
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -57,7 +58,7 @@ class SourceCodeDependencies:
     build: Set[str] = field(factory=set)
     runtime: Set[str] = field(factory=set)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return {
             'build': list(self.build),
             'runtime': list(self.runtime),
@@ -66,11 +67,11 @@ class SourceCodeDependencies:
 
 @frozen
 class SourceCodeLocation:
-    file: Optional[str] = None
-    package: Optional[str] = None
+    file: str | None = None
+    package: str | None = None
     line: int = 0
     column: int = 0
-    language: Optional[str] = None
+    language: str | None = None
 
     def serialize(self) -> Mapping[str, Any]:
         return asdict(self)
@@ -91,11 +92,8 @@ class TrackedCode:
 ###############################################################################
 
 
-T = TypeVar('T')
-
-
 @frozen
-class VariantValue(Generic[T]):
+class VariantValue[T]:
     value: T
     condition: LogicValue
 
@@ -104,9 +102,9 @@ class VariantValue(Generic[T]):
 
 
 @define
-class VariantData(Generic[T]):
-    _base_value: Optional[T] = None
-    _variants: List[VariantValue[T]] = field(factory=list)
+class VariantData[T]:
+    _base_value: T | None = None
+    _variants: MutableSequence[VariantValue[T]] = field(factory=list)
 
     @property
     def has_base_value(self) -> bool:
@@ -124,7 +122,7 @@ class VariantData(Generic[T]):
     def with_base_value(cls, value: T) -> 'VariantData':
         return cls(base_value=value)
 
-    def possible_values(self) -> List[VariantValue[T]]:
+    def possible_values(self) -> list[VariantValue[T]]:
         values = list(reversed(self._variants))
         if self._base_value is not None:
             values.append(VariantValue(self._base_value, TRUE))
@@ -150,7 +148,7 @@ class VariantData(Generic[T]):
     def serialize(self) -> Mapping[str, Any]:
         return {
             'base': self._base_value,
-            'variants': [[v.value, v.condition.serialize()] for v in self._variants]
+            'variants': [[v.value, v.condition.serialize()] for v in self._variants],
         }
 
     @classmethod
@@ -165,7 +163,7 @@ class VariantData(Generic[T]):
         return ' or '.join(values)
 
 
-def variant_dict(other: Mapping[Any, T] = None) -> Mapping[Any, VariantData[T]]:
+def variant_dict[T](other: Mapping[Any, T] = None) -> Mapping[Any, VariantData[T]]:
     d = defaultdict(VariantData)
     if other:
         for key, value in other.items():

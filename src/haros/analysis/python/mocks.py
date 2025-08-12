@@ -5,17 +5,18 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Generic, Optional
+from types import SimpleNamespace
+from typing import Any, Final
 
+from collections.abc import Callable
 import logging
 import os
 from pathlib import Path
-from types import SimpleNamespace
 
 from attrs import define, frozen
+
 from haros.analysis.python.dataflow import BUILTINS_MODULE, MockObject, StrictFunctionCaller
 from haros.internal.interface import AnalysisSystemInterface, PathType
-from haros.metamodel.common import T
 from haros.metamodel.result import Result
 
 ###############################################################################
@@ -30,7 +31,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
 @define
-class HarosMockObject(MockObject, Generic[T]):
+class HarosMockObject[T](MockObject):
     def _haros_freeze(self) -> T:
         # use a method name with a low probability of name collision
         # with one of the mocked object's methods or attributes
@@ -42,7 +43,7 @@ class LazyFileHandle(MockObject):
     path: Result[PathType]
     system: AnalysisSystemInterface
 
-    def read(self, encoding: Optional[Result[str]] = None) -> Result[str]:
+    def read(self, encoding: Result[str] | None = None) -> Result[str]:
         try:
             if self.path.is_resolved:
                 encoding = encoding or Result.of_none()
@@ -63,7 +64,7 @@ class BuiltinOpen(MockObject, Callable[[Result[str], Result[str]], Result[LazyFi
     def __call__(
         self,
         path: Result[str],
-        mode: Optional[Result[str]] = None,
+        mode: Result[str] | None = None,
     ) -> Result[LazyFileHandle]:
         if not path.is_resolved:
             return Result.unknown_value()
@@ -79,7 +80,7 @@ class BuiltinOpen(MockObject, Callable[[Result[str], Result[str]], Result[LazyFi
 ###############################################################################
 
 
-def standard_symbols(system: AnalysisSystemInterface) -> Dict[str, Any]:
+def standard_symbols(system: AnalysisSystemInterface) -> dict[str, Any]:
     symbols = {
         f'{BUILTINS_MODULE}.open': BuiltinOpen(system),
     }

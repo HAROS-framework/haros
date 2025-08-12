@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Optional, Tuple, Union
+from collections.abc import Sequence
 
 from attrs import frozen
 
@@ -102,7 +102,7 @@ class PythonBooleanLiteral(PythonLiteral):
 
 @frozen
 class PythonNumberLiteral(PythonLiteral):
-    value: Union[int, float, complex]
+    value: int | float | complex
 
     @property
     def is_number(self) -> bool:
@@ -146,7 +146,7 @@ class PythonStringLiteral(PythonLiteral):
 
 @frozen
 class PythonTupleLiteral(PythonLiteral):
-    values: Tuple[PythonExpression]
+    values: Sequence[PythonExpression]
 
     @property
     def is_tuple(self) -> bool:
@@ -164,7 +164,7 @@ class PythonTupleLiteral(PythonLiteral):
 
 @frozen
 class PythonListLiteral(PythonLiteral):
-    values: Tuple[PythonExpression]
+    values: Sequence[PythonExpression]
 
     @property
     def is_list(self) -> bool:
@@ -182,7 +182,7 @@ class PythonListLiteral(PythonLiteral):
 
 @frozen
 class PythonDictLiteral(PythonLiteral):
-    entries: Tuple[PythonDictEntry]
+    entries: Sequence[PythonDictEntry]
 
     @property
     def is_dict(self) -> bool:
@@ -200,7 +200,7 @@ class PythonDictLiteral(PythonLiteral):
 
 @frozen
 class PythonSetLiteral(PythonLiteral):
-    values: Tuple[PythonExpression]
+    values: Sequence[PythonExpression]
 
     @property
     def is_set(self) -> bool:
@@ -219,8 +219,8 @@ class PythonSetLiteral(PythonLiteral):
 @frozen
 class PythonTupleComprehension(PythonLiteral):
     expression: PythonExpression
-    iterators: Tuple[PythonIterator]
-    test: Optional[PythonExpression] = None
+    iterators: Sequence[PythonIterator]
+    test: PythonExpression | None = None
 
     @property
     def is_tuple(self) -> bool:
@@ -234,8 +234,8 @@ class PythonTupleComprehension(PythonLiteral):
 @frozen
 class PythonListComprehension(PythonLiteral):
     expression: PythonExpression
-    iterators: Tuple[PythonIterator]
-    test: Optional[PythonExpression] = None
+    iterators: Sequence[PythonIterator]
+    test: PythonExpression | None = None
 
     @property
     def is_list(self) -> bool:
@@ -249,8 +249,8 @@ class PythonListComprehension(PythonLiteral):
 @frozen
 class PythonDictComprehension(PythonLiteral):
     entry: PythonKeyValuePair
-    iterators: Tuple[PythonIterator]
-    test: Optional[PythonExpression] = None
+    iterators: Sequence[PythonIterator]
+    test: PythonExpression | None = None
 
     @property
     def is_dict(self) -> bool:
@@ -264,8 +264,8 @@ class PythonDictComprehension(PythonLiteral):
 @frozen
 class PythonSetComprehension(PythonLiteral):
     expression: PythonExpression
-    iterators: Tuple[PythonIterator]
-    test: Optional[PythonExpression] = None
+    iterators: Sequence[PythonIterator]
+    test: PythonExpression | None = None
 
     @property
     def is_set(self) -> bool:
@@ -284,7 +284,7 @@ class PythonSetComprehension(PythonLiteral):
 @frozen
 class PythonReference(PythonExpression):
     name: str
-    object: Optional[PythonExpression] = None
+    object: PythonExpression | None = None
 
     @property
     def is_reference(self) -> bool:
@@ -457,8 +457,8 @@ class PythonConditionalExpression(PythonExpression):
 @frozen
 class PythonGenerator(PythonExpression):
     result: PythonAst
-    iterators: Tuple[PythonIterator]
-    test: Optional[PythonExpression] = None
+    iterators: Sequence[PythonIterator]
+    test: PythonExpression | None = None
 
     @property
     def is_generator(self) -> bool:
@@ -468,7 +468,7 @@ class PythonGenerator(PythonExpression):
 @frozen
 class PythonFunctionCall(PythonExpression):
     function: PythonExpression
-    arguments: Tuple[PythonArgument]
+    arguments: Sequence[PythonArgument]
 
     @property
     def is_function_call(self) -> bool:
@@ -477,7 +477,7 @@ class PythonFunctionCall(PythonExpression):
 
 @frozen
 class PythonLambdaExpression(PythonExpression):
-    parameters: Tuple[PythonFunctionParameter]
+    parameters: Sequence[PythonFunctionParameter]
     expression: PythonExpression
 
     @property
@@ -485,15 +485,15 @@ class PythonLambdaExpression(PythonExpression):
         return True
 
     @property
-    def positional_parameters(self) -> Tuple[PythonFunctionParameter]:
+    def positional_parameters(self) -> Sequence[PythonFunctionParameter]:
         return tuple(p for p in self.parameters if p.is_positional)
 
     @property
-    def standard_parameters(self) -> Tuple[PythonFunctionParameter]:
+    def standard_parameters(self) -> Sequence[PythonFunctionParameter]:
         return tuple(p for p in self.parameters if p.is_standard)
 
     @property
-    def keyword_parameters(self) -> Tuple[PythonFunctionParameter]:
+    def keyword_parameters(self) -> Sequence[PythonFunctionParameter]:
         return tuple(p for p in self.parameters if p.is_keyword)
 
     @property
@@ -517,7 +517,7 @@ class PythonAssignmentExpression(PythonExpression):
 
 @frozen
 class PythonYieldExpression(PythonExpression):
-    expressions: Tuple[PythonExpression]
+    expressions: Sequence[PythonExpression]
     is_from: bool = False
 
     @property

@@ -1,17 +1,16 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
-"""
-Module that contains the command line sub-program.
-"""
+"""Module that contains the command line sub-program."""
 
 ###############################################################################
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List
+from typing import Any, Final
 
 import argparse
+from collections.abc import Mapping, Sequence
 import logging
 from pathlib import Path
 
@@ -31,7 +30,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def subprogram(argv: List[str], settings: Settings) -> int:
+def subprogram(argv: Sequence[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -41,7 +40,7 @@ def subprogram(argv: List[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Settings) -> int:
+def run(args: Mapping[str, Any], settings: Settings) -> int:
     action = args['action']
     if action == 'new':
         return action_new(args)
@@ -51,7 +50,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
     return 1
 
 
-def action_new(args: Dict[str, Any]) -> int:
+def action_new(args: Mapping[str, Any]) -> int:
     name = args['name']
     path = args['path']
     logger.info(f'project: new ({name}, {path})')
@@ -72,7 +71,7 @@ def action_new(args: Dict[str, Any]) -> int:
     return 0  # success
 
 
-def action_build(args: Dict[str, Any]) -> int:
+def action_build(args: Mapping[str, Any]) -> int:
     path = args['path']
     logger.info(f'project: build ({path})')
     try:
@@ -96,7 +95,7 @@ def action_build(args: Dict[str, Any]) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: List[str]) -> Dict[str, Any]:
+def parse_arguments(argv: Sequence[str]) -> dict[str, Any]:
     msg = 'haros project'
     parser = argparse.ArgumentParser(prog='haros project', description=msg)
 
@@ -111,28 +110,25 @@ def parse_arguments(argv: List[str]) -> Dict[str, Any]:
 def _parser_new(subparsers):
     parser = subparsers.add_parser('new')
 
-    parser.add_argument(
-        'name',
-        help='name of the new project'
-    )
+    parser.add_argument('name', help='name of the new project')
 
     parser.add_argument(
         'path',
         nargs='?',
         default=DEFAULT_PATH,
         type=Path,
-        help=f'path of the generated file [{DEFAULT_PATH}]'
+        help=f'path of the generated file [{DEFAULT_PATH}]',
     )
 
 
 def _parser_build(subparsers):
     parser = subparsers.add_parser('build')
 
-    default_path = Path.cwd() / 'project.haros.yaml'
+    # default_path = Path.cwd() / 'project.haros.yaml'
     parser.add_argument(
         'path',
         nargs='?',
         default=DEFAULT_PATH,
         type=Path,
-        help=f'path to the project file [{DEFAULT_PATH}]'
+        help=f'path to the project file [{DEFAULT_PATH}]',
     )

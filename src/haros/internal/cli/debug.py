@@ -1,23 +1,23 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
-"""
-Module that contains the command line sub-program.
-"""
+"""Module that contains the command line sub-program."""
 
 ###############################################################################
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, Mapping
+from typing import Any, Final
 
 import argparse
-import logging
+from collections.abc import Iterable, Mapping, Sequence
 import json
+import logging
 from pathlib import Path
 
 from haros.analysis.launch import get_launch_description
 from haros.analysis.python.dataflow import BUILTINS_MODULE
+from haros.analysis.python.graph import ProgramGraphBuilder
 from haros.export.json import export_launch_description
 from haros.internal.interface import AnalysisSystemInterface
 from haros.internal.settings import Settings
@@ -25,8 +25,6 @@ from haros.metamodel.builder.launch import model_from_description
 from haros.metamodel.launch import LaunchFileFeature, NodeFeature
 from haros.metamodel.result import Result
 from haros.metamodel.ros import FileModel, NodeModel, PackageModel, ProjectModel
-
-from haros.analysis.python.graph import ProgramGraphBuilder
 
 ###############################################################################
 # Constants
@@ -39,7 +37,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 ###############################################################################
 
 
-def subprogram(argv: List[str], settings: Settings) -> int:
+def subprogram(argv: Sequence[str], settings: Settings) -> int:
     args = parse_arguments(argv)
     return run(args, settings)
 
@@ -49,7 +47,7 @@ def subprogram(argv: List[str], settings: Settings) -> int:
 ###############################################################################
 
 
-def run(args: Dict[str, Any], settings: Settings) -> int:
+def run(args: Mapping[str, Any], settings: Settings) -> int:
     try:
         path: Path = args['path'].resolve(strict=True)
     except FileNotFoundError:
@@ -92,7 +90,7 @@ def run(args: Dict[str, Any], settings: Settings) -> int:
 
     # code = path.read_text(encoding='utf-8')
     # ast = parse(code, path=path.as_posix())
-    # symbols: Dict[str, Any] = _prepare_builtin_symbols()
+    # symbols: dict[str, Any] = _prepare_builtin_symbols()
     # symbols.update({
     #     f'{BUILTINS_MODULE}.__file__': str(path),
     #     f'{BUILTINS_MODULE}.open': _builtin_open(system),
@@ -211,7 +209,7 @@ def print_mapping(mapping: Mapping[Result[Any], Result[Any]], indent: int = 0):
 
 
 def print_subgraphs(builder: ProgramGraphBuilder):
-    for name, statement in builder.nested_graphs.items():
+    for name, _statement in builder.nested_graphs.items():
         # full_name = f'{builder.name}/{name}'
         print('')
         print(f'>> {name}')
@@ -220,13 +218,13 @@ def print_subgraphs(builder: ProgramGraphBuilder):
         subgraph, data = subbuilder.build()
         print(subgraph.pretty())
 
-        print(f'\nReachable:')
+        print('\nReachable:')
         for node in subgraph.nodes.values():
             if node.id == subgraph.root_id or not node.is_unreachable:
                 print('')
                 print(node.pretty())
 
-        print(f'\nUnreachable:')
+        print('\nUnreachable:')
         for node in subgraph.nodes.values():
             if node.id != subgraph.root_id and node.is_unreachable:
                 print('')
@@ -261,7 +259,7 @@ def print_variables(variables):
 ###############################################################################
 
 
-def parse_arguments(argv: List[str]) -> Dict[str, Any]:
+def parse_arguments(argv: Sequence[str]) -> dict[str, Any]:
     parser = argparse.ArgumentParser(
         prog='haros debug',
         description='Manual tests and debugging',

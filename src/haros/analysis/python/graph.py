@@ -5,27 +5,16 @@
 # Imports
 ###############################################################################
 
-from typing import (
-    Any,
-    Callable,
-    Collection,
-    Dict,
-    Final,
-    Iterable,
-    List,
-    Mapping,
-    NewType,
-    Optional,
-    Tuple,
-)
-
-import logging
 from types import SimpleNamespace
+from typing import Any, Final, NewType
+
+from collections.abc import Callable, Iterable, Mapping, Sequence
+import logging
 
 from attrs import define, field, frozen
 
 from haros.analysis.python.cfg import BasicControlFlowGraphBuilder, ControlFlowGraph, ControlNodeId
-from haros.analysis.python.dataflow import BUILTINS_MODULE, DataScope, tracked
+from haros.analysis.python.dataflow import DataScope, tracked
 from haros.analysis.python.logic import to_condition
 from haros.errors import AnalysisError
 from haros.metamodel.common import VariantData
@@ -43,7 +32,6 @@ from haros.parsing.python.ast import (
     PythonTupleLiteral,
 )
 from haros.parsing.python.ast.expressions import PythonAssignmentExpression
-from haros.parsing.python.ast.helpers import PythonFunctionParameter
 from haros.parsing.python.ast.statements import PythonExpressionStatement, PythonWithStatement
 
 ###############################################################################
@@ -81,8 +69,8 @@ class ProgramNode:
     id: ProgramNodeId
     ast: PythonStatement
     condition: LogicValue = field(default=TRUE)
-    incoming: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
-    outgoing: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    incoming: Mapping[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    outgoing: Mapping[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
 
 @frozen
@@ -137,7 +125,7 @@ class ExpressionNode:
 @frozen
 class FunctionCallNode(ExpressionNode):
     function: VariantData[str] = field(factory=VariantData)
-    arguments: Tuple[ExpressionNodeId] = field(factory=tuple)
+    arguments: Sequence[ExpressionNodeId] = field(factory=tuple)
 
 
 def eval_expression(expr: PythonExpression, data: DataScope) -> VariantData[AnalysisExpression]:
@@ -181,7 +169,7 @@ def statement_to_node(statement: PythonStatement, uid: ProgramNodeId) -> Program
 class ProgramGraph:
     name: str
     root_id: ProgramNodeId = field()
-    nodes: Dict[ProgramNodeId, ProgramNode] = field(factory=dict)
+    nodes: Mapping[ProgramNodeId, ProgramNode] = field(factory=dict)
     asynchronous: bool = False
 
     @root_id.validator
@@ -206,7 +194,7 @@ class ProgramGraphBuilder:
     name: str = '__main__'
     cfg: BasicControlFlowGraphBuilder = field(factory=BasicControlFlowGraphBuilder.from_scratch)
     data: DataScope = field(factory=DataScope.with_builtins)
-    nested_graphs: Dict[str, PythonStatement] = field(factory=dict)
+    nested_graphs: Mapping[str, PythonStatement] = field(factory=dict)
     _pid: int = 0
 
     @classmethod
@@ -328,10 +316,10 @@ class ProgramGraphBuilder:
 
             elif statement.is_function_def or statement.is_class_def:
                 if statement.is_class_def:
-                    asynchronous = False
+                    # asynchronous = False
                     self.data.add_class_def(statement)
                 else:
-                    asynchronous = statement.asynchronous
+                    # asynchronous = statement.asynchronous
                     cb = self._function_interpreter(statement)
                     self.data.add_function_def(statement, fun=cb)
                 self.nested_graphs[statement.name] = statement
@@ -356,8 +344,10 @@ class ProgramGraphBuilder:
         #         # id: ProgramNodeId
         #         # ast: PythonStatement
         #         # condition: LogicValue = field(default=TRUE)
-        #         # incoming: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
-        #         # outgoing: Dict[ProgramNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+        #         # incoming: dict[ProgramNodeId, LogicValue] = field(
+        #         #     factory=dict, eq=False, hash=False)
+        #         # outgoing: dict[ProgramNodeId, LogicValue] = field(
+        #         #     factory=dict, eq=False, hash=False)
         #         node = ProgramNode(
         #             ProgramNodeId(cid),
         #             statement,
@@ -382,7 +372,7 @@ class ProgramGraphBuilder:
         try:
             for stmt in statement.body:
                 builder.add_statement(stmt)
-        except Exception as e:
+        except Exception:
             logger.exception(f'error processing statement of "{name}"')
             logger.error(f'add_statement({stmt!r})')
         builder.clean_up()
@@ -390,7 +380,7 @@ class ProgramGraphBuilder:
 
     def _build_branch(
         self,
-        test: Optional[PythonExpression],
+        test: PythonExpression | None,
         body: Iterable[PythonStatement],
     ):
         if test is None:
@@ -508,7 +498,7 @@ class ProgramGraphBuilder:
 ###############################################################################
 
 
-def from_ast(ast: PythonAst, symbols: Optional[Mapping[str, Any]] = None) -> Any:
+def from_ast(ast: PythonAst, symbols: Mapping[str, Any] | None = None) -> Any:
     if ast.is_module:
         return from_module(ast, symbols=symbols)
     if not ast.is_statement:
@@ -516,7 +506,7 @@ def from_ast(ast: PythonAst, symbols: Optional[Mapping[str, Any]] = None) -> Any
     raise TypeError(f'unexpected tree node: {ast!r}')
 
 
-def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = None) -> Any:
+def from_module(module: PythonModule, symbols: Mapping[str, Any] | None = None) -> Any:
     builder = ProgramGraphBuilder.from_scratch(name=module.name)
     if symbols:
         for key, value in symbols.items():
@@ -537,7 +527,7 @@ def from_module(module: PythonModule, symbols: Optional[Mapping[str, Any]] = Non
     return builder
 
 
-def _split_names(full_name: str) -> Tuple[str, str]:
+def _split_names(full_name: str) -> tuple[str, str]:
     initial = full_name
     prefix = ''
     if full_name.startswith('..'):
@@ -560,7 +550,7 @@ def _split_names(full_name: str) -> Tuple[str, str]:
     return name, module
 
 
-def find_qualified_name(graph: ControlFlowGraph, full_name: str) -> List[PythonAst]:
+def find_qualified_name(graph: ControlFlowGraph, full_name: str) -> list[PythonAst]:
     data = DataScope.with_builtins()
     matches = find_name_in_graph(graph, full_name, data)
     return list(dict.fromkeys(matches))
@@ -570,7 +560,7 @@ def find_name_in_graph(
     graph: ControlFlowGraph,
     full_name: str,
     data: DataScope,
-) -> List[PythonExpression]:
+) -> list[PythonExpression]:
     references = []
     branch_queue = [graph.root_node]
     while branch_queue:
@@ -610,7 +600,7 @@ def find_name_in_expression(
     expression: PythonExpression,
     full_name: str,
     data: DataScope,
-) -> List[PythonExpression]:
+) -> list[PythonExpression]:
     references = []
     if expression.is_literal:
         pass  # FIXME TODO
@@ -651,7 +641,7 @@ def compare_qualified_names(full_name: str, import_base: str, local_name: str) -
 
 def find_qualified_function_call(
     graph: ControlFlowGraph, full_name: str
-) -> List[PythonFunctionCall]:
+) -> list[PythonFunctionCall]:
     data = DataScope.with_builtins()
     matches = find_function_call_in_graph(graph, full_name, data)
     return list(dict.fromkeys(matches))
@@ -661,7 +651,7 @@ def find_function_call_in_graph(
     graph: ControlFlowGraph,
     full_name: str,
     starting_data: DataScope,
-) -> List[PythonFunctionCall]:
+) -> list[PythonFunctionCall]:
     calls = []
     branch_queue = [(graph.root_node, starting_data)]
     while branch_queue:
@@ -701,7 +691,7 @@ def find_function_call_in_expression(
     expression: PythonExpression,
     full_name: str,
     data: DataScope,
-) -> List[PythonFunctionCall]:
+) -> list[PythonFunctionCall]:
     calls = []
     if expression.is_function_call:
         if find_name_in_expression(expression.function, full_name, data):

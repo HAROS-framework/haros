@@ -5,9 +5,10 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, Mapping, Optional
+from typing import Any, Final
 
-from enum import auto, Enum, Flag, unique
+from collections.abc import Iterable, Mapping, MutableSequence, Sequence
+from enum import Enum, Flag, auto, unique
 
 from attrs import asdict, field, frozen
 from attrs.validators import matches_re
@@ -113,7 +114,7 @@ class RosMetamodelEntity:
     def is_runtime_entity(self) -> bool:
         return False
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -167,7 +168,7 @@ class RosName:
 
     @property
     def namespace(self) -> str:
-        parts: List[str] = self.text.rsplit(sep='/', maxsplit=1)
+        parts: list[str] = self.text.rsplit(sep='/', maxsplit=1)
         if len(parts) > 1:
             # e.g. 'a/b', '~a/b' or '/a'
             return parts[0] if parts[0] else '/'
@@ -191,7 +192,7 @@ class RosName:
         return cls('/')
 
     def join(self, other: 'RosName') -> 'RosName':
-        """Uses `self` as a namespace to join with `other`."""
+        """Use `self` as a namespace to join with `other`."""
         if other.is_global:
             return other
         suffix: str = other.text
@@ -207,7 +208,7 @@ class RosName:
         return RosName(name)
 
     def resolve(self, ns: 'RosName', private_ns: 'RosName') -> 'RosName':
-        """Resolves `self` relative to `ns` or `private_ns`."""
+        """Resolve `self` relative to `ns` or `private_ns`."""
         if self.is_global:
             return self
         if self.is_private:
@@ -218,7 +219,7 @@ class RosName:
         return self.text
 
 
-def maybe_str_to_rosname(name: Optional[str]) -> Optional[RosName]:
+def maybe_str_to_rosname(name: str | None) -> RosName | None:
     return None if name is None else RosName(name)
 
 
@@ -228,7 +229,7 @@ class RosClientAdvertiseCall(RosSourceEntity):
     name: str
     namespace: str
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -238,16 +239,16 @@ class RosClientSubscribeCall(RosSourceEntity):
     name: str
     namespace: str
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 @frozen
 class RosClientLibraryCalls:
-    advertise: List[RosClientAdvertiseCall] = field(factory=list)
-    subscribe: List[RosClientSubscribeCall] = field(factory=list)
+    advertise: Sequence[RosClientAdvertiseCall] = field(factory=list)
+    subscribe: Sequence[RosClientSubscribeCall] = field(factory=list)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -281,7 +282,7 @@ class FileModel(RosFileSystemEntity):
             return parts[0]
         return '.'
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         data = asdict(self)
         data['uid'] = self.uid
         return data
@@ -292,8 +293,8 @@ class PackageModel(RosFileSystemEntity):
     # Parameters
     name: str = field(validator=matches_re(RE_NAME))
     # Defaults
-    files: List[str] = field(factory=list)
-    nodes: List[str] = field(factory=list)
+    files: MutableSequence[str] = field(factory=list)
+    nodes: MutableSequence[str] = field(factory=list)
     # storage: StorageMetadata = field(factory=StorageMetadata)
     metadata: DevelopmentMetadata = field(factory=DevelopmentMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
@@ -302,7 +303,7 @@ class PackageModel(RosFileSystemEntity):
     def uid(self) -> str:
         return self.name
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         data = asdict(self)
         data['uid'] = self.uid
         return data
@@ -315,8 +316,8 @@ class NodeModel(RosFileSystemEntity):
     name: str = field(validator=matches_re(RE_NAME))
     # Defaults
     is_library: bool = False
-    rosname: Optional[RosName] = field(default=None, converter=maybe_str_to_rosname)
-    files: List[str] = field(factory=list)
+    rosname: RosName | None = field(default=None, converter=maybe_str_to_rosname)
+    files: MutableSequence[str] = field(factory=list)
     rcl_calls: RosClientLibraryCalls = field(factory=RosClientLibraryCalls)
     source: SourceCodeMetadata = field(factory=SourceCodeMetadata)
     dependencies: SourceCodeDependencies = field(factory=SourceCodeDependencies)
@@ -331,20 +332,22 @@ class NodeModel(RosFileSystemEntity):
 ###############################################################################
 
 
-def const_string(value: str, source: Optional[TrackedCode] = None) -> Result[str]:
+def const_string(value: str, source: TrackedCode | None = None) -> Result[str]:
     # TODO validate values
     return Result.of_string(value=value, source=source)
 
+
 def const_list(
     value: Iterable[Result],
-    source: Optional[TrackedCode] = None,
+    source: TrackedCode | None = None,
 ) -> Result[Iterable[Result]]:
     # TODO validate values
     return Result.of_iterable(value=value, source=source)
 
+
 def const_mapping(
     value: Mapping[str, Result],
-    source: Optional[TrackedCode] = None,
+    source: TrackedCode | None = None,
 ) -> Result[Mapping[str, Result]]:
     # TODO validate values
     return Result.of_mapping(value=value, source=source)
@@ -360,7 +363,7 @@ class RosNodeModel(RosRuntimeEntity):
     rosname: Result[RosName]
     package: Result[str]
     executable: Result[str]
-    arguments: Result[List[str]] = field(factory=Result.of_list)
+    arguments: Result[Sequence[str]] = field(factory=Result.of_list)
     parameters: Result = field(factory=Result.of_dict)
     remappings: Result = field(factory=Result.of_dict)
     output: Result[str] = Result.of_string('log')
@@ -401,7 +404,7 @@ class RosParameterModel(RosRuntimeEntity):
 
 @frozen
 class ComputationGraphModel(RosRuntimeEntity):
-    nodes: List[RosNodeModel] = field(factory=list)
+    nodes: Sequence[RosNodeModel] = field(factory=list)
 
 
 ###############################################################################
@@ -412,13 +415,13 @@ class ComputationGraphModel(RosRuntimeEntity):
 @frozen
 class ProjectModel:
     name: str
-    packages: Dict[str, PackageModel] = field(factory=dict)
-    files: Dict[str, FileModel] = field(factory=dict)
-    nodes: Dict[str, NodeModel] = field(factory=dict)
+    packages: Mapping[str, PackageModel] = field(factory=dict)
+    files: Mapping[str, FileModel] = field(factory=dict)
+    nodes: Mapping[str, NodeModel] = field(factory=dict)
     # NOTE: still not sure whether to include storage here
-    # storage: Dict[str, StorageMetadata] = field(factory=dict)
+    # storage: Mapping[str, StorageMetadata] = field(factory=dict)
 
-    def asdict(self) -> Dict[str, Any]:
+    def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -429,6 +432,7 @@ class ProjectModel:
 
 def uid_file(package: str, relative_path: str) -> str:
     return f'{package}/{relative_path}'
+
 
 def uid_node(package: str, executable: str) -> str:
     return f'{package}/{executable}'

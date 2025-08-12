@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Callable, Final, Tuple
+from typing import Final
 
+from collections.abc import Callable
 from pathlib import Path
 
 from haros.analysis.launch.python import get_python_launch_description
@@ -20,7 +21,7 @@ from haros.metamodel.launch import LaunchDescription
 # Constants
 ###############################################################################
 
-PARSERS: Final[Tuple[Callable]] = (
+PARSERS: Final[tuple[Callable, ...]] = (
     get_python_launch_description,
     get_xml_launch_description,
     get_yaml_launch_description,

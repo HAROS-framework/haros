@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List, NewType, Optional, Tuple
+from typing import Any, NewType
 
+from collections.abc import Mapping, Sequence
 from enum import Enum, auto
 
 from attrs import field, frozen
@@ -148,10 +149,10 @@ class PythonAstNodeType(Enum):
 @frozen
 class PythonAstNodeMetadata:
     id: PythonAstNodeId
-    # type: PythonAstNodeType
     line: int = 0
     column: int = 0
-    annotations: Dict[str, Any] = field(factory=dict, eq=False, hash=False)
+    annotations: Mapping[str, Any] = field(factory=dict, eq=False, hash=False)
+
 
 @frozen
 class PythonAst:
@@ -309,7 +310,7 @@ class PythonStatement(PythonAst):
     def is_class_def(self) -> bool:
         return False
 
-    def substatements(self) -> List['PythonStatement']:
+    def substatements(self) -> list['PythonStatement']:
         return []
 
 
@@ -437,7 +438,7 @@ class PythonHelperNode(PythonAst):
 
 @frozen
 class PythonModule(PythonAst):
-    statements: Tuple[PythonStatement]
+    statements: Sequence[PythonStatement]
     name: str = '__main__'
 
     # @property

@@ -5,9 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Optional, Tuple, Type
+from typing import Any, Final
 
-from collections.abc import Iterable as IterableType, Mapping as MappingType
+from collections.abc import Iterable, Mapping, Sequence
 
 from haros.metamodel.common import (
     DevelopmentMetadata,
@@ -36,14 +36,14 @@ from haros.metamodel.ros import (
 # Constants
 ###############################################################################
 
-JSON_PRIMITIVE_TYPES: Final[Tuple[Type]] = (bool, int, float, str)
+JSON_PRIMITIVE_TYPES: Final[Sequence[type]] = (bool, int, float, str)
 
 ###############################################################################
 # Project Interface
 ###############################################################################
 
 
-def export_project(model: ProjectModel) -> Dict[str, Any]:
+def export_project(model: ProjectModel) -> dict[str, Any]:
     return {
         'name': model.name,
         'packages': {k: export_package(v) for k, v in model.packages.items()},
@@ -52,7 +52,7 @@ def export_project(model: ProjectModel) -> Dict[str, Any]:
     }
 
 
-def export_package(model: PackageModel) -> Dict[str, Any]:
+def export_package(model: PackageModel) -> dict[str, Any]:
     return {
         'name': model.name,
         'files': list(model.files),
@@ -62,7 +62,7 @@ def export_package(model: PackageModel) -> Dict[str, Any]:
     }
 
 
-def export_node(model: NodeModel) -> Dict[str, Any]:
+def export_node(model: NodeModel) -> dict[str, Any]:
     return {
         'package': model.package,
         'name': model.name,
@@ -75,7 +75,7 @@ def export_node(model: NodeModel) -> Dict[str, Any]:
     }
 
 
-def export_file(model: FileModel) -> Dict[str, Any]:
+def export_file(model: FileModel) -> dict[str, Any]:
     return {
         'package': model.package,
         'path': model.path,
@@ -89,7 +89,7 @@ def export_file(model: FileModel) -> Dict[str, Any]:
 ###############################################################################
 
 
-def export_launch_description(launch: LaunchDescription) -> Dict[str, Any]:
+def export_launch_description(launch: LaunchDescription) -> dict[str, Any]:
     return serialize(launch)
 
 
@@ -98,11 +98,11 @@ def export_launch_description(launch: LaunchDescription) -> Dict[str, Any]:
 ###############################################################################
 
 
-def export_launch_model(model: LaunchModel) -> Dict[str, Any]:
+def export_launch_model(model: LaunchModel) -> dict[str, Any]:
     return {'name': model.name, 'files': list(map(launch_feature, model.files))}
 
 
-def launch_feature(model: LaunchFileFeature) -> Dict[str, Any]:
+def launch_feature(model: LaunchFileFeature) -> dict[str, Any]:
     return {
         'id': model.id,
         'file': model.file,
@@ -113,7 +113,7 @@ def launch_feature(model: LaunchFileFeature) -> Dict[str, Any]:
     }
 
 
-def launch_argument_feature(model: ArgumentFeature) -> Dict[str, Any]:
+def launch_argument_feature(model: ArgumentFeature) -> dict[str, Any]:
     return {
         'id': model.id,
         'name': model.name,
@@ -126,7 +126,7 @@ def launch_argument_feature(model: ArgumentFeature) -> Dict[str, Any]:
     }
 
 
-def launch_node_feature(model: NodeFeature) -> Dict[str, Any]:
+def launch_node_feature(model: NodeFeature) -> dict[str, Any]:
     return {
         'id': model.id,
         'rosnode': rosnode_model(model.rosnode),
@@ -138,7 +138,7 @@ def launch_node_feature(model: NodeFeature) -> Dict[str, Any]:
 ###############################################################################
 
 
-def rosnode_model(model: RosNodeModel) -> Dict[str, Any]:
+def rosnode_model(model: RosNodeModel) -> dict[str, Any]:
     return {
         'rosname': serialize(model.rosname),
         'package': serialize(model.package),
@@ -162,35 +162,35 @@ def serialize(value: Any) -> Any:
         return _result(value)
     if isinstance(value, RosName):
         return _rosname(value)
-    if isinstance(value, MappingType):
+    if isinstance(value, Mapping):
         return {str(serialize(k)): serialize(v) for k, v in value.items()}
-    if isinstance(value, IterableType):
+    if isinstance(value, Iterable):
         return list(map(serialize, value))
     if hasattr(value, 'serialize'):
         return serialize(value.serialize())
     return str(value)
 
 
-def _result(result: Result[Any]) -> Dict[str, Any]:
+def _result(result: Result[Any]) -> dict[str, Any]:
     data = {'type': str(result.type), 'source': _tracked_code(result.source)}
     if result.is_resolved:
         data['value'] = serialize(result.value)
     return data
 
 
-def _tracked_code(code: Optional[TrackedCode]) -> Optional[Dict[str, Any]]:
+def _tracked_code(code: TrackedCode | None) -> dict[str, Any] | None:
     return None if code is None else code.location.serialize()
 
 
-def _rosname(rosname: Optional[RosName]) -> Optional[str]:
+def _rosname(rosname: RosName | None) -> str | None:
     return None if rosname is None else str(rosname)
 
 
-def _rcl_calls(calls: RosClientLibraryCalls) -> Dict[str, Any]:
+def _rcl_calls(calls: RosClientLibraryCalls) -> dict[str, Any]:
     return calls.asdict()
 
 
-def _source_metadata(data: SourceCodeMetadata) -> Dict[str, Any]:
+def _source_metadata(data: SourceCodeMetadata) -> dict[str, Any]:
     return {
         'language': getattr(data.language, 'value', str(data.language)),
         'lines': data.lines,
@@ -198,7 +198,7 @@ def _source_metadata(data: SourceCodeMetadata) -> Dict[str, Any]:
     }
 
 
-def _dev_metadata(data: DevelopmentMetadata) -> Dict[str, Any]:
+def _dev_metadata(data: DevelopmentMetadata) -> dict[str, Any]:
     return {
         'description': data.description,
         'authors': list(data.authors),

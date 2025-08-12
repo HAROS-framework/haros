@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final, Tuple
+from typing import Final
 
 from pathlib import Path
 
@@ -17,7 +17,7 @@ from haros.metamodel.launch import LaunchDescription
 # Constants
 ###############################################################################
 
-EXTENSIONS: Final[Tuple[str]] = ('.launch.xml', '.xml', '.launch')
+EXTENSIONS: Final[tuple[str, ...]] = ('.launch.xml', '.xml', '.launch')
 
 ###############################################################################
 # Interface

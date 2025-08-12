@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Final, Iterable, Mapping
+from typing import Final
 
+from collections.abc import Mapping
 import logging
 from pathlib import Path
 
@@ -64,7 +65,7 @@ def _build_nodes(model: ProjectModel, packages: Mapping[str, Path]):
                 root = packages[package.name]
                 nodes = build_nodes_from_cmake(package.name, root)
                 for node in nodes:
-                    _validate_node_files(model, node)    
+                    _validate_node_files(model, node)
                     package.nodes.append(node.uid)
                     model.nodes[node.uid] = node
                 break

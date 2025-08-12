@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2021 André Santos
 
+# flake8: noqa
+
 """
 Module that contains the command line program.
 
@@ -18,16 +20,19 @@ Some of the structure of this file came from this StackExchange question:
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import argparse
+from collections.abc import Mapping, Sequence
 import json
 import logging
 from pathlib import Path
-import time
 import sys
+import time
 
 from bottle import request, route, run, static_file
+
+from haros.metamodel.ros import NodeModel, ProjectModel
 from harosviz import __version__ as current_version
 
 ###############################################################################
@@ -35,7 +40,7 @@ from harosviz import __version__ as current_version
 ###############################################################################
 
 
-def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
+def parse_arguments(argv: Sequence[str] | None) -> dict[str, Any]:
     msg = 'HAROSViz: Visualizer for ROS applications.'
     parser = argparse.ArgumentParser(description=msg)
 
@@ -43,7 +48,7 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
         '--version',
         action='version',
         version=f'{current_version}',
-        help='Prints the program version.'
+        help='Prints the program version.',
     )
 
     parser.add_argument(
@@ -70,9 +75,9 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
 ###############################################################################
 
 
-def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
+def load_configs(args: Mapping[str, Any]) -> dict[str, Any]:
     try:
-        config: Dict[str, Any] = {}
+        config: dict[str, Any] = {}
         # with open(args['config_path'], 'r') as file_pointer:
         # yaml.safe_load(file_pointer)
 
@@ -86,7 +91,7 @@ def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
             raise err
 
         # Optional: return some sane fallback defaults.
-        sane_defaults: Dict[str, Any] = {}
+        sane_defaults: dict[str, Any] = {}
         return sane_defaults
 
 
@@ -95,7 +100,7 @@ def load_configs(args: Dict[str, Any]) -> Dict[str, Any]:
 ###############################################################################
 
 
-def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
+def workflow(args: Mapping[str, Any], configs: Mapping[str, Any]) -> None:
     print(f'Arguments: {args}')
     print(f'Configurations: {configs}')
 
@@ -104,12 +109,12 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
     if not path.is_dir():
         raise ValueError(f'"{root}" is not a directory')
 
-    global workspace
-    workspace = fsys.Workspace(list(args['src']))
-    workspace.find_packages()
-    global ros_iface
-    ros_iface = SimpleRosInterface(strict=True, pkgs=workspace.packages)
-    ros_iface.executables = get_all_package_executables()
+    # global workspace
+    # workspace = fsys.Workspace(list(args['src']))
+    # workspace.find_packages()
+    # global ros_iface
+    # ros_iface = SimpleRosInterface(strict=True, pkgs=workspace.packages)
+    # ros_iface.executables = get_all_package_executables()
 
     set_routes(str(path), configs)
     run(host='localhost', port=8080)
@@ -120,7 +125,7 @@ def workflow(args: Dict[str, Any], configs: Dict[str, Any]) -> None:
 ###############################################################################
 
 
-def set_routes(root: str, configs: Dict[str, Any]):
+def set_routes(root: str, configs: Mapping[str, Any]):
     logger = configs['logger']
 
     def serve_file(filepath):
@@ -158,6 +163,7 @@ def timed(fun):
         else:
             print(f'<done in {delta:.2f} seconds>')
         return res
+
     return wrapper
 
 
@@ -166,7 +172,7 @@ def timed(fun):
 ###############################################################################
 
 project_model: ProjectModel = None
-project_nodes: List[Any] = []
+project_nodes: list[Any] = []
 current_cg: RosComputationGraph = None
 query_engine = None
 workspace = None
@@ -271,25 +277,28 @@ def _load_project_nodes(root):
     nodes = []
     for item in data:
         package = item['package']
-        nodes.append(Node(
-            package,
-            item['nodelet'] or item['name'],
-            files=[FileId(f'{package}/{fp}') for fp in item['files']],
-            advertise_calls=item['advertise'],
-            subscribe_calls=item['subscribe'],
-            srv_server_calls=item['service'],
-            srv_client_calls=item['client'],
-            param_get_calls=item['readParam'],
-            param_set_calls=item['writeParam'],
-        ))
+        nodes.append(
+            NodeModel(
+                package,
+                item['nodelet'] or item['name'],
+                files=[FileId(f'{package}/{fp}') for fp in item['files']],
+                advertise_calls=item['advertise'],
+                subscribe_calls=item['subscribe'],
+                srv_server_calls=item['service'],
+                srv_client_calls=item['client'],
+                param_get_calls=item['readParam'],
+                param_set_calls=item['writeParam'],
+            )
+        )
     return nodes
+
 
 ###############################################################################
 # Entry Point
 ###############################################################################
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = parse_arguments(argv)
     try:
         config = load_configs(args)

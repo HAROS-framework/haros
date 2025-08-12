@@ -5,7 +5,7 @@
 # Imports
 ###############################################################################
 
-from typing import Final, Optional
+from typing import Final
 
 from pathlib import Path
 
@@ -59,8 +59,8 @@ class PythonParser:
     def parse(
         self,
         text: str,
-        package: Optional[str] = None,
-        path: Optional[str] = None,
+        package: str | None = None,
+        path: str | None = None,
     ) -> PythonModule:
         tree = self._parser.parse(text)
         self._transformer.file_path = path
@@ -78,5 +78,5 @@ def parser() -> PythonParser:
     return _parser
 
 
-def parse(text: str, package: Optional[str] = None, path: Optional[str] = None) -> PythonModule:
+def parse(text: str, package: str | None = None, path: str | None = None) -> PythonModule:
     return parser().parse(text, package=package, path=path)

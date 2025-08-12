@@ -5,25 +5,16 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, Iterable, List, NewType, Optional, Set, Tuple, Union
+from typing import Final, NewType
+
+from collections.abc import Mapping, MutableSequence
 
 from attrs import define, field, frozen
 
-from haros.analysis.python import logic as PythonLogic
 from haros.errors import ControlFlowError
 from haros.metamodel.logic import FALSE, TRUE, LogicValue
 from haros.parsing.python.ast import (
-    PythonAst,
-    PythonAstNodeId,
-    PythonBinaryOperator,
-    PythonBooleanLiteral,
-    PythonExpression,
-    PythonForStatement,
-    PythonModule,
     PythonStatement,
-    PythonWhileStatement,
-    PythonTryStatement,
-    PythonTupleLiteral,
 )
 
 ###############################################################################
@@ -56,10 +47,10 @@ class ControlJump:
 @frozen
 class ControlNode:
     id: ControlNodeId
-    body: List[PythonStatement] = field(factory=list, eq=False, hash=False)
+    body: MutableSequence[PythonStatement] = field(factory=list, eq=False, hash=False)
     condition: LogicValue = field(default=TRUE, eq=False, hash=False)
-    incoming: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
-    outgoing: Dict[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    incoming: Mapping[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
+    outgoing: Mapping[ControlNodeId, LogicValue] = field(factory=dict, eq=False, hash=False)
 
     @property
     def is_empty(self) -> bool:
@@ -102,7 +93,7 @@ class ControlNode:
 class ControlFlowGraph:
     name: str
     root_id: ControlNodeId = field()
-    nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
+    nodes: Mapping[ControlNodeId, ControlNode] = field(factory=dict)
     asynchronous: bool = False
 
     @root_id.validator
@@ -166,7 +157,7 @@ class LoopingContext:
 @define
 class BranchingContext:
     guard_node: ControlNode
-    branch_leaves: List[ControlNode] = field(init=False, factory=list)
+    branch_leaves: MutableSequence[ControlNode] = field(init=False, factory=list)
     condition: LogicValue = field(init=False, default=FALSE)
     previous: LogicValue = field(init=False, default=TRUE)
     terminal_branch: bool = False
@@ -211,10 +202,10 @@ class BasicControlFlowGraphBuilder:
     asynchronous: bool = False
     root_id: ControlNodeId = ROOT_ID
     current_id: ControlNodeId = ROOT_ID
-    nodes: Dict[ControlNodeId, ControlNode] = field(factory=dict)
+    nodes: Mapping[ControlNodeId, ControlNode] = field(factory=dict)
     _node_id_counter: int = 0
-    _loop_stack: List[LoopingContext] = field(factory=list, eq=False, hash=False)
-    _branch_stack: List[BranchingContext] = field(factory=list, eq=False, hash=False)
+    _loop_stack: MutableSequence[LoopingContext] = field(factory=list, eq=False, hash=False)
+    _branch_stack: MutableSequence[BranchingContext] = field(factory=list, eq=False, hash=False)
 
     @classmethod
     def from_scratch(cls, name: str = MAIN, asynchronous: bool = False):
@@ -273,7 +264,7 @@ class BasicControlFlowGraphBuilder:
         self.nodes[uid] = node
         return node
 
-    def switch_to(self, node_or_id: Union[ControlNodeId, ControlNode]):
+    def switch_to(self, node_or_id: ControlNodeId | ControlNode):
         uid = node_or_id
         if isinstance(node_or_id, ControlNode):
             uid = node_or_id.id

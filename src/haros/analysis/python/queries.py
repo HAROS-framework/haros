@@ -5,12 +5,11 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Generic, Iterable, Optional, Set, TypeVar
+from collections.abc import Callable, Iterable, Set
 
 from attrs import define
 
 from haros.parsing.python.ast import (
-    PythonAst,
     PythonExpression,
     PythonFunctionDefStatement,
     PythonImportStatement,
@@ -19,18 +18,12 @@ from haros.parsing.python.ast import (
 )
 
 ###############################################################################
-# Constants
-###############################################################################
-
-T = TypeVar('T')
-
-###############################################################################
 # Interface
 ###############################################################################
 
 
 @define
-class Query(Generic[T]):
+class Query[T]:
     matches: Set[T]
 
     @classmethod
@@ -64,7 +57,7 @@ class FunctionQuery(Query[PythonFunctionDefStatement]):
     def named(self, name: str) -> 'FunctionQuery':
         return self.q(f for f in self.matches if f.name == name)
 
-    def typed(self, hint: Optional[PythonExpression] = None) -> 'FunctionQuery':
+    def typed(self, hint: PythonExpression | None = None) -> 'FunctionQuery':
         if hint is not None:
             return self.q(f for f in self.matches if f.type_hint == hint)
         return self.q(f for f in self.matches if f.type_hint is not None)
@@ -95,7 +88,7 @@ class ModuleQuery(Query[PythonModule]):
         imports = self._find_statements('is_import')
         return ImportQuery(imports)
 
-    def _find_statements(self, is_what: str) -> Set[PythonStatement]:
+    def _find_statements(self, is_what: str) -> set[PythonStatement]:
         found = set()
         for module in self.matches:
             stack = list(reversed(module.statements))

@@ -5,40 +5,43 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Final, Iterable, List, Optional, Tuple, Union
+from typing import Any, Final
 
+from collections.abc import Iterable, MutableSequence, Sequence
 import logging
 from pathlib import Path
 
 from attrs import define
+
 from haros.analysis.python.mocks import HarosMockObject
 from haros.metamodel.common import VariantData
 from haros.metamodel.launch import (
     ConcatenationSubstitution,
     EqualsSubstitution,
     IfCondition,
+    LaunchArgument,
     LaunchArgumentKeyValuePair,
     LaunchCondition,
+    LaunchConfiguration,
+    LaunchDescription,
     LaunchEntity,
     LaunchGroupAction,
+    LaunchInclusion,
+    LaunchNode,
+    LaunchNodeRemapItem,
     LaunchNodeRemapList,
     LaunchSetEnvironment,
+    LaunchSubstitution,
     NotEqualsSubstitution,
     ParameterFileDescription,
     PythonExpressionSubstitution,
     ReplaceStringSubstitution,
     RewrittenYamlSubstitution,
     TextSubstitution,
+    ThisDirectorySubstitution,
     UnlessCondition,
     const_substitution,
     const_text,
-    LaunchArgument,
-    LaunchConfiguration,
-    LaunchDescription,
-    LaunchInclusion,
-    LaunchNode,
-    LaunchSubstitution,
-    ThisDirectorySubstitution,
     unknown_parameter_list,
     unknown_remap_list,
     unknown_substitution,
@@ -64,7 +67,7 @@ TYPE_LAUNCH_SUBSTITUTION: Final[TypeToken[LaunchSubstitution]] = TypeToken.of(La
 
 @define
 class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
-    entities: Result[List[Result[LaunchEntity]]]
+    entities: Result[MutableSequence[Result[LaunchEntity]]]
 
     def add_action(self, action: Result[LaunchEntity]) -> None:
         if self.entities.is_resolved:
@@ -81,13 +84,13 @@ class LaunchDescriptionMock(HarosMockObject[LaunchDescription]):
 ###############################################################################
 
 
-def if_condition_function(expr: Result[Union[str, LaunchSubstitution]]) -> IfCondition:
+def if_condition_function(expr: Result[str | LaunchSubstitution]) -> IfCondition:
     if expr.is_resolved and expr.type.is_string:
         expr = const_text(expr.value, source=expr.source)
     return IfCondition(expr)
 
 
-def unless_condition_function(expr: Result[Union[str, LaunchSubstitution]]) -> UnlessCondition:
+def unless_condition_function(expr: Result[str | LaunchSubstitution]) -> UnlessCondition:
     if expr.is_resolved and expr.type.is_string:
         expr = const_text(expr.value, source=expr.source)
     return UnlessCondition(expr)
@@ -116,7 +119,7 @@ def python_launch_description_source_function(arg_list: Result) -> LaunchSubstit
 
 
 def launch_description_function(
-    arg_list: Optional[Result[List[Result[LaunchEntity]]]] = None,
+    arg_list: Result[Sequence[Result[LaunchEntity]]] | None = None,
 ) -> LaunchDescriptionMock:
     if not arg_list:
         return LaunchDescriptionMock(Result.of_list([]))
@@ -125,8 +128,8 @@ def launch_description_function(
 
 def declare_launch_argument_function(
     name: Result,
-    default_value: Optional[Result] = None,
-    description: Optional[Result] = None,
+    default_value: Result | None = None,
+    description: Result | None = None,
 ) -> LaunchArgument:
     return LaunchArgument(
         _dataflow_to_string(name),
@@ -144,7 +147,7 @@ def set_environment_variable_function(name: Result, value: Result) -> LaunchSetE
 
 def launch_configuration_function(
     name: Result,
-    default: Optional[Result] = None,
+    default: Result | None = None,
 ) -> LaunchConfiguration:
     return LaunchConfiguration(
         _dataflow_to_string(name),
@@ -152,21 +155,21 @@ def launch_configuration_function(
     )
 
 
-StringOrSubstitution = Result[Union[str, LaunchSubstitution]]
-SubstitutionPair = Tuple[StringOrSubstitution, StringOrSubstitution]
-LaunchArgumentKeyValue = Union[SubstitutionPair, Result[SubstitutionPair]]
+type StringOrSubstitution = Result[str | LaunchSubstitution]
+type SubstitutionPair = tuple[StringOrSubstitution, StringOrSubstitution]
+type LaunchArgumentKeyValue = SubstitutionPair | Result[SubstitutionPair]
 
 
 def include_launch_description_function(
     source: Result,
-    launch_arguments: Optional[Result[Iterable[LaunchArgumentKeyValue]]] = None,
-    condition: Optional[Result[LaunchCondition]] = None,
+    launch_arguments: Result[Iterable[LaunchArgumentKeyValue]] | None = None,
+    condition: Result[LaunchCondition] | None = None,
 ) -> LaunchInclusion:
     _source: Result[LaunchSubstitution] = unknown_substitution(source=source.source)
     if source.is_resolved:
         if isinstance(source.value, LaunchSubstitution):
             _source = const_substitution(source.value, source=source.source)
-    _arguments: List[LaunchArgumentKeyValuePair] = []
+    _arguments: list[LaunchArgumentKeyValuePair] = []
     if launch_arguments is not None and launch_arguments.is_resolved:
         assert launch_arguments.type.is_iterable, repr(launch_arguments)
         for item in launch_arguments.value:
@@ -183,27 +186,27 @@ def include_launch_description_function(
 
 def node_function(
     executable: Result,
-    package: Optional[Result] = None,
-    name: Optional[Result] = None,
-    parameters: Optional[Result[Iterable[Result[Any]]]] = None,
-    arguments: Optional[Result] = None,
-    output: Optional[Result] = None,
-    remappings: Optional[Result[Iterable[Result[Any]]]] = None,
-    condition: Optional[LaunchCondition] = None,
-    respawn: Optional[Any] = None,  # FIXME
-    respawn_delay: Optional[Any] = None,  # FIXME
+    package: Result | None = None,
+    name: Result | None = None,
+    parameters: Result[Iterable[Result[Any]]] | None = None,
+    arguments: Result | None = None,
+    output: Result | None = None,
+    remappings: Result[Iterable[Result[Any]]] | None = None,
+    condition: LaunchCondition | None = None,
+    respawn: Any | None = None,  # FIXME
+    respawn_delay: Any | None = None,  # FIXME
 ) -> LaunchNode:
     # docs: https://github.com/ros2/launch_ros/blob/rolling/launch_ros/launch_ros/actions/node.py
     # Node.__init__:
     #   executable: SomeSubstitutionsType
-    #   package: Optional[SomeSubstitutionsType]
-    #   name: Optional[SomeSubstitutionsType]
-    #   namespace: Optional[SomeSubstitutionsType]
-    #   exec_name: Optional[SomeSubstitutionsType]
-    #   parameters: Optional[SomeParameters]
-    #   remappings: Optional[SomeRemapRules]
-    #   ros_arguments: Optional[Iterable[SomeSubstitutionsType]]
-    #   arguments: Optional[Iterable[SomeSubstitutionsType]]
+    #   package: SomeSubstitutionsType | None
+    #   name: SomeSubstitutionsType | None
+    #   namespace: SomeSubstitutionsType | None
+    #   exec_name: SomeSubstitutionsType | None
+    #   parameters: SomeParameters | None
+    #   remappings: SomeRemapRules | None
+    #   ros_arguments: Iterable[SomeSubstitutionsType] | None
+    #   arguments: Iterable[SomeSubstitutionsType] | None
     #   **kwargs
     if parameters is None:
         params = Result.of_list([])
@@ -234,12 +237,13 @@ def node_function(
     else:
         params = unknown_parameter_list(source=parameters.source)
     if remappings is None:
-        remaps = Result.of_list([])
-    elif remappings.is_resolved:
         remaps: LaunchNodeRemapList = Result.of_list([])
+    elif remappings.is_resolved:
+        to_keep: MutableSequence[LaunchNodeRemapItem] = []
+        remaps = Result.of_list(to_keep, source=remappings.source)
         for item in remappings.value:
             if item.is_resolved:
-                remaps.value.append(item)
+                to_keep.append(item)
             else:
                 remaps = unknown_remap_list(source=remappings.source)
                 break
@@ -260,8 +264,8 @@ def node_function(
 
 
 def group_action_function(
-    actions: Optional[Result[Iterable[Result[LaunchEntity]]]] = None,
-    condition: Optional[LaunchCondition] = None,
+    actions: Result[Iterable[Result[LaunchEntity]]] | None = None,
+    condition: LaunchCondition | None = None,
 ) -> LaunchGroupAction:
     return LaunchGroupAction(actions or Result.of_list([]), condition=condition)
 
@@ -287,7 +291,7 @@ LAUNCH_SYMBOLS = {
     'launch.conditions.if_condition.IfCondition': if_condition_function,
     'launch.conditions.UnlessCondition': unless_condition_function,
     'launch.conditions.unless_condition.UnlessCondition': unless_condition_function,
-    'launch.launch_description_sources.PythonLaunchDescriptionSource': python_launch_description_source_function,
+    'launch.launch_description_sources.PythonLaunchDescriptionSource': python_launch_description_source_function,  # noqa: E501
     'launch.substitutions.EqualsSubstitution': EqualsSubstitution,
     'launch.substitutions.LaunchConfiguration': launch_configuration_function,
     'launch.substitutions.NotEqualsSubstitution': NotEqualsSubstitution,
@@ -312,9 +316,9 @@ def _dataflow_to_string(value: Result) -> str:
 
 
 def _dataflow_to_launch_substitution(
-    result: Optional[Result],
-    default: Optional[str] = None,
-) -> Optional[Result[LaunchSubstitution]]:
+    result: Result | None,
+    default: str | None = None,
+) -> Result[LaunchSubstitution] | None:
     if result is None:
         return None if default is None else const_text(default)
     if result.is_resolved:
@@ -325,7 +329,7 @@ def _dataflow_to_launch_substitution(
     return unknown_substitution(source=result.source)
 
 
-def _dataflow_to_launch_list(arg_list: Optional[Result]) -> List[Result[LaunchSubstitution]]:
+def _dataflow_to_launch_list(arg_list: Result | None) -> list[Result[LaunchSubstitution]]:
     values = []
     if arg_list is not None:
         if arg_list.is_resolved:

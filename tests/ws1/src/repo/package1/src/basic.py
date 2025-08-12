@@ -6,7 +6,8 @@
 ###############################################################################
 
 import os
-from mymodule import MY_CONSTANT, my_division # type: ignore
+
+from mymodule import MY_CONSTANT, my_division  # type: ignore
 
 ###############################################################################
 # Tests
@@ -19,7 +20,7 @@ FILE_NAME = 'number'
 
 def basic_math():
     a = THE_X
-    b = a ** 2 // 64
+    b = a**2 // 64
     c = (a * b) / (a + b)
     if c > b:
         d = 1
@@ -64,12 +65,7 @@ def imported_function_call():
 
 def file_io():
     param_file_name = FILE_NAME + '.txt'
-    number_file = os.path.join(
-        __file__,
-        '..',
-        '..',
-        'param',
-        param_file_name)
+    number_file = os.path.join(__file__, '..', '..', 'param', param_file_name)
     with open(number_file, 'r') as infp:
         number = infp.read()
         # number = int(infp.read())

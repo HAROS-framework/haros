@@ -5,8 +5,9 @@
 # Imports
 ###############################################################################
 
-from typing import Any, Callable, Dict, Final, Generic, List, Optional, Type
+from typing import Any, Final
 
+from collections.abc import Callable, Mapping, MutableSequence, Sequence
 import logging
 
 from attrs import define, evolve, field, frozen
@@ -14,7 +15,7 @@ from attrs import define, evolve, field, frozen
 from haros.errors import DataFlowError
 from haros.metamodel.common import SourceCodeLocation, TrackedCode, VariantData
 from haros.metamodel.logic import FALSE, TRUE, LogicValue, LogicVariable
-from haros.metamodel.result import Result, V, T, TypeToken
+from haros.metamodel.result import Result, TypeToken
 from haros.parsing.python.ast import (
     PythonAssignmentStatement,
     PythonAst,
@@ -39,7 +40,7 @@ logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 BUILTINS_MODULE: Final[str] = '__builtins__'
 
-BUILTIN_FUNCTIONS: Final[List[str]] = [
+BUILTIN_FUNCTIONS: Final[Sequence[str]] = [
     'abs',
     'all',
     'any',
@@ -93,7 +94,7 @@ BUILTIN_FUNCTIONS: Final[List[str]] = [
     # '__import__',
 ]
 
-BUILTIN_CLASSES: Final[List[str]] = [
+BUILTIN_CLASSES: Final[Sequence[str]] = [
     'bool',
     'bytearray',
     'bytes',
@@ -114,7 +115,7 @@ BUILTIN_CLASSES: Final[List[str]] = [
     'type',
 ]
 
-BUILTIN_EXCEPTIONS: Final[List[str]] = [
+BUILTIN_EXCEPTIONS: Final[Sequence[str]] = [
     'BaseException',
     'Exception',
     'ArithmeticError',
@@ -223,7 +224,7 @@ class StrictFunctionCaller(Callable):
         return Result.of(raw_value)
 
 
-def tracked(ast: PythonAst) -> Optional[TrackedCode]:
+def tracked(ast: PythonAst) -> TrackedCode | None:
     location = SourceCodeLocation(
         file=ast.meta.annotations.get('file'),
         package=ast.meta.annotations.get('package'),
@@ -235,9 +236,9 @@ def tracked(ast: PythonAst) -> Optional[TrackedCode]:
 
 
 @frozen
-class Definition(Generic[V]):
+class Definition[V]:
     value: Result[V]
-    ast: Optional[PythonAst] = None
+    ast: PythonAst | None = None
     import_base: str = ''
 
     @property
@@ -257,7 +258,7 @@ class Definition(Generic[V]):
         return self.import_base == BUILTINS_MODULE
 
     @classmethod
-    def of_builtin_function(cls, name: str) -> 'Definition[Type[min]]':
+    def of_builtin_function(cls, name: str) -> 'Definition[type[min]]':
         # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert callable(raw_value), f'expected function, got: {raw_value!r}'
@@ -266,19 +267,19 @@ class Definition(Generic[V]):
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def of_builtin_class(cls, name: str) -> 'Definition[Type]':
+    def of_builtin_class(cls, name: str) -> 'Definition[type]':
         # value = getattr(__builtins__, name)
         raw_value = __builtins__.get(name)
         assert isinstance(raw_value, type), f'expected class, got: {raw_value!r}'
         wrapper = StrictFunctionCaller(raw_value, name=name, module=BUILTINS_MODULE)
-        value: Result[Type] = Result.of_class(value=wrapper)
+        value: Result[type] = Result.of_class(value=wrapper)
         return cls(value, import_base=BUILTINS_MODULE)
 
     @classmethod
-    def from_value(cls, raw_value: V, ast: Optional[PythonAst] = None) -> 'Definition[V]':
+    def from_value(cls, raw_value: V, ast: PythonAst | None = None) -> 'Definition[V]':
         return cls(Result.of(raw_value), ast=ast)  # FIXME TrackedCode from ast
 
-    def cast_to(self, type: TypeToken[T]) -> 'Definition[T]':
+    def cast_to[T](self, type: TypeToken[T]) -> 'Definition[T]':
         if self.value.type == type:
             return self
         # new_type_mask = self.value.type.mask & type.mask
@@ -305,10 +306,10 @@ def _default_return_value() -> VariantData[Result[Any]]:
 
 @define
 class DataScope:
-    variables: Dict[str, VariantData[Definition]] = field(factory=dict)
+    variables: Mapping[str, VariantData[Definition]] = field(factory=dict)
     return_values: VariantData[Result[Any]] = field(factory=_default_return_value)
-    _condition_stack: List[LogicValue] = field(init=False, factory=list)
-    _symbols: Dict[str, Any] = field(factory=dict)
+    _condition_stack: MutableSequence[LogicValue] = field(init=False, factory=list)
+    _symbols: Mapping[str, Any] = field(factory=dict)
 
     @property
     def condition(self) -> LogicValue:
@@ -338,7 +339,7 @@ class DataScope:
         self,
         name: str,
         value: Result[Any],
-        ast: Optional[PythonAst] = None,
+        ast: PythonAst | None = None,
         import_base: str = '',
     ):
         definition = Definition(value, ast=ast, import_base=import_base)
@@ -388,7 +389,7 @@ class DataScope:
     def add_function_def(
         self,
         statement: PythonFunctionDefStatement,
-        fun: Optional[Callable] = None,
+        fun: Callable | None = None,
     ):
         assert statement.is_statement and statement.is_function_def
         if fun is None:
@@ -415,7 +416,7 @@ class DataScope:
         value = self.value_from_expression(statement.value)
         self.set(name, value, ast=statement)
 
-    def add_return_value(self, expression: Optional[PythonExpression] = None):
+    def add_return_value(self, expression: PythonExpression | None = None):
         if expression is None:
             value = Result.of_none()
         else:
@@ -646,8 +647,8 @@ class DataScope:
         assert callable(function.value), f'not callable: {repr(function.value)}'
         if not call.arguments:
             return function.call().trace_to(tracked(call))
-        args: List[Result[Any]] = []
-        kwargs: Dict[str, Result[Any]] = {}
+        args: list[Result[Any]] = []
+        kwargs: dict[str, Result[Any]] = {}
         for argument in call.arguments:
             arg: Result[Any] = self.value_from_expression(argument.value)
             if argument.is_positional:

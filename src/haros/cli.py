@@ -18,9 +18,10 @@ Some of the structure of this file came from this StackExchange question:
 # Imports
 ###############################################################################
 
-from typing import Any, Dict, Final, List, Optional
+from typing import Any, Final
 
 import argparse
+from collections.abc import Sequence
 import logging
 import logging.config
 from pathlib import Path
@@ -30,9 +31,9 @@ from haros import __version__ as current_version
 from haros.internal import home
 from haros.internal.cli import analysis, debug, init, project
 from haros.internal.settings import (
+    Settings,
     defaults as default_settings,
     load as load_settings,
-    Settings,
 )
 
 ###############################################################################
@@ -43,7 +44,7 @@ from haros.internal.settings import (
 logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     args = parse_arguments(argv)
     cmd = args['cmd']
 
@@ -64,8 +65,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     except KeyboardInterrupt:
         print('Aborted manually.', file=sys.stderr)
         return 1
-    except Exception as err:
-        print('Unhandled exception during setup.', err, file=sys.stderr)
+    except Exception:
+        import traceback
+
+        print('Unhandled exception during setup:', file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         return 1
 
     logger.info('Setup phase finished.')
@@ -107,7 +111,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 ###############################################################################
 
 
-def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
+def parse_arguments(argv: Sequence[str] | None) -> dict[str, Any]:
     msg = 'The High-Assurance ROS Framework.'
     parser = argparse.ArgumentParser(description=msg)
 
@@ -115,7 +119,7 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
         '--version',
         action='version',
         version=f'{current_version}',
-        help='Prints the program version.'
+        help='Prints the program version.',
     )
 
     parser.add_argument(
@@ -147,6 +151,7 @@ def parse_arguments(argv: Optional[List[str]]) -> Dict[str, Any]:
 ###############################################################################
 # Logging Configuration
 ###############################################################################
+
 
 def _setup_logging(homepath: Path, settings: Settings) -> None:
     config = settings.logging.asdict()
